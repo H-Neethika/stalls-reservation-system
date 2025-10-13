@@ -16,7 +16,7 @@ import java.util.List;
 public class Stall {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String stallName;
@@ -24,9 +24,10 @@ public class Stall {
     @ManyToOne
     private Hall hall;
 
+    @Enumerated(EnumType.STRING)
     private STALL_TYPE stallType;
 
-    @OneToOne
+    @ManyToOne
     private BookingStatus bookingStatus;
 
     private Boolean isActive;
