@@ -1,6 +1,6 @@
 -- BookingStatus
 INSERT INTO booking_status (id, status, color)
-SELECT 1, 'AVAILABLE', '#28a745'
+SELECT 1, 'AVAILABLE', '#ffffff'
 WHERE NOT EXISTS (SELECT 1 FROM booking_status WHERE id = 1);
 
 INSERT INTO booking_status (id, status, color)
@@ -11,6 +11,9 @@ INSERT INTO booking_status (id, status, color)
 SELECT 3, 'BOOKED', '#6c757d'
 WHERE NOT EXISTS (SELECT 1 FROM booking_status WHERE id = 3);
 
+INSERT INTO booking_status (id, status, color)
+SELECT 4, 'UNAVAILABLE', '#dc3545'
+WHERE NOT EXISTS (SELECT 1 FROM booking_status WHERE id = 4);
 
 -- Genre
 INSERT INTO genre (id, name)
