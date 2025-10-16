@@ -27,6 +27,7 @@ public class ExhibitionStall {
 
     private Long hallId;
 
+
     private Long exhibitionId;
 
     @Enumerated(EnumType.STRING)
