@@ -121,5 +121,8 @@ INSERT INTO hall (id, hall_name)
 SELECT 16, 'Hall-Q'
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-Q');
 
-
+-- ✅ Reset sequences after inserts
+SELECT setval('genre_id_seq', COALESCE((SELECT MAX(id) + 1 FROM genre), 1), false);
+SELECT setval('booking_status_id_seq', COALESCE((SELECT MAX(id) + 1 FROM booking_status), 1), false);
+SELECT setval('hall_id_seq', COALESCE((SELECT MAX(id) + 1 FROM hall), 1), false);
 
