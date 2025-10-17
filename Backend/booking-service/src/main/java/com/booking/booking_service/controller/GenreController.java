@@ -3,6 +3,7 @@ package com.booking.booking_service.controller;
 import com.booking.booking_service.model.Genre;
 import com.booking.booking_service.response.MessageResponse;
 import com.booking.booking_service.service.GenreService;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -53,4 +54,9 @@ public class GenreController {
   }
 
 
+  @GetMapping
+  public ResponseEntity<List<Genre>> getAllGenres() {
+    List<Genre> genreList = genreService.getAllGenres();
+    return new ResponseEntity<>(genreList, HttpStatus.OK);
+  }
 }

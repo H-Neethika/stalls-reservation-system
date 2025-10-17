@@ -3,6 +3,7 @@ package com.booking.booking_service.service.serviceImpl;
 import com.booking.booking_service.model.Genre;
 import com.booking.booking_service.repository.GenreRepository;
 import com.booking.booking_service.service.GenreService;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,5 +41,10 @@ public class GenreServiceImpl implements GenreService {
   public void deleteGenre(Long genreId) throws Exception {
     Genre genre = findGenreById(genreId);
     genreRepository.delete(genre);
+  }
+
+  @Override
+  public List<Genre> getAllGenres() {
+    return genreRepository.findAll();
   }
 }
