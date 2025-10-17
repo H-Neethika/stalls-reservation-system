@@ -62,7 +62,8 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
                 boolean exists = exhibitionStallRepository.existsByExhibitionIdAndStallId(exhibitionId, stall.getId());
                 if (exists) {
                     // skip if already created
-                    continue;
+                    throw new RuntimeException("Record for this stallId and exhibitionId already exist");
+
                 }
                 ExhibitionStall exhibitionStall = new ExhibitionStall();
                 exhibitionStall.setExhibitionId(exhibitionId);
@@ -75,9 +76,9 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
                 exhibitionStall.setGenres(new ArrayList<>());
                 List<PriceDto> priceList = hallPrice.getPriceList();
                 for (PriceDto price : priceList) {
-                    if (price.getStallType().equals(stall.getStallType())) {
+                    if (price.getStallType().equalsIgnoreCase(stall.getStallType().name())) {
                         exhibitionStall.setPrice(price.getPrice());
-                        break; // stop once matched
+                        break;
                     }
                 }
 
