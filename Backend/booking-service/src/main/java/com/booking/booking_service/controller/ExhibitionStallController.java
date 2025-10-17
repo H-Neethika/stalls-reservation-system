@@ -42,14 +42,14 @@ public class ExhibitionStallController {
         return ResponseEntity.ok(stalls);
     }
 
-    @PutMapping("/{exhibitionId}/{stallId}")
-    public ResponseEntity<ExhibitionStall> updateExhibitionStall(@PathVariable Long exhibitionId, @PathVariable Long stallId, @RequestBody ExhibitionStall updateStall) {
+    @PutMapping()
+    public ResponseEntity<ExhibitionStall> updateExhibitionStall(@RequestParam Long exhibitionId, @RequestParam Long stallId, @RequestBody ExhibitionStall updateStall) {
         ExhibitionStall updatedExhibitionStall = exhibitionStallService.updateExhibitionStall(stallId, exhibitionId, updateStall);
         return ResponseEntity.ok(updatedExhibitionStall);
     }
 
-    @DeleteMapping("/{exhibitionId}/{stallId}")
-    public ResponseEntity<String> deleteExhibitionStall(@PathVariable Long exhibitionId, @PathVariable Long stallId) {
+    @DeleteMapping()
+    public ResponseEntity<String> deleteExhibitionStall(@RequestParam Long exhibitionId, @RequestParam Long stallId) {
         exhibitionStallService.deleteExhibitionStall(stallId, exhibitionId);
         return ResponseEntity.ok("ExhibitionStall deleted successfully for exhibitionId: " + exhibitionId + " & stallId: " + stallId);
     }
