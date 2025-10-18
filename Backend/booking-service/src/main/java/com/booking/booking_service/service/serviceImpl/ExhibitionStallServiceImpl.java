@@ -1,6 +1,5 @@
 package com.booking.booking_service.service.serviceImpl;
 
-import com.booking.booking_service.domain.STALL_TYPE;
 import com.booking.booking_service.dto.HallPriceDto;
 import com.booking.booking_service.dto.PriceDto;
 import com.booking.booking_service.model.BookingStatus;
@@ -12,9 +11,9 @@ import com.booking.booking_service.repository.ExhibitionStallRepository;
 import com.booking.booking_service.request.CreateExhibitionStallRequest;
 import com.booking.booking_service.service.ExhibitionStallService;
 import com.booking.booking_service.service.StallService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -32,6 +31,13 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
     private StallService stallService;
     @Autowired
     private BookingStatusRepository bookingStatusRepository;
+
+
+    @Override
+    public Page<ExhibitionStall> getExhibitionStall(Long hallId, String bookingStatus, String stallType, String genre, Long exhibitionId, Pageable pageable) {
+
+        return exhibitionStallRepository.findAllByFilters(hallId, bookingStatus, stallType, genre, exhibitionId, pageable);
+    }
 
     @Override
     public List<ExhibitionStall> createExhibitionStall(CreateExhibitionStallRequest exhibitionStallReq) {
@@ -56,7 +62,8 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
                 boolean exists = exhibitionStallRepository.existsByExhibitionIdAndStallId(exhibitionId, stall.getId());
                 if (exists) {
                     // skip if already created
-                    continue;
+                    throw new RuntimeException("Record for this stallId and exhibitionId already exist");
+
                 }
                 ExhibitionStall exhibitionStall = new ExhibitionStall();
                 exhibitionStall.setExhibitionId(exhibitionId);
@@ -69,9 +76,9 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
                 exhibitionStall.setGenres(new ArrayList<>());
                 List<PriceDto> priceList = hallPrice.getPriceList();
                 for (PriceDto price : priceList) {
-                    if (price.getStallType().equals(stall.getStallType())) {
+                    if (price.getStallType().equalsIgnoreCase(stall.getStallType().name())) {
                         exhibitionStall.setPrice(price.getPrice());
-                        break; // stop once matched
+                        break;
                     }
                 }
 
@@ -86,24 +93,47 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
     }
 
     @Override
-    public ExhibitionStall updateExhibitionStall(Long stallId, ExhibitionStall exhibitionStall) {
-        return null;
+    public ExhibitionStall updateExhibitionStall(Long stallId, Long exhibitionId, ExhibitionStall updatedStall) {
+
+        ExhibitionStall foundExhibitionStall = exhibitionStallRepository.findByExhibitionIdAndStallId(exhibitionId, stallId).orElseThrow(() -> new RuntimeException("ExhibitionStall not found for the exhibitionId : " + exhibitionId + " and stallId: " + stallId));
+        if (updatedStall.getPrice() != null) {
+            foundExhibitionStall.setPrice(updatedStall.getPrice());
+        }
+
+        if (updatedStall.getStallType() != null) {
+            foundExhibitionStall.setStallType(updatedStall.getStallType());
+        }
+
+        if (updatedStall.getGenres() != null) {
+            foundExhibitionStall.setGenres(updatedStall.getGenres());
+        }
+
+        if (updatedStall.getBookingStatus() != null) {
+            foundExhibitionStall.setBookingStatus(updatedStall.getBookingStatus());
+        }
+        return exhibitionStallRepository.save(foundExhibitionStall);
     }
 
     @Override
-    public void deleteExhibitionStall(Long stallId) {
-
+    public void deleteExhibitionStall(Long stallId, Long exhibitionId) {
+        ExhibitionStall foundExhibitionStall = exhibitionStallRepository.findByExhibitionIdAndStallId(exhibitionId, stallId).orElseThrow(() -> new RuntimeException("ExhibitionStall not found for the exhibitionId : " + exhibitionId + " and stallId: " + stallId));
+        exhibitionStallRepository.delete(foundExhibitionStall);
     }
 
-    @Override
-    public Page<ExhibitionStall> getExhibitionStall(Long hallId, String bookingStatus, String stallType, String genre, Long exhibitionId) {
-
-
-        return null;
-    }
 
     @Override
-    public Genre getGenre(String query) {
-        return null;
+    public List<Genre> getExhibitionStallGenres(Long hallId, Long stallId) {
+        if (hallId != null) {
+            List<ExhibitionStall> stalls = exhibitionStallRepository.findByHallId(hallId);
+            return stalls.stream().flatMap(e -> e.getGenres().stream()).distinct().collect(Collectors.toList());
+        }
+
+        if (stallId != null) {
+            return exhibitionStallRepository.findByStallId(stallId).map(ExhibitionStall::getGenres).orElseThrow(() -> new RuntimeException("No ExhibitionStall found in this stallId : " + stallId));
+        }
+
+        throw new IllegalArgumentException("Either hallId or stallId must be provided");
+
+
     }
 }
