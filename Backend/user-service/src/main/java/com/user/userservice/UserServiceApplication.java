@@ -1,9 +1,13 @@
-package com.user.user_service;
+package com.user.userservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+
+import com.user.userservice.config.JwtProperties;
 
 @SpringBootApplication
+@EnableConfigurationProperties(JwtProperties.class)
 public class UserServiceApplication {
 
 	public static void main(String[] args) {
