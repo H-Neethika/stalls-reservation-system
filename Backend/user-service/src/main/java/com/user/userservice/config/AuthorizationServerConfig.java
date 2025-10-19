@@ -44,8 +44,6 @@ public class AuthorizationServerConfig {
 		return new NimbusJwtEncoder(jwkSource);
 	}
     private static KeyPair generateRsaKey() {
-        // In a real app, you'd load these from a secure vault or a file.
-        // For this example, we generate them on startup.
         try {
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
             keyPairGenerator.initialize(2048);
