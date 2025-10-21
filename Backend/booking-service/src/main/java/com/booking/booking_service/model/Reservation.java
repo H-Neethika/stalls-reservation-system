@@ -24,9 +24,11 @@ public class Reservation {
     private Long userId;
 
     @OneToMany
-    private List<Stall> stall=new ArrayList<>();
+    private List<ExhibitionStall> stall=new ArrayList<>();
 
     private Date createdAt;
+
+    private Long totalAmount;
 
 
 
