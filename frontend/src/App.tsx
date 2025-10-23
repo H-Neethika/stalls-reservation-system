@@ -15,6 +15,7 @@ import AllReservations from "./pages/organizer/AllReservations";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import LayoutBuilder from "./pages/organizer/LayoutBuilder";
 
 const queryClient = new QueryClient();
 
@@ -28,7 +29,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/auth" element={<Auth />} />
-            
+
             {/* Vendor Routes */}
             <Route
               path="/halls"
@@ -80,6 +81,8 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/organizer/layout-builder/:hallId" element={<LayoutBuilder />} />
+
             <Route
               path="/organizer/reservations"
               element={
