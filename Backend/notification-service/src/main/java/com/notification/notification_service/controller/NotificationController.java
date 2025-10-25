@@ -17,10 +17,10 @@ public class NotificationController {
     @Autowired
     private NotificationService notificationService;
 
-    @GetMapping("/notifications/{id}")
-    public ResponseEntity<Notification> getNotificationDetails(@PathVariable Long id) {
+    @GetMapping("/notifications/{reservationId}")
+    public ResponseEntity<Notification> getNotificationDetails(@PathVariable Long reservationId) {
         try {
-            return ResponseEntity.ok(notificationService.getNotificationDetails(id));
+            return ResponseEntity.ok(notificationService.getNotificationDetails(reservationId));
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException(e);
         }

@@ -28,8 +28,6 @@ public class Notification {
     @Column(nullable = false)
     private NotificationStatus status;
 
-    private String qrCodeUrl;
-
     private String lastError;
 
     @Column(nullable = false, updatable = false)
