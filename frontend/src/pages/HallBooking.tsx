@@ -172,9 +172,7 @@ const HallBooking = () => {
               <CardHeader>
                 <CardTitle>Select Your Stalls</CardTitle>
                 <CardDescription>
-                  {hall.id === "hall-a"
-                    ? "Octagon stall plan inspired by the default Hall A map. Click on available stalls to select (max 3)."
-                    : "Cinema-style layout - Click on available stalls to select (max 3)"}
+                  Cinema-style layout - Click on available stalls to select (max 3)
                 </CardDescription>
                 
                 {/* Legend */}
