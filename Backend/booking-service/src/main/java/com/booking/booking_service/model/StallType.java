@@ -1,31 +1,22 @@
 package com.booking.booking_service.model;
 
-import com.booking.booking_service.domain.STALL_TYPE;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Entity
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class Stall {
-
+@NoArgsConstructor
+public class StallType {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    private String stallName;
+    private String type;
+    private Long price;
 
     @ManyToOne
-    private Hall hall;
-
-    @Enumerated(EnumType.STRING)
-    private STALL_TYPE stallType;
-
-
+    private ExhibitionHall exhibitionHallId;
 }
