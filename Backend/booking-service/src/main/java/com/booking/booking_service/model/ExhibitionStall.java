@@ -1,7 +1,5 @@
 package com.booking.booking_service.model;
 
-
-import com.booking.booking_service.domain.STALL_TYPE;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,19 +17,20 @@ public class ExhibitionStall {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private  Long id;
+    private Long id;
+
+    @ManyToOne
+    private ExhibitionHall exhibitionHallId;
 
 
-    private Long stallId;
+    private String stallName;
 
 
-    private Long hallId;
+    @OneToOne
+    private StallType stallType;
 
 
-    private Long exhibitionId;
-
-    @Enumerated(EnumType.STRING)
-    private STALL_TYPE stallType;
+    private Long price;
 
     @ManyToOne
     private BookingStatus bookingStatus;
@@ -39,5 +38,9 @@ public class ExhibitionStall {
     @OneToMany
     private List<Genre> genres = new ArrayList<>();
 
-    private Long price;
+    private Long rowPosition;
+
+    private Long columnPosition;
+
+
 }
