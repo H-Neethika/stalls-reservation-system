@@ -6,4 +6,6 @@ import java.util.List;
 public interface HallService {
 
   public List<Hall> getAllHalls();
+
+  public  Hall createHall(Hall hall);
 }
