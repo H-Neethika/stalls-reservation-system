@@ -1,3 +1,4 @@
+
 package com.payment.payment_service.service.impl;
 
 import com.payment.payment_service.domain.PaymentOrderStatus;
@@ -16,6 +17,8 @@ import com.stripe.net.Webhook;
 import com.stripe.model.StripeObject;
 import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.param.checkout.SessionCreateParams;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,9 +26,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import jakarta.annotation.PostConstruct;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -34,18 +39,33 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentOrderRepository paymentOrderRepository;
 
-    @Value("${stripe.secret.key}")
+    @Value("${STRIPE_SECRET_KEY:}")
     private String stripeSecretKey;
 
-    @Value("${payment.currency:usd}")
+    @Value("${PAYMENT_CURRENCY:usd}")
     private String defaultCurrency;
 
-    @Value("${stripe.webhook.secret}")
+    @Value("${STRIPE_WEBHOOK_SECRET:}")
     private String webhookSecret;
 
-    @Value("${stripe.frontendBaseUrl:http://localhost:3000}")
+    @Value("${FRONTEND_BASE_URL:http://localhost:3000}")
     private String frontendBaseUrl;
 
+    @Value("${STRIPE_SESSION_TTL_MINUTES:30}")
+    private int checkoutTtlMinutes;
+
+    @PostConstruct
+    private void validateConfiguration() {
+        if (stripeSecretKey == null || stripeSecretKey.isBlank()) {
+            throw new IllegalStateException("STRIPE_SECRET_KEY environment variable is required");
+        }
+        if (webhookSecret == null || webhookSecret.isBlank()) {
+            throw new IllegalStateException("STRIPE_WEBHOOK_SECRET environment variable is required");
+        }
+    }
+
+
+    //  Create Checkout Session
 
     @Override
     @Transactional
@@ -73,17 +93,16 @@ public class PaymentServiceImpl implements PaymentService {
         if (originalAmount.compareTo(new BigDecimal("0.01")) < 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "totalAmount must be at least 0.01");
         }
-        // Normalize to 2 decimal places
+
         BigDecimal normalizedAmount = originalAmount.setScale(2, RoundingMode.HALF_UP);
         Long stripeAmount = convertToStripeAmount(normalizedAmount, currencyUpper);
 
         log.info("Creating Stripe Checkout Session: reservationId={}, currency={}, originalAmount={}, convertedStripeAmount={}",
                 request.getReservationId(), currencyUpper, normalizedAmount, stripeAmount);
 
-        // Persist a new payment order in PENDING state
         PaymentOrder order = PaymentOrder.builder()
                 .reservationId(request.getReservationId())
-                .amount(stripeAmount) // keep legacy field as smallest unit
+                .amount(stripeAmount)
                 .originalAmount(normalizedAmount)
                 .convertedStripeAmount(stripeAmount)
                 .currency(currencyUpper)
@@ -92,27 +111,32 @@ public class PaymentServiceImpl implements PaymentService {
         order = paymentOrderRepository.save(order);
 
         try {
+            // Product setup
             SessionCreateParams.LineItem.PriceData.ProductData productData =
                     SessionCreateParams.LineItem.PriceData.ProductData.builder()
                             .setName("Reservation #" + request.getReservationId())
                             .build();
 
+            // Price setup
             SessionCreateParams.LineItem.PriceData priceData =
                     SessionCreateParams.LineItem.PriceData.builder()
                             .setCurrency(stripeCurrency)
-                            .setUnitAmount(stripeAmount) // expects smallest currency unit
+                            .setUnitAmount(stripeAmount)
                             .setProductData(productData)
                             .build();
 
+            // Line item
             SessionCreateParams.LineItem lineItem =
                     SessionCreateParams.LineItem.builder()
                             .setQuantity(1L)
                             .setPriceData(priceData)
                             .build();
 
+            // URLs
             String successUrl = String.format("%s/payment/success?session_id={CHECKOUT_SESSION_ID}", frontendBaseUrl);
             String cancelUrl = String.format("%s/payment/cancel", frontendBaseUrl);
 
+            // Session parameters
             SessionCreateParams params = SessionCreateParams.builder()
                     .setMode(SessionCreateParams.Mode.PAYMENT)
                     .setSuccessUrl(successUrl)
@@ -125,7 +149,6 @@ public class PaymentServiceImpl implements PaymentService {
             Session session = Session.create(params);
 
             order.setSessionId(session.getId());
-            // PaymentIntent may be null until after completion; capture if available
             if (session.getPaymentIntent() != null) {
                 order.setStripePaymentIntentId(session.getPaymentIntent());
             }
@@ -149,23 +172,22 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
+
+    //  Currency Conversion
+
     private Long convertToStripeAmount(BigDecimal amount, String currencyUpper) {
-        // Currently both USD and LKR have 2 decimal places for Stripe
         int fractionDigits;
         switch (currencyUpper) {
-            case "USD":
-            case "LKR":
-                fractionDigits = 2;
-                break;
-            default:
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported currency for conversion");
+            case "USD", "LKR" -> fractionDigits = 2;
+            default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported currency for conversion");
         }
         BigDecimal scaled = amount.scaleByPowerOfTen(fractionDigits);
         BigDecimal rounded = scaled.setScale(0, RoundingMode.HALF_UP);
-        long value = rounded.longValueExact();
-        log.debug("Converted {} {} to smallest unit: {}", amount, currencyUpper, value);
-        return value;
+        return rounded.longValueExact();
     }
+
+
+    //  Get Latest Payment by Reservation ID
 
     @Override
     @Transactional(readOnly = true)
@@ -184,49 +206,217 @@ public class PaymentServiceImpl implements PaymentService {
                 .build();
     }
 
+
+    //  Stripe Webhook Handler (fixed)
+
     @Override
+
     @Transactional
     public void handleStripeWebhook(String payload, String signatureHeader) {
-        if (webhookSecret == null || webhookSecret.isBlank()) {
-            throw new IllegalStateException("Stripe webhook secret not configured. Set STRIPE_WEBHOOK_SECRET environment variable.");
+        if (signatureHeader == null || signatureHeader.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing Stripe-Signature header");
         }
+
+        if (payload == null || payload.isBlank()) {
+            log.error("❌ Webhook payload is null or empty");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Empty webhook payload");
+        }
+
+        log.debug("📦 Stripe webhook triggered. Payload length: {}", payload.length());
+
         Event event;
         try {
             event = Webhook.constructEvent(payload, signatureHeader, webhookSecret);
         } catch (Exception e) {
-            throw new RuntimeException("Invalid Stripe webhook signature: " + e.getMessage(), e);
+            log.warn("❌ Stripe webhook signature verification failed: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Stripe webhook signature");
         }
 
         String type = event.getType();
+        String eventId = event.getId();
+        log.info("📦 Received Stripe event: type={}", type);
+
+        // First, try to parse the raw JSON directly for better reliability
+        try {
+            JsonObject eventJson = com.google.gson.JsonParser.parseString(payload).getAsJsonObject();
+            JsonObject dataObj = eventJson.getAsJsonObject("data");
+            JsonObject objectData = dataObj.getAsJsonObject("object");
+
+            handleEventByType(type, objectData);
+            return;
+
+        } catch (Exception e) {
+            log.warn("⚠️ Direct JSON parsing failed for type={}. Error: {}", type, e.getMessage());
+        }
+
+        // Fallback to Stripe's deserialization
         EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
-        if (!deserializer.getObject().isPresent()) {
-            // Cannot deserialize; ignore but don't fail the webhook
+        Optional<StripeObject> objOpt = deserializer.getObject();
+
+        if (objOpt.isPresent()) {
+            StripeObject obj = objOpt.get();
+            handleStripeObject(type, obj);
+        } else {
+            log.error("❌ Both JSON parsing and Stripe deserialization failed for event type: {}", type);
+        }
+    }
+
+    private void handleEventByType(String type, JsonObject objectData) {
+        switch (type) {
+            case "checkout.session.completed":
+            case "checkout.session.expired":
+                handleCheckoutSessionEvent(type, objectData);
+                break;
+
+            case "payment_intent.succeeded":
+            case "payment_intent.canceled":
+            case "payment_intent.payment_failed":
+            case "payment_intent.processing":
+            case "payment_intent.created":
+                handlePaymentIntentEvent(type, objectData);
+                break;
+
+            case "charge.succeeded":
+            case "charge.updated":
+                handleChargeEvent(type, objectData);
+                break;
+
+            default:
+                log.info("ℹ️ Unhandled event type: {}", type);
+        }
+    }
+
+    private void handleCheckoutSessionEvent(String type, JsonObject sessionData) {
+        JsonElement idElement = sessionData.get("id");
+        if (idElement == null || idElement.isJsonNull()) {
+            log.error("❌ No session ID found in checkout session event");
             return;
         }
 
-        StripeObject obj = deserializer.getObject().get();
+        String sessionId = idElement.getAsString();
+        log.info("🔍 Processing session event: {} for sessionId: {}", type, sessionId);
 
+        paymentOrderRepository.findBySessionId(sessionId).ifPresentOrElse(order -> {
+            PaymentOrderStatus oldStatus = order.getStatus();
+
+            if ("checkout.session.completed".equals(type)) {
+                order.setStatus(PaymentOrderStatus.SUCCEEDED);
+
+                // Extract payment_intent if available
+                JsonElement piElement = sessionData.get("payment_intent");
+                if (piElement != null && !piElement.isJsonNull()) {
+                    String paymentIntentId = piElement.getAsString();
+                    order.setStripePaymentIntentId(paymentIntentId);
+                    log.info("💳 Updated payment intent ID: {}", paymentIntentId);
+                }
+
+                log.info("✅ Payment completed for sessionId: {} (status: {} -> {})",
+                        sessionId, oldStatus, order.getStatus());
+
+            } else if ("checkout.session.expired".equals(type)) {
+                order.setStatus(PaymentOrderStatus.CANCELED);
+                log.info("⏰ Session expired for sessionId: {} (status: {} -> {})",
+                        sessionId, oldStatus, order.getStatus());
+            }
+
+            paymentOrderRepository.save(order);
+
+        }, () -> {
+            log.warn("⚠️ No PaymentOrder found for sessionId: {}", sessionId);
+        });
+    }
+
+    private void handlePaymentIntentEvent(String type, JsonObject paymentIntentData) {
+        JsonElement idElement = paymentIntentData.get("id");
+        if (idElement == null || idElement.isJsonNull()) {
+            log.error("❌ No payment intent ID found in payment intent event");
+            return;
+        }
+
+        String paymentIntentId = idElement.getAsString();
+        log.info("🔍 Processing payment intent event: {} for paymentIntentId: {}", type, paymentIntentId);
+
+        paymentOrderRepository.findByStripePaymentIntentId(paymentIntentId).ifPresentOrElse(order -> {
+            PaymentOrderStatus oldStatus = order.getStatus();
+            PaymentOrderStatus newStatus = null;
+
+            switch (type) {
+                case "payment_intent.succeeded":
+                    newStatus = PaymentOrderStatus.SUCCEEDED;
+                    break;
+                case "payment_intent.canceled":
+                    newStatus = PaymentOrderStatus.CANCELED;
+                    break;
+                case "payment_intent.payment_failed":
+                    newStatus = PaymentOrderStatus.FAILED;
+                    break;
+                case "payment_intent.processing":
+                    newStatus = PaymentOrderStatus.REQUIRES_ACTION;
+                    break;
+                case "payment_intent.created":
+                    // Don't change status for created events, just log
+                    log.info("💳 Payment intent created: {}", paymentIntentId);
+                    return;
+                default:
+                    log.warn("⚠️ Unhandled payment intent event type: {}", type);
+                    return;
+            }
+
+            if (newStatus != null) {
+                order.setStatus(newStatus);
+                paymentOrderRepository.save(order);
+                log.info("✅ Updated payment intent: {} (status: {} -> {})",
+                        paymentIntentId, oldStatus, newStatus);
+            }
+
+        }, () -> {
+            log.warn("⚠️ No PaymentOrder found for paymentIntentId: {}", paymentIntentId);
+        });
+    }
+
+    private void handleChargeEvent(String type, JsonObject chargeData) {
+        JsonElement piElement = chargeData.get("payment_intent");
+        if (piElement == null || piElement.isJsonNull()) {
+            log.info("ℹ️ Charge event {} has no payment_intent, skipping", type);
+            return;
+        }
+
+        String paymentIntentId = piElement.getAsString();
+        log.info("🔍 Processing charge event: {} for paymentIntentId: {}", type, paymentIntentId);
+
+        // For charge events, we mainly just log since payment_intent events handle status updates
+        paymentOrderRepository.findByStripePaymentIntentId(paymentIntentId).ifPresentOrElse(order -> {
+            log.info("💰 Charge {} for payment order: {} (reservationId: {})",
+                    type, order.getId(), order.getReservationId());
+        }, () -> {
+            log.warn("⚠️ No PaymentOrder found for charge event paymentIntentId: {}", paymentIntentId);
+        });
+    }
+
+    private void handleStripeObject(String type, StripeObject obj) {
         if (obj instanceof Session) {
             Session session = (Session) obj;
             String sessionId = session.getId();
-            paymentOrderRepository.findBySessionId(sessionId).ifPresent(order -> {
+
+            paymentOrderRepository.findBySessionId(sessionId).ifPresentOrElse(order -> {
                 if ("checkout.session.completed".equals(type)) {
                     order.setStatus(PaymentOrderStatus.SUCCEEDED);
-                    // Backfill PaymentIntent id if available
                     if (session.getPaymentIntent() != null) {
                         order.setStripePaymentIntentId(session.getPaymentIntent());
                     }
-                    paymentOrderRepository.save(order);
+                    log.info("✅ [Object] Payment completed for sessionId: {}", sessionId);
+                } else if ("checkout.session.expired".equals(type)) {
+                    order.setStatus(PaymentOrderStatus.CANCELED);
+                    log.info("⏰ [Object] Session expired for sessionId: {}", sessionId);
                 }
-            });
-            return;
-        }
+                paymentOrderRepository.save(order);
+            }, () -> log.warn("⚠️ [Object] No PaymentOrder found for sessionId: {}", sessionId));
 
-        if (obj instanceof PaymentIntent) {
+        } else if (obj instanceof PaymentIntent) {
             PaymentIntent intent = (PaymentIntent) obj;
             String paymentIntentId = intent.getId();
 
-            paymentOrderRepository.findByStripePaymentIntentId(paymentIntentId).ifPresent(order -> {
+            paymentOrderRepository.findByStripePaymentIntentId(paymentIntentId).ifPresentOrElse(order -> {
                 switch (type) {
                     case "payment_intent.succeeded":
                         order.setStatus(PaymentOrderStatus.SUCCEEDED);
@@ -238,14 +428,14 @@ public class PaymentServiceImpl implements PaymentService {
                         order.setStatus(PaymentOrderStatus.FAILED);
                         break;
                     case "payment_intent.processing":
-                        order.setStatus(PaymentOrderStatus.PENDING);
+                        order.setStatus(PaymentOrderStatus.REQUIRES_ACTION);
                         break;
                     default:
-                        // no-op for other PI events
-                        break;
+                        return;
                 }
                 paymentOrderRepository.save(order);
-            });
+                log.info("✅ [Object] Updated payment intent: {} status for type: {}", paymentIntentId, type);
+            }, () -> log.warn("⚠️ [Object] No PaymentOrder found for paymentIntentId: {}", paymentIntentId));
         }
     }
 }
