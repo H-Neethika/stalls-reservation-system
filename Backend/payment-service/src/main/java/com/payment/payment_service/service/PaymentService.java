@@ -1,4 +1,13 @@
 package com.payment.payment_service.service;
 
-public class PaymentService {
+import com.payment.payment_service.payload.request.CreatePaymentRequest;
+import com.payment.payment_service.payload.response.PaymentIntentResponse;
+import com.payment.payment_service.payload.response.PaymentOrderResponse;
+
+public interface PaymentService {
+    PaymentIntentResponse createPaymentIntent(CreatePaymentRequest request);
+
+    PaymentOrderResponse getLatestOrderByReservationId(Long reservationId);
+
+    void handleStripeWebhook(String payload, String signatureHeader);
 }
