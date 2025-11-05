@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -19,6 +21,14 @@ public class PaymentController {
 
     @PostMapping("/intent")
     public ResponseEntity<PaymentIntentResponse> createPaymentIntent(@Valid @RequestBody CreatePaymentRequest request) {
+        String currency = request.getCurrency();
+        if (currency != null && !currency.isBlank()) {
+            String upper = currency.toUpperCase();
+            if (!("USD".equals(upper) || "LKR".equals(upper))) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported currency. Allowed: USD, LKR");
+            }
+            request.setCurrency(upper);
+        }
         PaymentIntentResponse response = paymentService.createPaymentIntent(request);
         return ResponseEntity.ok(response);
     }

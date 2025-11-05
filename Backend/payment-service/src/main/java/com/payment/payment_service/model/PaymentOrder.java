@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "payment_orders")
@@ -26,7 +27,14 @@ public class PaymentOrder {
     private Long reservationId;
 
     @Column(nullable = false)
-    private Long amount; // amount in the smallest currency unit (e.g., cents)
+    private Long amount; // legacy: amount in smallest currency unit (e.g., cents)
+
+    // New fields to persist both human-readable and Stripe smallest-unit amounts
+    @Column(precision = 19, scale = 2)
+    private BigDecimal originalAmount; // e.g., 500.00
+
+    @Column
+    private Long convertedStripeAmount; // e.g., 50000
 
     @Column(nullable = false)
     private String currency;

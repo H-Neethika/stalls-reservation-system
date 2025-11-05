@@ -17,12 +17,19 @@ import com.stripe.model.StripeObject;
 import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.param.checkout.SessionCreateParams;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentOrderRepository paymentOrderRepository;
@@ -49,15 +56,37 @@ public class PaymentServiceImpl implements PaymentService {
 
         Stripe.apiKey = stripeSecretKey;
 
-        String currency = (request.getCurrency() == null || request.getCurrency().isBlank())
+        String requestedCurrency = request.getCurrency();
+        String resolvedCurrency = (requestedCurrency == null || requestedCurrency.isBlank())
                 ? defaultCurrency
-                : request.getCurrency();
+                : requestedCurrency;
+        String currencyUpper = resolvedCurrency.toUpperCase();
+        if (!("USD".equals(currencyUpper) || "LKR".equals(currencyUpper))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported currency. Allowed: USD, LKR");
+        }
+        String stripeCurrency = currencyUpper.toLowerCase(); // stripe expects lowercase
+
+        BigDecimal originalAmount = request.getTotalAmount();
+        if (originalAmount == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "totalAmount is required");
+        }
+        if (originalAmount.compareTo(new BigDecimal("0.01")) < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "totalAmount must be at least 0.01");
+        }
+        // Normalize to 2 decimal places
+        BigDecimal normalizedAmount = originalAmount.setScale(2, RoundingMode.HALF_UP);
+        Long stripeAmount = convertToStripeAmount(normalizedAmount, currencyUpper);
+
+        log.info("Creating Stripe Checkout Session: reservationId={}, currency={}, originalAmount={}, convertedStripeAmount={}",
+                request.getReservationId(), currencyUpper, normalizedAmount, stripeAmount);
 
         // Persist a new payment order in PENDING state
         PaymentOrder order = PaymentOrder.builder()
                 .reservationId(request.getReservationId())
-                .amount(request.getTotalAmount())
-                .currency(currency)
+                .amount(stripeAmount) // keep legacy field as smallest unit
+                .originalAmount(normalizedAmount)
+                .convertedStripeAmount(stripeAmount)
+                .currency(currencyUpper)
                 .status(PaymentOrderStatus.PENDING)
                 .build();
         order = paymentOrderRepository.save(order);
@@ -70,8 +99,8 @@ public class PaymentServiceImpl implements PaymentService {
 
             SessionCreateParams.LineItem.PriceData priceData =
                     SessionCreateParams.LineItem.PriceData.builder()
-                            .setCurrency(currency)
-                            .setUnitAmount(request.getTotalAmount()) // expects smallest currency unit
+                            .setCurrency(stripeCurrency)
+                            .setUnitAmount(stripeAmount) // expects smallest currency unit
                             .setProductData(productData)
                             .build();
 
@@ -107,6 +136,9 @@ public class PaymentServiceImpl implements PaymentService {
                     .sessionId(session.getId())
                     .paymentIntentId(order.getStripePaymentIntentId())
                     .paymentUrl(session.getUrl())
+                    .currency(currencyUpper)
+                    .originalAmount(normalizedAmount)
+                    .convertedStripeAmount(stripeAmount)
                     .status(order.getStatus())
                     .build();
 
@@ -115,6 +147,24 @@ public class PaymentServiceImpl implements PaymentService {
             paymentOrderRepository.save(order);
             throw new RuntimeException("Stripe error creating checkout session: " + e.getMessage(), e);
         }
+    }
+
+    private Long convertToStripeAmount(BigDecimal amount, String currencyUpper) {
+        // Currently both USD and LKR have 2 decimal places for Stripe
+        int fractionDigits;
+        switch (currencyUpper) {
+            case "USD":
+            case "LKR":
+                fractionDigits = 2;
+                break;
+            default:
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported currency for conversion");
+        }
+        BigDecimal scaled = amount.scaleByPowerOfTen(fractionDigits);
+        BigDecimal rounded = scaled.setScale(0, RoundingMode.HALF_UP);
+        long value = rounded.longValueExact();
+        log.debug("Converted {} {} to smallest unit: {}", amount, currencyUpper, value);
+        return value;
     }
 
     @Override

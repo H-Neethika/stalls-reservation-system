@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -15,5 +17,8 @@ public class PaymentIntentResponse {
     private String sessionId;
     private String paymentIntentId;
     private String paymentUrl;
+    private String currency; // "LKR" or "USD"
+    private BigDecimal originalAmount; // e.g., 500.00
+    private Long convertedStripeAmount; // e.g., 50000
     private PaymentOrderStatus status;
 }
