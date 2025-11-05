@@ -21,6 +21,7 @@ public class Exhibition {
 
 
     private Long id;
+    private String exhibitionName;
     private LocalDateTime startDateTime;
     private LocalDateTime endDateTime;
     private LocalDateTime bookingOpenDateTime;
