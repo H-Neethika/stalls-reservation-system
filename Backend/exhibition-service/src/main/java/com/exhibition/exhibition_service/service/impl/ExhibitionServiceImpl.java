@@ -3,6 +3,7 @@ package com.exhibition.exhibition_service.service.impl;
 
 import com.exhibition.exhibition_service.dto.ExhibitionDTO;
 import com.exhibition.exhibition_service.exception.InvalidExhibitionDateException;
+import com.exhibition.exhibition_service.exception.ExhibitionConflictException;
 import com.exhibition.exhibition_service.mapper.ExhibitionMapper;
 import com.exhibition.exhibition_service.model.Exhibition;
 import com.exhibition.exhibition_service.repository.ExhibitionRepository;
@@ -14,6 +15,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import static com.exhibition.exhibition_service.domain.EXHIBITION_STATE.PUBLISHED;
 
 @Service
 @RequiredArgsConstructor
@@ -72,11 +74,38 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         }
     }
 
+    private void validateNoOverlapWithPublished(Exhibition exhibition, Long excludeIdIfAny) {
+        if (exhibition.getExhibitionState() != PUBLISHED) {
+            return; // Only enforce overlap when target is PUBLISHED
+        }
+
+        boolean exists;
+        if (excludeIdIfAny == null) {
+            exists = exhibitionRepository
+                    .existsByExhibitionStateAndStartDateTimeLessThanAndEndDateTimeGreaterThan(
+                            PUBLISHED,
+                            exhibition.getEndDateTime(),
+                            exhibition.getStartDateTime());
+        } else {
+            exists = exhibitionRepository
+                    .existsByExhibitionStateAndIdNotAndStartDateTimeLessThanAndEndDateTimeGreaterThan(
+                            PUBLISHED,
+                            excludeIdIfAny,
+                            exhibition.getEndDateTime(),
+                            exhibition.getStartDateTime());
+        }
+
+        if (exists) {
+            throw new ExhibitionConflictException("Another exhibition is already published during these dates.");
+        }
+    }
+
 
     @Override
     public ExhibitionDTO createExhibition(ExhibitionDTO exhibition) {
         Exhibition entity = exhibitionMapper.toEntity(exhibition);
         validateExhibitionDates(entity);
+        validateNoOverlapWithPublished(entity, null);
         Exhibition saved = exhibitionRepository.save(entity);
         return exhibitionMapper.toDto(saved);
     }
@@ -108,6 +137,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
 
             validateExhibitionDates(existing);
+            validateNoOverlapWithPublished(existing, existing.getId());
             Exhibition updated = exhibitionRepository.save(existing);
             return exhibitionMapper.toDto(updated);
         }).orElseThrow(()->new RuntimeException("Exhibition not found with id "+id));
