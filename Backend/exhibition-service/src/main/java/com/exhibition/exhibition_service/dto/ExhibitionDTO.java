@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 public class ExhibitionDTO {
 
     private Long id;
+    private String exhibitionName;
     private LocalDateTime startDateTime;
     private LocalDateTime endDateTime;
     private LocalDateTime bookingOpenDateTime;

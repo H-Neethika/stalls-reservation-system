@@ -85,6 +85,9 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     public ExhibitionDTO updateExhibition(Long id, ExhibitionDTO exhibition) {
         return exhibitionRepository.findById(id).map(existing ->{
 
+            if (exhibition.getExhibitionName() != null && !exhibition.getExhibitionName().isBlank())
+                existing.setExhibitionName(exhibition.getExhibitionName());
+
             if (exhibition.getStartDateTime() != null)
                 existing.setStartDateTime(exhibition.getStartDateTime());
 
@@ -133,5 +136,13 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     @Override
     public List<ExhibitionDTO> getAllExhibitions() {
         return exhibitionRepository.findAll().stream().map(exhibitionMapper::toDto).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ExhibitionDTO> getExhibitionsByState(com.exhibition.exhibition_service.domain.EXHIBITION_STATE state) {
+        return exhibitionRepository.findByExhibitionState(state)
+                .stream()
+                .map(exhibitionMapper::toDto)
+                .collect(Collectors.toList());
     }
 }

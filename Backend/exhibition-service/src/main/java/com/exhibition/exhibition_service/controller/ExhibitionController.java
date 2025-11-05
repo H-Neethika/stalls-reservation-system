@@ -2,6 +2,7 @@ package com.exhibition.exhibition_service.controller;
 
 
 import com.exhibition.exhibition_service.dto.ExhibitionDTO;
+import com.exhibition.exhibition_service.domain.EXHIBITION_STATE;
 import com.exhibition.exhibition_service.model.Exhibition;
 import com.exhibition.exhibition_service.service.ExhibitionService;
 import lombok.RequiredArgsConstructor;
@@ -54,5 +55,10 @@ public class ExhibitionController {
     @GetMapping
     public ResponseEntity<List<ExhibitionDTO>> getAllExhibitions(){
         return ResponseEntity.ok(exhibitionService.getAllExhibitions());
+    }
+
+    @GetMapping("/state/{state}")
+    public ResponseEntity<List<ExhibitionDTO>> getByState(@PathVariable EXHIBITION_STATE state) {
+        return ResponseEntity.ok(exhibitionService.getExhibitionsByState(state));
     }
 }
