@@ -1,0 +1,46 @@
+server:
+  port: ${USER_SERVICE_SERVER_PORT:8081}
+
+spring:
+  application:
+    name: USER-SERVICE
+
+  datasource:
+    url: ${USER_DB_URL}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          lob:
+            non_contextual_creation: true
+
+app:
+  jwt:
+    issuer: ${APP_JWT_ISSUER:http://localhost:8090}
+    access-token-ttl: ${APP_JWT_ACCESS_TOKEN_TTL:PT1H}
+    refresh-token-ttl: ${APP_JWT_REFRESH_TOKEN_TTL:P7D}
+
+logging:
+  level:
+    org:
+      springframework:
+        security: INFO
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka

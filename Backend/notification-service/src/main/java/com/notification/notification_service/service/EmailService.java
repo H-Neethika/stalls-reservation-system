@@ -23,7 +23,6 @@ public class EmailService {
         helper.setTo(to);
         helper.setSubject(subject);
         helper.setText(body, true);
-
         // Attach the QR code
         helper.addAttachment(attachmentName, new ByteArrayResource(qrCodeBytes), "image/png");
 

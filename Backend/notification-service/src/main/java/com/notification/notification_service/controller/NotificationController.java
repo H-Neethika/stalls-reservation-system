@@ -11,13 +11,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/notification")
 public class NotificationController {
 
     @Autowired
     private NotificationService notificationService;
 
-    @GetMapping("/notifications/{reservationId}")
+    @GetMapping("/{reservationId}")
     public ResponseEntity<Notification> getNotificationDetails(@PathVariable Long reservationId) {
         try {
             return ResponseEntity.ok(notificationService.getNotificationDetails(reservationId));
@@ -36,7 +36,7 @@ public class NotificationController {
         }
     }
 
-    @PostMapping("/notifications/send")
+    @PostMapping("/send")
     public ResponseEntity<String> sendNotification(@RequestBody BookingEvent event) {
         try {
             notificationService.processNotification(event);

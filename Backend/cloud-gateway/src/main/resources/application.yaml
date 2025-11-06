@@ -1,0 +1,59 @@
+server:
+  port: 5000
+
+
+spring:
+  application:
+    name: GATEWAY-SERVICE
+  cloud:
+    gateway:
+      routes:
+        - id: USER-SERVICE
+          uri:
+            lb://USER-SERVICE
+          predicates:
+            - Path=/auth/**, /api/users/**, /
+
+        - id: BOOKING-SERVICE
+          uri:
+            lb://BOOKING-SERVICE
+          predicates:
+            - Path=/api/exhibition-halls/**, /api/exhibition-stalls/**, /api/genre/**, /api/hall/**,/api/reservation/**
+
+        - id: EXHIBITION-SERVICE
+          uri:
+            lb://EXHIBITION-SERVICE
+          predicates:
+            - Path=/api/exhibition/**
+
+        - id: NOTIFICATION-SERVICE
+          uri:
+            lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/api/notification/**
+
+        - id: PAYMENT-SERVICE
+          uri:
+            lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/api/payment/**
+
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      globalcors:
+        cors-configuration:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+
+
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka
