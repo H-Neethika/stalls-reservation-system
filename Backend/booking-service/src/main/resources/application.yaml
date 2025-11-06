@@ -24,3 +24,12 @@ spring:
       data-locations:
         - classpath:data.sql
 
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka
