@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: exhibition-service
+    name: EXHIBITION-SERVICE
 
   datasource:
     driver-class-name: org.postgresql.Driver

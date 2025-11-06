@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: payment-service
+    name: PAYMENT-SERVICE
 
   datasource:
     url: ${PAYMENT_DB_URL}
