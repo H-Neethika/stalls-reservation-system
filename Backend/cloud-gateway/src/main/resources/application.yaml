@@ -1,53 +1,85 @@
 server:
   port: 5000
 
-
 spring:
   cloud:
     gateway:
       routes:
-        - id: USER-SERVICE
+
+        # ---------- USER SERVICE ----------
+        - id: USER-SERVICE-API
           uri: lb://USER-SERVICE
           predicates:
-            - Path=/auth/**, /api/users/**, /USER-SERVICE/**
+            - Path=/auth/**, /api/users/**
+          filters:
+            - StripPrefix=0
+
+        - id: USER-SERVICE-SWAGGER
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/USER-SERVICE/**, /USER-SERVICE/v3/api-docs
           filters:
             - StripPrefix=1
 
-        - id: BOOKING-SERVICE
+
+        # ---------- BOOKING SERVICE ----------
+        - id: BOOKING-SERVICE-API
           uri: lb://BOOKING-SERVICE
           predicates:
-            - Path=/api/exhibition-halls/**, /api/exhibition-stalls/**, /api/genre/**, /api/hall/**, /api/reservation/**, /BOOKING-SERVICE/**
+            - Path=/api/exhibition-halls/**, /api/exhibition-stalls/**, /api/genre/**, /api/hall/**, /api/reservation/**
+          filters:
+            - StripPrefix=0
+
+        - id: BOOKING-SERVICE-SWAGGER
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/BOOKING-SERVICE/**, /BOOKING-SERVICE/v3/api-docs
           filters:
             - StripPrefix=1
 
-        - id: EXHIBITION-SERVICE
+
+        # ---------- EXHIBITION SERVICE ----------
+        - id: EXHIBITION-SERVICE-API
           uri: lb://EXHIBITION-SERVICE
           predicates:
-            - Path=/api/exhibition/**, /EXHIBITION-SERVICE/**
+            - Path=/api/exhibition/**
+          filters:
+            - StripPrefix=0
+
+        - id: EXHIBITION-SERVICE-SWAGGER
+          uri: lb://EXHIBITION-SERVICE
+          predicates:
+            - Path=/EXHIBITION-SERVICE/**, /EXHIBITION-SERVICE/v3/api-docs
           filters:
             - StripPrefix=1
 
-        - id: NOTIFICATION-SERVICE
+
+        # ---------- NOTIFICATION SERVICE ----------
+        - id: NOTIFICATION-SERVICE-API
           uri: lb://NOTIFICATION-SERVICE
           predicates:
-            - Path=/api/notification/**, /NOTIFICATION-SERVICE/**
+            - Path=/api/notification/**
+          filters:
+            - StripPrefix=0
+
+        - id: NOTIFICATION-SERVICE-SWAGGER
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/NOTIFICATION-SERVICE/**, /NOTIFICATION-SERVICE/v3/api-docs
           filters:
             - StripPrefix=1
-
-#        - id: PAYMENT-SERVICE
-#          uri: lb://PAYMENT-SERVICE
-#          predicates:
-#            - Path=/api/payment/**, /PAYMENT-SERVICE/**
 
 
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
       globalcors:
         cors-configuration:
           '[/**]':
             allowedOrigins: "*"
             allowedMethods: "*"
             allowedHeaders: "*"
+
 
 springdoc:
   swagger-ui:
@@ -60,7 +92,6 @@ springdoc:
         url: /EXHIBITION-SERVICE/v3/api-docs
       - name: NOTIFICATION-SERVICE
         url: /NOTIFICATION-SERVICE/v3/api-docs
-
 
 
 eureka:

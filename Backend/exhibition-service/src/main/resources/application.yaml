@@ -17,6 +17,11 @@ spring:
     show-sql: true
     defer-datasource-initialization: true
 
+springdoc:
+  api-docs:
+    enabled: true
+  packages-to-scan: com.exhibition.exhibition_service.controller
+
 
 eureka:
   instance:

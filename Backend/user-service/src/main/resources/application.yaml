@@ -24,6 +24,11 @@ spring:
           lob:
             non_contextual_creation: true
 
+springdoc:
+  api-docs:
+    enabled: true
+  packages-to-scan: com.user.userservice.controller
+
 app:
   jwt:
     issuer: ${APP_JWT_ISSUER:http://localhost:8090}
