@@ -2,6 +2,7 @@ package com.booking.booking_service.controller;
 
 import com.booking.booking_service.model.ExhibitionHall;
 import com.booking.booking_service.request.CreateExhibitionHallRequest;
+import com.booking.booking_service.response.ExhibitionHallResponse;
 import com.booking.booking_service.response.MessageResponse;
 import com.booking.booking_service.service.ExhibitionHallService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,12 +27,13 @@ public class ExhibitionHallController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ExhibitionHall>> getAllExhibitionHalls() {
+    public ResponseEntity<List<ExhibitionHallResponse>> getAllExhibitionHalls() {
         return ResponseEntity.ok(exhibitionHallService.getAllExhibitionHalls());
     }
 
+    // ✅ Get by ID (returns single DTO)
     @GetMapping("/{id}")
-    public ResponseEntity<ExhibitionHall> getExhibitionHallById(@PathVariable Long id) {
+    public ResponseEntity<ExhibitionHallResponse> getExhibitionHallById(@PathVariable Long id) {
         return exhibitionHallService.getExhibitionHallById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
