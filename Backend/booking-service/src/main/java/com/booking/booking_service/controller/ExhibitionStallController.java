@@ -4,6 +4,7 @@ package com.booking.booking_service.controller;
 import com.booking.booking_service.model.ExhibitionStall;
 import com.booking.booking_service.request.BulkCreateExhibitionStallsRequest;
 import com.booking.booking_service.request.CreateExhibitionStallRequest;
+import com.booking.booking_service.response.ExhibitionStallResponse;
 import com.booking.booking_service.response.MessageResponse;
 import com.booking.booking_service.service.ExhibitionStallService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,14 +36,13 @@ public class ExhibitionStallController {
         return ResponseEntity.ok(created);
     }
 
-
     @GetMapping
-    public ResponseEntity<List<ExhibitionStall>> getAllExhibitionStalls() {
+    public ResponseEntity<List<ExhibitionStallResponse>> getAllExhibitionStalls() {
         return ResponseEntity.ok(exhibitionStallService.getAllExhibitionStalls());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ExhibitionStall> getExhibitionStallById(@PathVariable Long id) {
+    public ResponseEntity<ExhibitionStallResponse> getExhibitionStallById(@PathVariable Long id) {
         return exhibitionStallService.getExhibitionStallById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
