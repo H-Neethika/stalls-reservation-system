@@ -30,10 +30,12 @@ public class ExhibitionController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> updateExhibition(@PathVariable Long id, @RequestBody ExhibitionDTO exhibition){
-
-        ExhibitionDTO updatedExhibition = exhibitionService.updateExhibition(id, exhibition);
-
+    public ResponseEntity<String> updateExhibition(
+            @PathVariable Long id,
+            @RequestBody ExhibitionDTO exhibition
+    ){
+        Long requesterUserId = exhibition.getOrganizerId();
+        ExhibitionDTO updatedExhibition = exhibitionService.updateExhibition(id, exhibition, requesterUserId);
         return ResponseEntity.ok("Exhibition has been updated");
     }
 
