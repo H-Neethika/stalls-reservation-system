@@ -2,6 +2,7 @@ package com.booking.booking_service.controller;
 
 import com.booking.booking_service.model.Reservation;
 import com.booking.booking_service.request.ReservationRequest;
+import com.booking.booking_service.response.ReservationResponse;
 import com.booking.booking_service.service.ReservationService;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,14 +30,14 @@ public class ReservationController {
   }
 
   @GetMapping("/{id}")
-  public ResponseEntity<Reservation> getReservationById(@PathVariable Long id) throws Exception {
-    Reservation reservation = reservationService.getReservationById(id);
+  public ResponseEntity<ReservationResponse> getReservationById(@PathVariable Long id) throws Exception {
+    ReservationResponse reservation = reservationService.getReservationById(id);
     return new ResponseEntity<>(reservation, HttpStatus.OK);
   }
 
   @GetMapping
-  public ResponseEntity<List<Reservation>> getAllReservation() {
-    List<Reservation> reservationList = reservationService.getAllReservation();
+  public ResponseEntity<List<ReservationResponse>> getAllReservation() {
+    List<ReservationResponse> reservationList = reservationService.getAllReservation();
     return new ResponseEntity<>(reservationList, HttpStatus.OK);
   }
 
