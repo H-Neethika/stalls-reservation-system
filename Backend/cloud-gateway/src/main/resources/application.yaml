@@ -3,40 +3,42 @@ server:
 
 
 spring:
-  application:
-    name: GATEWAY-SERVICE
   cloud:
     gateway:
       routes:
         - id: USER-SERVICE
-          uri:
-            lb://USER-SERVICE
+          uri: lb://USER-SERVICE
           predicates:
-            - Path=/auth/**, /api/users/**, /
+            - Path=/auth/**, /api/users/**, /USER-SERVICE/**
+          filters:
+            - StripPrefix=1
 
         - id: BOOKING-SERVICE
-          uri:
-            lb://BOOKING-SERVICE
+          uri: lb://BOOKING-SERVICE
           predicates:
-            - Path=/api/exhibition-halls/**, /api/exhibition-stalls/**, /api/genre/**, /api/hall/**,/api/reservation/**
+            - Path=/api/exhibition-halls/**, /api/exhibition-stalls/**, /api/genre/**, /api/hall/**, /api/reservation/**, /BOOKING-SERVICE/**
+          filters:
+            - StripPrefix=1
 
         - id: EXHIBITION-SERVICE
-          uri:
-            lb://EXHIBITION-SERVICE
+          uri: lb://EXHIBITION-SERVICE
           predicates:
-            - Path=/api/exhibition/**
+            - Path=/api/exhibition/**, /EXHIBITION-SERVICE/**
+          filters:
+            - StripPrefix=1
 
         - id: NOTIFICATION-SERVICE
-          uri:
-            lb://NOTIFICATION-SERVICE
+          uri: lb://NOTIFICATION-SERVICE
           predicates:
-            - Path=/api/notification/**
+            - Path=/api/notification/**, /NOTIFICATION-SERVICE/**
+          filters:
+            - StripPrefix=1
 
-        - id: PAYMENT-SERVICE
-          uri:
-            lb://PAYMENT-SERVICE
-          predicates:
-            - Path=/api/payment/**
+#        - id: PAYMENT-SERVICE
+#          uri: lb://PAYMENT-SERVICE
+#          predicates:
+#            - Path=/api/payment/**, /PAYMENT-SERVICE/**
+
 
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
@@ -46,6 +48,18 @@ spring:
             allowedOrigins: "*"
             allowedMethods: "*"
             allowedHeaders: "*"
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: USER-SERVICE
+        url: /USER-SERVICE/v3/api-docs
+      - name: BOOKING-SERVICE
+        url: /BOOKING-SERVICE/v3/api-docs
+      - name: EXHIBITION-SERVICE
+        url: /EXHIBITION-SERVICE/v3/api-docs
+      - name: NOTIFICATION-SERVICE
+        url: /NOTIFICATION-SERVICE/v3/api-docs
 
 
 
