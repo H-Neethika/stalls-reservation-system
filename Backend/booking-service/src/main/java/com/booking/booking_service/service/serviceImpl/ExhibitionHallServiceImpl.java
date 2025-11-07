@@ -8,6 +8,8 @@ import com.booking.booking_service.repository.HallRepository;
 import com.booking.booking_service.repository.StallTypeRepository;
 import com.booking.booking_service.request.CreateExhibitionHallRequest;
 import com.booking.booking_service.request.StallTypeRequest;
+import com.booking.booking_service.response.ExhibitionHallResponse;
+import com.booking.booking_service.response.StallTypeResponse;
 import com.booking.booking_service.service.ExhibitionHallService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ExhibitionHallServiceImpl implements ExhibitionHallService {
@@ -59,15 +62,18 @@ public class ExhibitionHallServiceImpl implements ExhibitionHallService {
 
         return savedExhibitionHall;
     }
-
     @Override
-    public List<ExhibitionHall> getAllExhibitionHalls() {
-        return exhibitionHallRepository.findAll();
+    public List<ExhibitionHallResponse> getAllExhibitionHalls() {
+        return exhibitionHallRepository.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public Optional<ExhibitionHall> getExhibitionHallById(Long id) {
-        return exhibitionHallRepository.findById(id);
+    public Optional<ExhibitionHallResponse> getExhibitionHallById(Long id) {
+        return exhibitionHallRepository.findById(id)
+                .map(this::mapToResponse);
     }
 
     @Override
@@ -87,5 +93,32 @@ public class ExhibitionHallServiceImpl implements ExhibitionHallService {
             throw new RuntimeException("ExhibitionHall not found with id " + id);
         }
         exhibitionHallRepository.deleteById(id);
+    }
+
+
+    private ExhibitionHallResponse mapToResponse(ExhibitionHall hall) {
+        ExhibitionHallResponse dto = new ExhibitionHallResponse();
+        dto.setId(hall.getId());
+        dto.setExhibitionId(hall.getExhibitionId());
+        dto.setHallId(hall.getHallId().getId());
+        dto.setHallName(hall.getHallId().getHallName());
+        dto.setRows(hall.getRows());
+        dto.setColumns(hall.getColumns());
+
+        // ✅ Fetch all stall types for this hall
+        List<StallTypeResponse> stallTypeResponses = stallTypeRepository
+                .findByExhibitionHallId(hall) // assumes repository method exists
+                .stream()
+                .map(st -> {
+                    StallTypeResponse stDto = new StallTypeResponse();
+                    stDto.setId(st.getId());
+                    stDto.setType(st.getType());
+                    stDto.setPrice(st.getPrice());
+                    return stDto;
+                })
+                .collect(Collectors.toList());
+
+        dto.setStallTypes(stallTypeResponses);
+        return dto;
     }
 }

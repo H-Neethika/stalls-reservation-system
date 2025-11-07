@@ -10,6 +10,7 @@ import com.booking.booking_service.repository.ExhibitionStallRepository;
 import com.booking.booking_service.repository.StallTypeRepository;
 import com.booking.booking_service.request.BulkCreateExhibitionStallsRequest;
 import com.booking.booking_service.request.CreateExhibitionStallRequest;
+import com.booking.booking_service.response.ExhibitionStallResponse;
 import com.booking.booking_service.service.ExhibitionStallService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -58,6 +59,35 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
         return exhibitionStallRepository.save(stall);
     }
 
+    private ExhibitionStallResponse mapToResponse(ExhibitionStall stall) {
+        ExhibitionStallResponse dto = new ExhibitionStallResponse();
+        dto.setId(stall.getId());
+        dto.setStallName(stall.getStallName());
+        dto.setPrice(stall.getPrice());
+        dto.setRowPosition(stall.getRowPosition());
+        dto.setColumnPosition(stall.getColumnPosition());
+
+        if (stall.getExhibitionHallId() != null) {
+            dto.setExhibitionHallId(stall.getExhibitionHallId().getId());
+            if (stall.getExhibitionHallId().getHallId() != null) {
+                dto.setHallName(stall.getExhibitionHallId().getHallId().getHallName());
+            }
+        }
+
+        if (stall.getStallType() != null) {
+            dto.setStallTypeId(stall.getStallType().getId());
+            dto.setStallTypeName(stall.getStallType().getType());
+        }
+
+        if (stall.getBookingStatus() != null) {
+            dto.setBookingStatus(stall.getBookingStatus().getStatus());
+            dto.setBookingColor(stall.getBookingStatus().getColor());
+        }
+
+        return dto;
+    }
+
+
     @Override
     public List<ExhibitionStall> createMultipleExhibitionStalls(BulkCreateExhibitionStallsRequest request) {
 
@@ -88,16 +118,20 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
 
         return createdStalls;
     }
-
     @Override
-    public List<ExhibitionStall> getAllExhibitionStalls() {
-        return exhibitionStallRepository.findAll();
+    public List<ExhibitionStallResponse> getAllExhibitionStalls() {
+        return exhibitionStallRepository.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 
     @Override
-    public Optional<ExhibitionStall> getExhibitionStallById(Long id) {
-        return exhibitionStallRepository.findById(id);
+    public Optional<ExhibitionStallResponse> getExhibitionStallById(Long id) {
+        return exhibitionStallRepository.findById(id)
+                .map(this::mapToResponse);
     }
+
 
     @Override
     public ExhibitionStall updateExhibitionStall(Long id, CreateExhibitionStallRequest request) {
