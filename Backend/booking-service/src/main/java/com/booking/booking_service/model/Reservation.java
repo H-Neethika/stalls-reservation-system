@@ -23,12 +23,13 @@ public class Reservation {
 
     private Long userId;
 
-    @OneToMany
-    private List<Stall> stall=new ArrayList<>();
+    @OneToMany(cascade = CascadeType.ALL)
+    @JoinColumn(name = "reservation_id")
+    private List<ExhibitionStall> stall=new ArrayList<>();
 
     private Date createdAt;
 
-
+    private Long totalAmount;
 
 
 }
