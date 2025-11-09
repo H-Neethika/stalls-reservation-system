@@ -9,6 +9,13 @@ spring:
     gateway:
       routes:
         # ---------- USER SERVICE ----------
+        - id: USER-SERVICE-OAUTH2
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/oauth2/**, /login/oauth2/**
+          filters:
+            - StripPrefix=0
+
         - id: USER-SERVICE-API
           uri: lb://USER-SERVICE
           predicates:
