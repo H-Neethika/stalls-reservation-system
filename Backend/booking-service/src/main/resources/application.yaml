@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: booking-service
+    name: BOOKING-SERVICE
 
   datasource:
     driver-class-name: org.postgresql.Driver
@@ -23,9 +23,13 @@ spring:
       platform: postgres
       data-locations:
         - classpath:data.sql
-        - classpath:hallA_stalls.sql
-        - classpath:hallB_stalls.sql
-        - classpath:hallCDFG_stalls.sql
-        - classpath:hallKJR_stalls.sql
-        - classpath:hallHH1_stalls.sql
-        - classpath:hallLMNPQ_stalls.sql
+
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: http://localhost:8070/eureka
