@@ -85,6 +85,7 @@ spring:
           filters:
             - StripPrefix=1
 
+
         # ---------- PAYMENT SERVICE ----------
         - id: PAYMENT-SERVICE-API
           uri: lb://PAYMENT-SERVICE
@@ -92,7 +93,14 @@ spring:
             - Path=/api/payment/**
           filters:
             - StripPrefix=0
-            - JwtRelay
+
+        - id: PAYMENT-SERVICE-SWAGGER
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/PAYMENT-SERVICE/**, /PAYMENT-SERVICE/v3/api-docs
+          filters:
+            - StripPrefix=1
+
 
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
@@ -108,6 +116,7 @@ springdoc:
         url: /EXHIBITION-SERVICE/v3/api-docs
       - name: NOTIFICATION-SERVICE
         url: /NOTIFICATION-SERVICE/v3/api-docs
+
 
 eureka:
   instance:

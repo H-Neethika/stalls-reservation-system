@@ -14,6 +14,7 @@ public class ExhibitionMapper {
         if (entity == null) return null;
         return ExhibitionDTO.builder()
                 .id(entity.getId())
+                .organizerId(entity.getOrganizerId())
                 .exhibitionName(entity.getExhibitionName())
                 .startDateTime(entity.getStartDateTime())
                 .endDateTime(entity.getEndDateTime())
@@ -28,6 +29,7 @@ public class ExhibitionMapper {
         if (dto == null) return null;
         return Exhibition.builder()
                 .id(dto.getId())
+                .organizerId(dto.getOrganizerId())
                 .exhibitionName(dto.getExhibitionName())
                 .startDateTime(dto.getStartDateTime())
                 .endDateTime(dto.getEndDateTime())
