@@ -6,9 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ArrowLeft, Loader2, Plus, Save, X } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
 type StallSize = "SMALL" | "MEDIUM" | "LARGE";
@@ -100,8 +106,10 @@ const HallDesigner = () => {
         }
 
         const stallUnits = STALL_SIZE_UNITS[stall.size];
-        const rowOverlap = row < stall.row + stallUnits && row + units > stall.row;
-        const colOverlap = col < stall.col + stallUnits && col + units > stall.col;
+        const rowOverlap =
+          row < stall.row + stallUnits && row + units > stall.row;
+        const colOverlap =
+          col < stall.col + stallUnits && col + units > stall.col;
         return rowOverlap && colOverlap;
       });
     },
@@ -148,7 +156,9 @@ const HallDesigner = () => {
     if (!position) {
       toast({
         title: "Layout full",
-        description: `No free space for a ${STALL_SIZE_LABELS[defaultSize].toLowerCase()} stall. Try resizing existing stalls or expanding the grid.`,
+        description: `No free space for a ${STALL_SIZE_LABELS[
+          defaultSize
+        ].toLowerCase()} stall. Try resizing existing stalls or expanding the grid.`,
         variant: "destructive",
       });
       return;
@@ -168,7 +178,8 @@ const HallDesigner = () => {
     if (units > rows || units > columns) {
       toast({
         title: "Stall too large",
-        description: "Increase the hall dimensions before placing this stall size.",
+        description:
+          "Increase the hall dimensions before placing this stall size.",
         variant: "destructive",
       });
       return;
@@ -180,7 +191,8 @@ const HallDesigner = () => {
     if (!isSpaceAvailable(clampedRow, clampedCol, defaultSize)) {
       toast({
         title: "Space occupied",
-        description: "That area is already covered by another stall. Choose another spot or move existing stalls.",
+        description:
+          "That area is already covered by another stall. Choose another spot or move existing stalls.",
         variant: "destructive",
       });
       return;
@@ -203,20 +215,28 @@ const HallDesigner = () => {
       if (!isSpaceAvailable(current.row, current.col, size, id)) {
         toast({
           title: "Not enough space",
-          description: "Move the stall to a larger free area before increasing the size.",
+          description:
+            "Move the stall to a larger free area before increasing the size.",
           variant: "destructive",
         });
         return prev;
       }
 
       return prev.map((stall) =>
-        stall.id === id ? { ...stall, size, price: getPriceForSize(size) } : stall
+        stall.id === id
+          ? { ...stall, size, price: getPriceForSize(size) }
+          : stall
       );
     });
   };
 
-  const startDrag = (event: React.PointerEvent<HTMLDivElement>, stall: PlacedStall) => {
-    const removeButton = (event.target as HTMLElement).closest("[data-stall-remove]");
+  const startDrag = (
+    event: React.PointerEvent<HTMLDivElement>,
+    stall: PlacedStall
+  ) => {
+    const removeButton = (event.target as HTMLElement).closest(
+      "[data-stall-remove]"
+    );
     if (removeButton) {
       return;
     }
@@ -343,7 +363,8 @@ const HallDesigner = () => {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error?.message || "Something went wrong while saving the hall.",
+        description:
+          error?.message || "Something went wrong while saving the hall.",
         variant: "destructive",
       });
     } finally {
@@ -359,7 +380,11 @@ const HallDesigner = () => {
       <nav className="border-b bg-card/50 backdrop-blur">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/organizer/halls")}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/organizer/halls")}
+            >
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <h1 className="text-2xl font-bold">Design Hall</h1>
@@ -420,7 +445,9 @@ const HallDesigner = () => {
                     min="1"
                     max="60"
                     value={rows}
-                    onChange={(e) => setRows(Math.max(1, Number(e.target.value) || 1))}
+                    onChange={(e) =>
+                      setRows(Math.max(1, Number(e.target.value) || 1))
+                    }
                   />
                 </div>
                 <div>
@@ -431,7 +458,9 @@ const HallDesigner = () => {
                     min="1"
                     max="60"
                     value={columns}
-                    onChange={(e) => setColumns(Math.max(1, Number(e.target.value) || 1))}
+                    onChange={(e) =>
+                      setColumns(Math.max(1, Number(e.target.value) || 1))
+                    }
                   />
                 </div>
               </CardContent>
@@ -444,26 +473,43 @@ const HallDesigner = () => {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label>Default stall size</Label>
-                  <Select value={defaultSize} onValueChange={(value) => setDefaultSize(value as StallSize)}>
+                  <Select
+                    value={defaultSize}
+                    onValueChange={(value) =>
+                      setDefaultSize(value as StallSize)
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="SMALL">Small - LKR {STALL_SIZE_PRICES.SMALL.toLocaleString()}</SelectItem>
-                      <SelectItem value="MEDIUM">Medium - LKR {STALL_SIZE_PRICES.MEDIUM.toLocaleString()}</SelectItem>
-                      <SelectItem value="LARGE">Large - LKR {STALL_SIZE_PRICES.LARGE.toLocaleString()}</SelectItem>
+                      <SelectItem value="SMALL">
+                        Small - LKR {STALL_SIZE_PRICES.SMALL.toLocaleString()}
+                      </SelectItem>
+                      <SelectItem value="MEDIUM">
+                        Medium - LKR {STALL_SIZE_PRICES.MEDIUM.toLocaleString()}
+                      </SelectItem>
+                      <SelectItem value="LARGE">
+                        Large - LKR {STALL_SIZE_PRICES.LARGE.toLocaleString()}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Medium stalls occupy 2x2 small units. Large stalls occupy 4x4 small units.
+                    Medium stalls occupy 2x2 small units. Large stalls occupy
+                    4x4 small units.
                   </p>
                 </div>
-                <Button variant="secondary" className="w-full" onClick={handleAddStallClick}>
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={handleAddStallClick}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Add {STALL_SIZE_LABELS[defaultSize]} Stall
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  Click on the layout to place the selected stall size. Drag stalls to reposition them.
+                  Click on the layout to place the selected stall size. Drag
+                  stalls to reposition them.
                 </p>
               </CardContent>
             </Card>
@@ -475,7 +521,8 @@ const HallDesigner = () => {
               <CardContent className="space-y-3">
                 {stalls.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No stalls yet. Use the button above or click the layout to start placing stalls.
+                    No stalls yet. Use the button above or click the layout to
+                    start placing stalls.
                   </p>
                 ) : (
                   stalls.map((stall) => (
@@ -486,14 +533,17 @@ const HallDesigner = () => {
                       <div>
                         <p className="font-medium">{stall.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {STALL_SIZE_LABELS[stall.size]} - Row {stall.row + 1}, Col {stall.col + 1} - LKR{" "}
+                          {STALL_SIZE_LABELS[stall.size]} - Row {stall.row + 1},
+                          Col {stall.col + 1} - LKR{" "}
                           {stall.price.toLocaleString()}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Select
                           value={stall.size}
-                          onValueChange={(value) => updateStallSize(stall.id, value as StallSize)}
+                          onValueChange={(value) =>
+                            updateStallSize(stall.id, value as StallSize)
+                          }
                         >
                           <SelectTrigger className="h-8 w-24 text-xs">
                             <SelectValue />
@@ -546,14 +596,20 @@ const HallDesigner = () => {
                     {stalls.map((stall) => {
                       const units = STALL_SIZE_UNITS[stall.size];
                       const isDragging = dragState?.stallId === stall.id;
-                      const displayRow = isDragging ? dragState.previewRow : stall.row;
-                      const displayCol = isDragging ? dragState.previewCol : stall.col;
+                      const displayRow = isDragging
+                        ? dragState.previewRow
+                        : stall.row;
+                      const displayCol = isDragging
+                        ? dragState.previewCol
+                        : stall.col;
 
                       return (
                         <div
                           key={stall.id}
                           className={`absolute rounded-md border-2 bg-primary/10 text-primary transition-shadow ${
-                            isDragging ? "border-primary shadow-xl ring-2 ring-primary/50" : "border-primary/60 hover:shadow-lg"
+                            isDragging
+                              ? "border-primary shadow-xl ring-2 ring-primary/50"
+                              : "border-primary/60 hover:shadow-lg"
                           }`}
                           style={{
                             width: units * CELL_SIZE,
@@ -580,7 +636,9 @@ const HallDesigner = () => {
                             className="flex h-full w-full cursor-grab select-none flex-col items-center justify-center gap-1 px-1 text-center text-xs font-semibold tracking-wide active:cursor-grabbing"
                           >
                             <span>{stall.name}</span>
-                            <span className="text-[11px] font-medium">{STALL_SIZE_ABBREVIATIONS[stall.size]}</span>
+                            <span className="text-[11px] font-medium">
+                              {STALL_SIZE_ABBREVIATIONS[stall.size]}
+                            </span>
                             <span className="text-[10px] font-normal text-muted-foreground">
                               LKR {stall.price.toLocaleString()}
                             </span>

@@ -9,6 +9,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.user.userservice.domain.AuthProvider;
 import com.user.userservice.domain.Role;
 import com.user.userservice.domain.User;
 import com.user.userservice.dto.AuthResponse;
@@ -53,6 +54,7 @@ public class UserService {
 				.password(passwordEncoder.encode(request.password()))
 				.organizationName(request.organizationName())
 				.role(request.role())
+				.authProvider(AuthProvider.LOCAL) // Set auth provider for email/password signup
 				.build();
 
 		User savedUser = userRepository.save(user);

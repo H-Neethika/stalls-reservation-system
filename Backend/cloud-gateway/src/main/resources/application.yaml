@@ -2,11 +2,20 @@ server:
   port: 5000
 
 spring:
+  application:
+    name: CLOUD-GATEWAY
+
   cloud:
     gateway:
       routes:
-
         # ---------- USER SERVICE ----------
+        - id: USER-SERVICE-OAUTH2
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/oauth2/**, /login/oauth2/**
+          filters:
+            - StripPrefix=0
+
         - id: USER-SERVICE-API
           uri: lb://USER-SERVICE
           predicates:
@@ -20,7 +29,6 @@ spring:
             - Path=/USER-SERVICE/**, /USER-SERVICE/v3/api-docs
           filters:
             - StripPrefix=1
-
 
         # ---------- BOOKING SERVICE ----------
         - id: BOOKING-SERVICE-API
@@ -37,7 +45,6 @@ spring:
           filters:
             - StripPrefix=1
 
-
         # ---------- EXHIBITION SERVICE ----------
         - id: EXHIBITION-SERVICE-API
           uri: lb://EXHIBITION-SERVICE
@@ -52,7 +59,6 @@ spring:
             - Path=/EXHIBITION-SERVICE/**, /EXHIBITION-SERVICE/v3/api-docs
           filters:
             - StripPrefix=1
-
 
         # ---------- NOTIFICATION SERVICE ----------
         - id: NOTIFICATION-SERVICE-API
@@ -89,14 +95,6 @@ spring:
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
 
-      globalcors:
-        cors-configuration:
-          '[/**]':
-            allowedOrigins: "*"
-            allowedMethods: "*"
-            allowedHeaders: "*"
-
-
 springdoc:
   swagger-ui:
     urls:
@@ -108,8 +106,6 @@ springdoc:
         url: /EXHIBITION-SERVICE/v3/api-docs
       - name: NOTIFICATION-SERVICE
         url: /NOTIFICATION-SERVICE/v3/api-docs
-      - name: PAYMENT-SERVICE
-        url: /PAYMENT-SERVICE/v3/api-docs
 
 
 eureka:
