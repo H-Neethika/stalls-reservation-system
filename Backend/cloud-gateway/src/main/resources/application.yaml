@@ -1,9 +1,15 @@
 server:
-  port: 5000
+  port: ${CLOUD_GATEWAY_PORT:5000}
 
 spring:
   application:
     name: CLOUD-GATEWAY
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${APP_JWT_ISSUER:http://localhost:9090}
 
   cloud:
     gateway:
@@ -22,6 +28,7 @@ spring:
             - Path=/auth/**, /api/users/**
           filters:
             - StripPrefix=0
+            - JwtRelay
 
         - id: USER-SERVICE-SWAGGER
           uri: lb://USER-SERVICE
@@ -37,6 +44,7 @@ spring:
             - Path=/api/exhibition-halls/**, /api/exhibition-stalls/**, /api/genre/**, /api/hall/**, /api/reservation/**
           filters:
             - StripPrefix=0
+            - JwtRelay
 
         - id: BOOKING-SERVICE-SWAGGER
           uri: lb://BOOKING-SERVICE
@@ -52,6 +60,7 @@ spring:
             - Path=/api/exhibition/**
           filters:
             - StripPrefix=0
+            - JwtRelay
 
         - id: EXHIBITION-SERVICE-SWAGGER
           uri: lb://EXHIBITION-SERVICE
@@ -67,6 +76,7 @@ spring:
             - Path=/api/notification/**
           filters:
             - StripPrefix=0
+            - JwtRelay
 
         - id: NOTIFICATION-SERVICE-SWAGGER
           uri: lb://NOTIFICATION-SERVICE
@@ -115,4 +125,16 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     serviceUrl:
-      defaultZone: http://localhost:8070/eureka
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8070/eureka}
+
+app:
+  jwt:
+    issuer: ${APP_JWT_ISSUER:http://localhost:9090}
+
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
+        cloud:
+          gateway: DEBUG
