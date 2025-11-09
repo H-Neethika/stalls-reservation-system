@@ -111,8 +111,12 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     }
 
     @Override
-    public ExhibitionDTO updateExhibition(Long id, ExhibitionDTO exhibition) {
+    public ExhibitionDTO updateExhibition(Long id, ExhibitionDTO exhibition, Long requesterUserId) {
         return exhibitionRepository.findById(id).map(existing ->{
+
+            if (existing.getOrganizerId() == null || requesterUserId == null || !existing.getOrganizerId().equals(requesterUserId)) {
+                throw new com.exhibition.exhibition_service.exception.ExhibitionForbiddenException("Only the created  organizer can update this exhibition");
+            }
 
             if (exhibition.getExhibitionName() != null && !exhibition.getExhibitionName().isBlank())
                 existing.setExhibitionName(exhibition.getExhibitionName());
