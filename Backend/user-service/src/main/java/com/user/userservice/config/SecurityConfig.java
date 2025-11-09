@@ -20,6 +20,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
@@ -92,12 +93,20 @@ public class SecurityConfig {
 	@Order(3)
 	public SecurityFilterChain webSecurityFilterChain(HttpSecurity http,
 			DaoAuthenticationProvider authenticationProvider,
-			OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> accessTokenResponseClient)
+			OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> accessTokenResponseClient,
+			ClientRegistrationRepository clientRegistrationRepository)
 			throws Exception {
+
+		// Create custom OAuth2 authorization request resolver to add prompt parameter
+		CustomOAuth2AuthorizationRequestResolver authorizationRequestResolver = new CustomOAuth2AuthorizationRequestResolver(
+				clientRegistrationRepository, "/oauth2/authorization");
+
 		http
 				.authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
 				.formLogin(Customizer.withDefaults())
 				.oauth2Login(oauth2 -> oauth2
+						.authorizationEndpoint(authorization -> authorization
+								.authorizationRequestResolver(authorizationRequestResolver))
 						.tokenEndpoint(token -> token
 								.accessTokenResponseClient(accessTokenResponseClient))
 						.userInfoEndpoint(userInfo -> userInfo

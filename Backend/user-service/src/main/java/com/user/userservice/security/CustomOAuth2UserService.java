@@ -9,7 +9,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
@@ -42,16 +41,26 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 		String registrationId = userRequest.getClientRegistration().getRegistrationId();
 		String email = extractEmail(userRequest, oauth2User);
 
-			User user = externalUserProcessor.ensureUser(registrationId, email, extractDisplayName(oauth2User));
+		// Check if user exists, but DON'T create yet - let the success handler decide
+		User user = externalUserProcessor.findUser(email);
+
+		Map<String, Object> attributes = new HashMap<>(oauth2User.getAttributes());
+		attributes.put("email", email);
+		attributes.put("registrationId", registrationId);
+
+		if (user != null) {
+			// Existing user - add user info to attributes
 			UserPrincipal principal = new UserPrincipal(user);
-
-			Map<String, Object> attributes = new HashMap<>(oauth2User.getAttributes());
-		attributes.put("email", user.getEmail());
-		attributes.put("userId", user.getId());
-		attributes.putIfAbsent("name", user.getName());
-
+			attributes.put("userId", user.getId());
+			attributes.putIfAbsent("name", user.getName());
 			return new DefaultOAuth2User(principal.getAuthorities(), attributes, "email");
+		} else {
+			// New user - just return OAuth2 info, don't create yet
+			// The success handler will validate and create if appropriate
+			attributes.putIfAbsent("name", extractDisplayName(oauth2User));
+			return new DefaultOAuth2User(List.of(), attributes, "email");
 		}
+	}
 
 	private String extractEmail(OAuth2UserRequest userRequest, OAuth2User oauth2User) {
 		String registrationId = userRequest.getClientRegistration().getRegistrationId().toLowerCase();
@@ -106,12 +115,5 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 			}
 		}
 		return oauth2User.getName();
-	}
-
-	public void ensureUserProvisioned(OAuth2AuthenticationToken oauth2Token) {
-		String registrationId = oauth2Token.getAuthorizedClientRegistrationId();
-		String email = oauth2Token.getPrincipal().getAttribute("email");
-		String displayName = oauth2Token.getPrincipal().getAttribute("name");
-		externalUserProcessor.ensureUser(registrationId, email, displayName);
 	}
 }

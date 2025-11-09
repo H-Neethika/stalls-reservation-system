@@ -31,6 +31,7 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID:change-me}
             client-secret: ${GOOGLE_CLIENT_SECRET:change-me}
+            redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:9090/login/oauth2/code/google}
             scope:
               - openid
               - profile
@@ -38,6 +39,7 @@ spring:
           github:
             client-id: ${GITHUB_CLIENT_ID:change-me}
             client-secret: ${GITHUB_CLIENT_SECRET:change-me}
+            redirect-uri: ${GITHUB_REDIRECT_URI:http://localhost:9090/login/oauth2/code/github}
             scope:
               - user:email
             client-name: GitHub
@@ -63,8 +65,8 @@ app:
     client-id: ${APP_OAUTH2_CLIENT_ID:user-service-client}
     client-secret: ${APP_OAUTH2_CLIENT_SECRET:user-service-secret}
     redirect-uris: ${APP_OAUTH2_REDIRECT_URIS:http://localhost:8081/login/oauth2/code/user-service-client}
-    post-logout-redirect-uris: ${APP_OAUTH2_POST_LOGOUT_URIS:http://localhost:8081/}
-    frontend-success-url: ${APP_OAUTH2_FRONTEND_SUCCESS_URL:http://localhost:5173/oauth2/callback}
+    post-logout-redirect-uris: ${APP_OAUTH2_POST_LOGOUT_URIS:http://localhost:8080/}
+    frontend-success-url: ${APP_OAUTH2_FRONTEND_SUCCESS_URL:http://localhost:8080/oauth2/callback}
 
 logging:
   level:
