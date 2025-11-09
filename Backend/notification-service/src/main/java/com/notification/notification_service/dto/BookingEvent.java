@@ -14,6 +14,5 @@ public class BookingEvent {
     private Long reservationId;
     private String userEmail;
     private String userName;
-    private URI websiteLink;
     private URI eventLink;
 }

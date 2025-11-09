@@ -36,10 +36,10 @@ public class EmailService {
             helper.addAttachment("Reservation_QR.png", new ByteArrayResource(qrCodeBytes), "image/png");
 
             mailSender.send(message);
-            logger.info("✅ Stall reservation confirmation email sent to {}", to);
+            logger.info("Stall reservation confirmation email sent to {}", to);
 
         } catch (MessagingException e) {
-            logger.error("❌ Failed to send email to {}: {}", to, e.getMessage());
+            logger.error("Failed to send email to {}: {}", to, e.getMessage());
         }
     }
 }

@@ -6,6 +6,7 @@ import com.notification.notification_service.model.Notification;
 import com.notification.notification_service.repository.NotificationRepository;
 import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,9 @@ public class NotificationService {
     @Autowired
     private EmailService emailService;
 
+    @Value("${OFFICIAL_WEBSITE_LINK}")
+    private String websiteLink;
+
     public Notification getNotificationDetails(Long reservationId) {
         return notificationRepository.findByReservationId(reservationId)
                 .orElseThrow(() -> new IllegalArgumentException("Notification not found for reservationId: " + reservationId));
@@ -37,6 +41,12 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setReservationId(bookingEvent.getReservationId());
         notification.setRecipientEmail(bookingEvent.getUserEmail());
+        notification.setFairName(bookingEvent.getFairName());
+        notification.setStallName(bookingEvent.getStallName());
+        notification.setBookingTime(bookingEvent.getBookingTime());
+        notification.setEventTime(bookingEvent.getEventTime());
+        notification.setUserName(bookingEvent.getUserName());
+        notification.setEventLink(bookingEvent.getEventLink());
         notification = notificationRepository.save(notification);
 
         try {
@@ -62,11 +72,9 @@ public class NotificationService {
         String stallName = bookingEvent.getStallName();
         LocalDateTime bookingTime = bookingEvent.getBookingTime();
         LocalDateTime eventTime = bookingEvent.getEventTime();
-        URI websiteLink = bookingEvent.getWebsiteLink();
+        URI websiteLink = URI.create(this.websiteLink);
         URI eventLink = bookingEvent.getEventLink();
 
-        // ✅ Convert QR Code to Base64 for embedding
-        String qrCodeBase64 = Base64.getEncoder().encodeToString(qrCode);
 
         String htmlBody = """
         <html>
@@ -114,7 +122,7 @@ public class NotificationService {
                     text-align: center;
                     margin-top: 30px;
                 }
-                .qr-section img {
+                #qrCode {
                     width: 180px;
                     height: 180px;
                     margin-top: 10px;
@@ -164,7 +172,7 @@ public class NotificationService {
 
                     <div class="qr-section">
                         <p>Please present this QR code at the venue entrance for verification:</p>
-                        <img src="cid:qrCode" alt="QR Code" style="width:180px;height:180px;border:4px solid #eee;border-radius:10px;" />
+                        <img id="qrCode" src="cid:qrCode" alt="QR Code" style="width:180px;height:180px;border:4px solid #eee;border-radius:10px;" />
                         <p>We look forward to seeing you at the fair!</p>
                         <a href="%s" class="btn">View Event Details</a>
                     </div>
@@ -188,7 +196,6 @@ public class NotificationService {
                 websiteLink.toString()
         );
 
-        // ✅ Send the HTML email with QR code
         emailService.sendStallReservationConfirmation(
                 bookingEvent.getUserEmail(),
                 fairName + " - Reservation Confirmation",

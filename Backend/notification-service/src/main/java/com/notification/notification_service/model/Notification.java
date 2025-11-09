@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -35,6 +36,15 @@ public class Notification {
 
     private LocalDateTime updatedAt;
 
+    private String fairName;
+    private String stallName;
+    private LocalDateTime bookingTime;
+    private LocalDateTime eventTime;
+    private String userName;
+
+    @Column(columnDefinition = "TEXT")
+    private URI eventLink;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -47,4 +57,3 @@ public class Notification {
         updatedAt = LocalDateTime.now();
     }
 }
-
