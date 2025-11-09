@@ -43,4 +43,8 @@ public class User {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private Role role;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "auth_provider", nullable = false)
+	private AuthProvider authProvider = AuthProvider.LOCAL;
 }

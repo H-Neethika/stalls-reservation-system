@@ -1,9 +1,19 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { mockApi } from "@/lib/mockData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Users, Building2, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Loader2,
+  Users,
+  Building2,
+  DollarSign,
+  ArrowLeft,
+  LogOut,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Reservation {
   id: string;
@@ -25,6 +35,8 @@ interface Reservation {
 }
 
 const AllReservations = () => {
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -73,7 +85,9 @@ const AllReservations = () => {
       setReservations(transformedData);
 
       // Calculate stats
-      const confirmed = transformedData.filter((r) => r.status === "CONFIRMED").length;
+      const confirmed = transformedData.filter(
+        (r) => r.status === "CONFIRMED"
+      ).length;
       const revenue = transformedData
         .filter((r) => r.status === "CONFIRMED")
         .reduce((sum, r) => sum + Number(r.stall.price), 0);
@@ -104,13 +118,31 @@ const AllReservations = () => {
 
   return (
     <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">All Reservations</h1>
+      {/* Header with Navigation */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/organizer/dashboard")}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-3xl font-bold">All Reservations</h1>
+        </div>
+        <Button variant="ghost" onClick={signOut}>
+          <LogOut className="mr-2 h-4 w-4" />
+          Logout
+        </Button>
+      </div>
 
       {/* Stats Cards */}
       <div className="grid md:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Reservations</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Reservations
+            </CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -132,7 +164,9 @@ const AllReservations = () => {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">LKR {stats.totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              LKR {stats.totalRevenue.toLocaleString()}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -159,20 +193,33 @@ const AllReservations = () => {
               </thead>
               <tbody>
                 {reservations.map((reservation) => (
-                  <tr key={reservation.id} className="border-b hover:bg-muted/50">
+                  <tr
+                    key={reservation.id}
+                    className="border-b hover:bg-muted/50"
+                  >
                     <td className="p-4">
                       <div>
-                        <div className="font-medium">{reservation.profile.name}</div>
-                        <div className="text-sm text-muted-foreground">{reservation.profile.email}</div>
+                        <div className="font-medium">
+                          {reservation.profile.name}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {reservation.profile.email}
+                        </div>
                       </div>
                     </td>
-                    <td className="p-4">{reservation.profile.organization_name}</td>
+                    <td className="p-4">
+                      {reservation.profile.organization_name}
+                    </td>
                     <td className="p-4">{reservation.hall.name}</td>
-                    <td className="p-4 font-medium">{reservation.stall.name}</td>
+                    <td className="p-4 font-medium">
+                      {reservation.stall.name}
+                    </td>
                     <td className="p-4">
                       <Badge variant="outline">{reservation.stall.size}</Badge>
                     </td>
-                    <td className="p-4">LKR {Number(reservation.stall.price).toLocaleString()}</td>
+                    <td className="p-4">
+                      LKR {Number(reservation.stall.price).toLocaleString()}
+                    </td>
                     <td className="p-4">
                       <Badge
                         variant={

@@ -1,17 +1,37 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { User, mockApi, initializeMockData } from "@/lib/mockData";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { User } from "@/types";
+import { apiService } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
   user: User | null;
   userRole: string | null;
   loading: boolean;
-  signUp: (email: string, password: string, name: string, organizationName: string, role: string) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (
+    email: string,
+    password: string,
+    name: string,
+    organizationName: string,
+    role: string
+  ) => Promise<{ error: string | null }>;
+  signIn: (
+    email: string,
+    password: string
+  ) => Promise<{ error: string | null }>;
+  signInWithOAuth: (provider: "google" | "github") => void;
+  signUpWithOAuth: (provider: "google" | "github") => void;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export { AuthContext };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -20,11 +40,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Initialize mock data
-    initializeMockData();
-    
     // Check for existing session
-    const currentUser = mockApi.getCurrentUser();
+    const currentUser = apiService.getCurrentUser();
     if (currentUser) {
       setUser(currentUser);
       setUserRole(currentUser.role);
@@ -40,25 +57,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     role: string
   ) => {
     try {
-      const { user: newUser, error } = await mockApi.signUp(
+      const newUser = await apiService.register({
         email,
+        password,
         name,
         organizationName,
-        role as "vendor" | "organizer"
-      );
-
-      if (error) {
-        toast({
-          title: "Error",
-          description: error,
-          variant: "destructive",
-        });
-        return { error };
-      }
+        role: role.toUpperCase() as "VENDOR" | "ORGANIZER",
+      });
 
       if (newUser) {
-        setUser(newUser);
-        setUserRole(newUser.role);
+        // After registration, automatically sign them in
+        const authResponse = await apiService.login({ email, password });
+        setUser(authResponse.user);
+        setUserRole(authResponse.user.role);
         toast({
           title: "Success",
           description: "Account created successfully!",
@@ -66,32 +77,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       return { error: null };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Registration failed";
       toast({
         title: "Error",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
-      return { error };
+      return { error: errorMessage };
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { user: authenticatedUser, error } = await mockApi.signIn(email, password);
+      const authResponse = await apiService.login({ email, password });
 
-      if (error) {
-        toast({
-          title: "Error",
-          description: error,
-          variant: "destructive",
-        });
-        return { error };
-      }
-
-      if (authenticatedUser) {
-        setUser(authenticatedUser);
-        setUserRole(authenticatedUser.role);
+      if (authResponse.user) {
+        setUser(authResponse.user);
+        setUserRole(authResponse.user.role);
         toast({
           title: "Success",
           description: "Signed in successfully!",
@@ -99,18 +103,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       return { error: null };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Login failed";
       toast({
         title: "Error",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
-      return { error };
+      return { error: errorMessage };
     }
   };
 
+  const signInWithOAuth = (provider: "google" | "github") => {
+    apiService.initiateOAuth2Login(provider, "signin");
+  };
+
+  const signUpWithOAuth = (provider: "google" | "github") => {
+    apiService.initiateOAuth2Login(provider, "signup");
+  };
+
   const signOut = async () => {
-    await mockApi.signOut();
+    await apiService.logout();
     setUser(null);
     setUserRole(null);
     toast({
@@ -121,17 +135,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, userRole, loading, signUp, signIn, signOut }}
+      value={{
+        user,
+        userRole,
+        loading,
+        signUp,
+        signIn,
+        signInWithOAuth,
+        signUpWithOAuth,
+        signOut,
+      }}
     >
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
 };
