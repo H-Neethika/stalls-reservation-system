@@ -26,9 +26,6 @@ import org.springframework.security.oauth2.server.authorization.config.annotatio
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.user.userservice.security.CustomOidcUserService;
 import com.user.userservice.security.CustomOAuth2UserService;
@@ -71,7 +68,7 @@ public class SecurityConfig {
 			JwtAuthenticationConverter jwtAuthenticationConverter,
 			DaoAuthenticationProvider authenticationProvider) throws Exception {
 		http
-				.securityMatcher("/users/**")
+				.securityMatcher("/api/users/**")
 				.cors(Customizer.withDefaults())
 				.csrf(AbstractHttpConfigurer::disable)
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -80,12 +77,13 @@ public class SecurityConfig {
 								"/v3/api-docs/**",
 								"/swagger-ui/**",
 								"/swagger-ui.html",
-								"/webjars/**"
-						).permitAll()
+								"/webjars/**")
+						.permitAll()
 						.requestMatchers(HttpMethod.OPTIONS, "/api/users/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/users/register", "/api/users/login").permitAll()
 						.anyRequest().authenticated())
-				.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
+				.oauth2ResourceServer(
+						oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
 				.authenticationProvider(authenticationProvider);
 		return http.build();
 	}
@@ -94,7 +92,8 @@ public class SecurityConfig {
 	@Order(3)
 	public SecurityFilterChain webSecurityFilterChain(HttpSecurity http,
 			DaoAuthenticationProvider authenticationProvider,
-			OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> accessTokenResponseClient) throws Exception {
+			OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> accessTokenResponseClient)
+			throws Exception {
 		http
 				.authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
 				.formLogin(Customizer.withDefaults())
@@ -148,17 +147,5 @@ public class SecurityConfig {
 	@Bean
 	public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
 		return configuration.getAuthenticationManager();
-	}
-
-	@Bean
-	public CorsConfigurationSource corsConfigurationSource() {
-		CorsConfiguration configuration = new CorsConfiguration();
-		configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:8080"));
-		configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-		configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Cache-Control"));
-		configuration.setAllowCredentials(true);
-		UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-		source.registerCorsConfiguration("/**", configuration);
-		return source;
 	}
 }

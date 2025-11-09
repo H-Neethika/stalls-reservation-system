@@ -2,10 +2,12 @@ server:
   port: 5000
 
 spring:
+  application:
+    name: CLOUD-GATEWAY
+
   cloud:
     gateway:
       routes:
-
         # ---------- USER SERVICE ----------
         - id: USER-SERVICE-API
           uri: lb://USER-SERVICE
@@ -20,7 +22,6 @@ spring:
             - Path=/USER-SERVICE/**, /USER-SERVICE/v3/api-docs
           filters:
             - StripPrefix=1
-
 
         # ---------- BOOKING SERVICE ----------
         - id: BOOKING-SERVICE-API
@@ -37,7 +38,6 @@ spring:
           filters:
             - StripPrefix=1
 
-
         # ---------- EXHIBITION SERVICE ----------
         - id: EXHIBITION-SERVICE-API
           uri: lb://EXHIBITION-SERVICE
@@ -52,7 +52,6 @@ spring:
             - Path=/EXHIBITION-SERVICE/**, /EXHIBITION-SERVICE/v3/api-docs
           filters:
             - StripPrefix=1
-
 
         # ---------- NOTIFICATION SERVICE ----------
         - id: NOTIFICATION-SERVICE-API
@@ -69,17 +68,8 @@ spring:
           filters:
             - StripPrefix=1
 
-
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
-
-      globalcors:
-        cors-configuration:
-          '[/**]':
-            allowedOrigins: "*"
-            allowedMethods: "*"
-            allowedHeaders: "*"
-
 
 springdoc:
   swagger-ui:
@@ -92,7 +82,6 @@ springdoc:
         url: /EXHIBITION-SERVICE/v3/api-docs
       - name: NOTIFICATION-SERVICE
         url: /NOTIFICATION-SERVICE/v3/api-docs
-
 
 eureka:
   instance:
