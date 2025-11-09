@@ -22,22 +22,66 @@ const OAuth2Callback = () => {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        const code = searchParams.get("code");
-        const state = searchParams.get("state");
+        // Check for errors first
         const error = searchParams.get("error");
+        const errorMessage = searchParams.get("message");
 
         if (error) {
-          throw new Error(`OAuth2 error: ${error}`);
+          setStatus("error");
+
+          // Handle specific error types with user-friendly messages
+          let displayMessage = errorMessage || "OAuth2 authentication failed";
+
+          if (error === "account_already_exists") {
+            displayMessage = decodeURIComponent(
+              errorMessage ||
+                "An account with this email already exists. Please sign in instead."
+            );
+          } else if (error === "account_not_found") {
+            displayMessage = decodeURIComponent(
+              errorMessage ||
+                "No account found with this email. Please sign up first."
+            );
+          } else if (error === "email_not_found") {
+            displayMessage = "Unable to retrieve email from OAuth provider.";
+          }
+
+          toast({
+            title: "Authentication Failed",
+            description: displayMessage,
+            variant: "destructive",
+          });
+
+          // Redirect to auth page after showing error
+          setTimeout(() => {
+            navigate("/auth");
+          }, 3000);
+          return;
         }
 
-        if (!code || !state) {
-          throw new Error("Missing OAuth2 parameters");
-        }
+        // Check for direct token parameters (OAuth2 success redirect)
+        const accessToken = searchParams.get("accessToken");
+        const refreshToken = searchParams.get("refreshToken");
+        const userId = searchParams.get("userId");
 
-        // Handle the OAuth2 callback
-        const authResponse = await apiService.handleOAuth2Callback(code, state);
+        if (accessToken && refreshToken && userId) {
+          // Direct token-based authentication (already authenticated by backend)
+          // Store tokens
+          localStorage.setItem("accessToken", accessToken);
+          localStorage.setItem("refreshToken", refreshToken);
 
-        if (authResponse.user) {
+          // Decode JWT to get user info
+          const tokenPayload = JSON.parse(atob(accessToken.split(".")[1]));
+          const user = {
+            id: parseInt(userId),
+            email: tokenPayload.sub,
+            name: tokenPayload.name,
+            role: tokenPayload.role,
+            organizationName: tokenPayload.organization || "",
+          };
+
+          localStorage.setItem("user", JSON.stringify(user));
+
           setStatus("success");
           toast({
             title: "Success",
@@ -47,11 +91,13 @@ const OAuth2Callback = () => {
           // Redirect based on user role
           setTimeout(() => {
             const redirectPath =
-              authResponse.user.role === "ORGANIZER"
-                ? "/organizer/dashboard"
-                : "/halls";
+              user.role === "ORGANIZER" ? "/organizer/dashboard" : "/halls";
             navigate(redirectPath);
+            // Force page reload to update auth context
+            window.location.href = redirectPath;
           }, 1000);
+        } else {
+          throw new Error("Missing authentication tokens");
         }
       } catch (error) {
         setStatus("error");

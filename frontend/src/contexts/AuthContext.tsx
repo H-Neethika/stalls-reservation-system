@@ -25,6 +25,7 @@ interface AuthContextType {
     password: string
   ) => Promise<{ error: string | null }>;
   signInWithOAuth: (provider: "google" | "github") => void;
+  signUpWithOAuth: (provider: "google" | "github") => void;
   signOut: () => Promise<void>;
 }
 
@@ -115,7 +116,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithOAuth = (provider: "google" | "github") => {
-    apiService.initiateOAuth2Login(provider);
+    apiService.initiateOAuth2Login(provider, "signin");
+  };
+
+  const signUpWithOAuth = (provider: "google" | "github") => {
+    apiService.initiateOAuth2Login(provider, "signup");
   };
 
   const signOut = async () => {
@@ -137,6 +142,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signUp,
         signIn,
         signInWithOAuth,
+        signUpWithOAuth,
         signOut,
       }}
     >

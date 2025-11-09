@@ -25,7 +25,8 @@ const authSchema = z.object({
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { user, userRole, signUp, signIn, signInWithOAuth } = useAuth();
+  const { user, userRole, signUp, signIn, signInWithOAuth, signUpWithOAuth } =
+    useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   // Login form
@@ -85,6 +86,10 @@ const Auth = () => {
 
   const handleOAuthLogin = (provider: "google" | "github") => {
     signInWithOAuth(provider);
+  };
+
+  const handleOAuthSignup = (provider: "google" | "github") => {
+    signUpWithOAuth(provider);
   };
 
   return (
@@ -284,7 +289,7 @@ const Auth = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => handleOAuthLogin("google")}
+                    onClick={() => handleOAuthSignup("google")}
                     disabled={isLoading}
                   >
                     <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -310,7 +315,7 @@ const Auth = () => {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => handleOAuthLogin("github")}
+                    onClick={() => handleOAuthSignup("github")}
                     disabled={isLoading}
                   >
                     <svg

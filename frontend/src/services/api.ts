@@ -78,9 +78,12 @@ class ApiService {
   }
 
   // OAuth2 Authentication
-  initiateOAuth2Login(provider: "google" | "github"): void {
-    // Redirect to backend OAuth2 login endpoint
-    window.location.href = `${API_BASE_URL}/oauth2/authorization/${provider}`;
+  initiateOAuth2Login(
+    provider: "google" | "github",
+    mode: "signin" | "signup" = "signin"
+  ): void {
+    // Redirect to backend OAuth2 login endpoint with mode parameter
+    window.location.href = `${API_BASE_URL}/oauth2/authorization/${provider}?mode=${mode}`;
   }
 
   async handleOAuth2Callback(
