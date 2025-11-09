@@ -37,12 +37,12 @@ public class NotificationController {
     }
 
     @PostMapping("/send")
-    public ResponseEntity<String> sendNotification(@RequestBody BookingEvent event) {
+    public ResponseEntity<String> sendNotification(@RequestBody BookingEvent bookingEvent) {
         try {
-            notificationService.processNotification(event);
+            notificationService.processNotification(bookingEvent);
             return ResponseEntity.ok("Notification sent successfully");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("Invalid booking event: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Invalid booking bookingEvent: " + e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Error sending notification: " + e.getMessage());
         }

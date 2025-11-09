@@ -29,6 +29,10 @@ public class EmailService {
             helper.setTo(to);
             helper.setSubject("📚 Stall Reservation Confirmation - " + fairName);
             helper.setText(htmlBody, true);
+
+            // Attach QR code as inline image
+            ByteArrayResource qrResource = new ByteArrayResource(qrCodeBytes);
+            helper.addInline("qrCode", qrResource, "image/png");
             helper.addAttachment("Reservation_QR.png", new ByteArrayResource(qrCodeBytes), "image/png");
 
             mailSender.send(message);
