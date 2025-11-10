@@ -63,4 +63,9 @@ public class ExhibitionController {
     public ResponseEntity<List<ExhibitionDTO>> getByState(@PathVariable EXHIBITION_STATE state) {
         return ResponseEntity.ok(exhibitionService.getExhibitionsByState(state));
     }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<ExhibitionDTO>> getByUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(exhibitionService.getExhibitionsByUserId(userId));
+    }
 }

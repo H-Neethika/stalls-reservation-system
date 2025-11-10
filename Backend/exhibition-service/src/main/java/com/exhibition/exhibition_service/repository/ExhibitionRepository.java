@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 public interface ExhibitionRepository extends JpaRepository<Exhibition,Long> {
 
     List<Exhibition> findByExhibitionState(EXHIBITION_STATE state);
+    List<Exhibition> findByOrganizerId(Long organizerId);
 
     boolean existsByExhibitionStateAndStartDateTimeLessThanAndEndDateTimeGreaterThan(
             EXHIBITION_STATE state,
