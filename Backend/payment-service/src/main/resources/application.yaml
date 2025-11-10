@@ -1,0 +1,41 @@
+server:
+  port: ${PAYMENT_SERVICE_PORT:8083}
+
+spring:
+  application:
+    name: PAYMENT-SERVICE
+
+  datasource:
+    url: ${PAYMENT_DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:guest}
+    password: ${SPRING_RABBITMQ_PASSWORD:guest}
+
+logging:
+  level:
+    com:
+      payment:
+        payment_service: DEBUG
+    org:
+      springframework:
+        web: DEBUG
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8070/eureka}

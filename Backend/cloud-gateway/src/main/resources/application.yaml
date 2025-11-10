@@ -1,0 +1,140 @@
+server:
+  port: ${CLOUD_GATEWAY_PORT:5000}
+
+spring:
+  application:
+    name: CLOUD-GATEWAY
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${APP_JWT_ISSUER:http://localhost:9090}
+
+  cloud:
+    gateway:
+      routes:
+        # ---------- USER SERVICE ----------
+        - id: USER-SERVICE-OAUTH2
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/oauth2/**, /login/oauth2/**
+          filters:
+            - StripPrefix=0
+
+        - id: USER-SERVICE-API
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/auth/**, /api/users/**
+          filters:
+            - StripPrefix=0
+            - JwtRelay
+
+        - id: USER-SERVICE-SWAGGER
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/USER-SERVICE/**, /USER-SERVICE/v3/api-docs
+          filters:
+            - StripPrefix=1
+
+        # ---------- BOOKING SERVICE ----------
+        - id: BOOKING-SERVICE-API
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/api/exhibition-halls/**, /api/exhibition-stalls/**, /api/genre/**, /api/hall/**, /api/reservation/**
+          filters:
+            - StripPrefix=0
+            - JwtRelay
+
+        - id: BOOKING-SERVICE-SWAGGER
+          uri: lb://BOOKING-SERVICE
+          predicates:
+            - Path=/BOOKING-SERVICE/**, /BOOKING-SERVICE/v3/api-docs
+          filters:
+            - StripPrefix=1
+
+        # ---------- EXHIBITION SERVICE ----------
+        - id: EXHIBITION-SERVICE-API
+          uri: lb://EXHIBITION-SERVICE
+          predicates:
+            - Path=/api/exhibition/**
+          filters:
+            - StripPrefix=0
+            - JwtRelay
+
+        - id: EXHIBITION-SERVICE-SWAGGER
+          uri: lb://EXHIBITION-SERVICE
+          predicates:
+            - Path=/EXHIBITION-SERVICE/**, /EXHIBITION-SERVICE/v3/api-docs
+          filters:
+            - StripPrefix=1
+
+        # ---------- NOTIFICATION SERVICE ----------
+        - id: NOTIFICATION-SERVICE-API
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/api/notification/**
+          filters:
+            - StripPrefix=0
+            - JwtRelay
+
+        - id: NOTIFICATION-SERVICE-SWAGGER
+          uri: lb://NOTIFICATION-SERVICE
+          predicates:
+            - Path=/NOTIFICATION-SERVICE/**, /NOTIFICATION-SERVICE/v3/api-docs
+          filters:
+            - StripPrefix=1
+
+
+        # ---------- PAYMENT SERVICE ----------
+        - id: PAYMENT-SERVICE-API
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/api/payment/**
+          filters:
+            - StripPrefix=0
+
+        - id: PAYMENT-SERVICE-SWAGGER
+          uri: lb://PAYMENT-SERVICE
+          predicates:
+            - Path=/PAYMENT-SERVICE/**, /PAYMENT-SERVICE/v3/api-docs
+          filters:
+            - StripPrefix=1
+
+
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: USER-SERVICE
+        url: /USER-SERVICE/v3/api-docs
+      - name: BOOKING-SERVICE
+        url: /BOOKING-SERVICE/v3/api-docs
+      - name: EXHIBITION-SERVICE
+        url: /EXHIBITION-SERVICE/v3/api-docs
+      - name: NOTIFICATION-SERVICE
+        url: /NOTIFICATION-SERVICE/v3/api-docs
+
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8070/eureka}
+
+app:
+  jwt:
+    issuer: ${APP_JWT_ISSUER:http://localhost:9090}
+
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
+        cloud:
+          gateway: DEBUG

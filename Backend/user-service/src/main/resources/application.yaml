@@ -1,0 +1,94 @@
+server:
+  port: ${USER_SERVICE_PORT:9090}
+
+spring:
+  application:
+    name: USER-SERVICE
+
+  datasource:
+    url: ${USER_DB_URL}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          lob:
+            non_contextual_creation: true
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:change-me}
+            client-secret: ${GOOGLE_CLIENT_SECRET:change-me}
+            redirect-uri: ${GOOGLE_REDIRECT_URI:http://localhost:9090/login/oauth2/code/google}
+            scope:
+              - openid
+              - profile
+              - email
+          github:
+            client-id: ${GITHUB_CLIENT_ID:change-me}
+            client-secret: ${GITHUB_CLIENT_SECRET:change-me}
+            redirect-uri: ${GITHUB_REDIRECT_URI:http://localhost:9090/login/oauth2/code/github}
+            scope:
+              - user:email
+            client-name: GitHub
+        provider:
+          github:
+            authorization-uri: https://github.com/login/oauth/authorize
+            token-uri: https://github.com/login/oauth/access_token
+            user-info-uri: https://api.github.com/user
+            user-name-attribute: login
+
+springdoc:
+  api-docs:
+    enabled: true
+  packages-to-scan: com.user.userservice.controller
+
+app:
+  jwt:
+    issuer: ${APP_JWT_ISSUER:http://localhost:8090}
+    access-token-ttl: ${APP_JWT_ACCESS_TOKEN_TTL:PT1H}
+    refresh-token-ttl: ${APP_JWT_REFRESH_TOKEN_TTL:P7D}
+
+  oauth2:
+    client-id: ${APP_OAUTH2_CLIENT_ID:user-service-client}
+    client-secret: ${APP_OAUTH2_CLIENT_SECRET:user-service-secret}
+    redirect-uris: ${APP_OAUTH2_REDIRECT_URIS:http://localhost:8081/login/oauth2/code/user-service-client}
+    post-logout-redirect-uris: ${APP_OAUTH2_POST_LOGOUT_URIS:http://localhost:8080/}
+    frontend-success-url: ${APP_OAUTH2_FRONTEND_SUCCESS_URL:http://localhost:8080/oauth2/callback}
+
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
+    com:
+      user:
+        userservice:
+          security: DEBUG
+
+http:
+  proxy:
+    host: ${HTTP_PROXY_HOST:}
+    port: ${HTTP_PROXY_PORT:}
+  nonProxyHosts: ${HTTP_NON_PROXY_HOSTS:localhost|127.*|[::1]}
+
+eureka:
+  instance:
+    prefer-ip-address: true
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    serviceUrl:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8070/eureka}
