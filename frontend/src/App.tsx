@@ -10,6 +10,8 @@ import HallsList from "./pages/HallsList";
 import HallBooking from "./pages/HallBooking";
 import MyBookings from "./pages/MyBookings";
 import OrganizerDashboard from "./pages/organizer/Dashboard";
+import OrganizerExhibitions from "./pages/organizer/Exhibitions";
+import OrganizerSettings from "./pages/organizer/Settings";
 import ManageHalls from "./pages/organizer/ManageHalls";
 import HallDesigner from "./pages/organizer/HallDesigner";
 import AllReservations from "./pages/organizer/AllReservations";
@@ -87,6 +89,22 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="organizer">
                   <AllReservations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/exhibitions"
+              element={
+                <ProtectedRoute requiredRole="organizer">
+                  <OrganizerExhibitions />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/settings"
+              element={
+                <ProtectedRoute requiredRole="organizer">
+                  <OrganizerSettings />
                 </ProtectedRoute>
               }
             />

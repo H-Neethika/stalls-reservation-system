@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/hooks/use-auth";
 import { z } from "zod";
+import { Eye, EyeOff } from "lucide-react";
 
 const authSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -32,6 +33,7 @@ const Auth = () => {
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
+  const [isLoginPasswordVisible, setIsLoginPasswordVisible] = useState(false);
 
   // Signup form
   const [signupEmail, setSignupEmail] = useState("");
@@ -39,6 +41,7 @@ const Auth = () => {
   const [name, setName] = useState("");
   const [organizationName, setOrganizationName] = useState("");
   const [role, setRole] = useState<"vendor" | "organizer">("vendor");
+  const [isSignupPasswordVisible, setIsSignupPasswordVisible] = useState(false);
 
   useEffect(() => {
     if (user && userRole) {
@@ -123,13 +126,32 @@ const Auth = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="login-password">Password</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="login-password"
+                      type={isLoginPasswordVisible ? "text" : "password"}
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      required
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      aria-label={
+                        isLoginPasswordVisible ? "Hide password" : "Show password"
+                      }
+                      onClick={() =>
+                        setIsLoginPasswordVisible(!isLoginPasswordVisible)
+                      }
+                      className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md p-1"
+                    >
+                      {isLoginPasswordVisible ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Signing in..." : "Sign In"}
@@ -222,13 +244,32 @@ const Auth = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    value={signupPassword}
-                    onChange={(e) => setSignupPassword(e.target.value)}
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="signup-password"
+                      type={isSignupPasswordVisible ? "text" : "password"}
+                      value={signupPassword}
+                      onChange={(e) => setSignupPassword(e.target.value)}
+                      required
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      aria-label={
+                        isSignupPasswordVisible ? "Hide password" : "Show password"
+                      }
+                      onClick={() =>
+                        setIsSignupPasswordVisible(!isSignupPasswordVisible)
+                      }
+                      className="absolute inset-y-0 right-2 flex items-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md p-1"
+                    >
+                      {isSignupPasswordVisible ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="organization">
