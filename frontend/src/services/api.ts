@@ -1,7 +1,8 @@
 // API service for backend integration
 import { User, AuthResponse, LoginRequest, RegisterRequest } from "@/types";
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL =
+  import.meta.env.BACKEND_BASE_URL || `http://localhost:${import.meta.env.CLOUD_GATEWAY_PORT}` || "http://localhost:6001";
 
 class ApiService {
   private getAuthToken(): string | null {
