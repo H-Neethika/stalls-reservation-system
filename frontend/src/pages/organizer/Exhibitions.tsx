@@ -18,6 +18,11 @@ import { useAuth } from "@/hooks/use-auth";
 import { exhibitionService } from "@/services/exhibitionService";
 import { CreateExhibitionRequest, Exhibition } from "@/types";
 
+type ApiError = Error & {
+  code?: number;
+  responseBody?: unknown;
+};
+
 type ExhibitionCard = Exhibition & {
   venue?: string;
   halls?: number;
@@ -155,11 +160,24 @@ const OrganizerExhibitions = () => {
         ...prev,
       ]);
       closeModal();
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as ApiError;
+      const backendMessage =
+        typeof err.responseBody === "string"
+          ? err.responseBody
+          : err.responseBody && typeof err.responseBody === "object"
+          ? (err.responseBody as { message?: string; error?: string }).message ??
+            (err.responseBody as { message?: string; error?: string }).error
+          : null;
+
+      const description =
+        backendMessage ||
+        err.message ||
+        "Something went wrong while creating the exhibition.";
+
       toast({
         title: "Failed to create exhibition",
-        description:
-          error instanceof Error ? error.message : "Please try again later.",
+        description,
         variant: "destructive",
       });
     } finally {

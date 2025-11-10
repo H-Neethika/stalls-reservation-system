@@ -20,8 +20,43 @@ class ExhibitionService {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || "Failed to create exhibition");
+      let errorBody: unknown = null;
+      const contentType = response.headers.get("content-type");
+
+      try {
+        if (contentType && contentType.includes("application/json")) {
+          errorBody = await response.json();
+        } else {
+          const text = await response.text();
+          errorBody = text || null;
+        }
+      } catch {
+        // swallow parsing errors; we'll fall back to generic message
+      }
+
+      const errorMessage =
+        (typeof errorBody === "object" && errorBody !== null
+          ? (errorBody as { message?: string; error?: string }).message ||
+            (errorBody as { message?: string; error?: string }).error
+          : null) ||
+        (typeof errorBody === "string" ? errorBody : null) ||
+        "Failed to create exhibition";
+
+      const errorCode =
+        (typeof errorBody === "object" && errorBody !== null
+          ? (errorBody as { code?: number; errorCode?: number }).code ??
+            (errorBody as { code?: number; errorCode?: number }).errorCode
+          : undefined) ?? response.status;
+
+      const enrichedError = new Error(errorMessage) as Error & {
+        status?: number;
+        code?: number;
+        responseBody?: unknown;
+      };
+      enrichedError.status = response.status;
+      enrichedError.code = errorCode;
+      enrichedError.responseBody = errorBody;
+      throw enrichedError;
     }
 
     return response.json();
