@@ -78,4 +78,8 @@ export interface Exhibition {
   bookingCloseDateTime: string;
   stallsPerPerson: number;
   status?: string;
+  venue?: string;
+  halls?: number;
+  stalls?: number;
+  description?: string;
 }
