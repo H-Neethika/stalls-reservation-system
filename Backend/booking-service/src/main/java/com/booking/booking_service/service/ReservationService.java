@@ -2,6 +2,9 @@ package com.booking.booking_service.service;
 
 import com.booking.booking_service.model.Reservation;
 import com.booking.booking_service.request.ReservationRequest;
+import com.booking.booking_service.response.CreatePaymentRequest;
+import com.booking.booking_service.response.MessageResponse;
+import com.booking.booking_service.response.PaymentIntentResponse;
 import java.util.List;
 
 import com.booking.booking_service.response.ReservationResponse;
@@ -15,4 +18,6 @@ public interface ReservationService {
   ReservationResponse getReservationById(Long id) throws Exception;
 
   List<ReservationResponse> getAllReservation();
+
+  public PaymentIntentResponse updateReservation(CreatePaymentRequest updateRequest, List<Long>stallIds);
 }
