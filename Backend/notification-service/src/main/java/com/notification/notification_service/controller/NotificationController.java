@@ -29,7 +29,7 @@ public class NotificationController {
     @PostMapping(value = "/qr/generate/{reservationId}", produces = MediaType.IMAGE_PNG_VALUE)
     public ResponseEntity<byte[]> generateQrCode(@PathVariable String reservationId) {
         try {
-            byte[] qrCode = notificationService.getQRCode(reservationId);
+            byte[] qrCode = notificationService.createQRCode(reservationId, 500, 500);
             return ResponseEntity.ok(qrCode);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
@@ -40,6 +40,18 @@ public class NotificationController {
     public ResponseEntity<String> sendNotification(@RequestBody BookingEvent bookingEvent) {
         try {
             notificationService.processNotification(bookingEvent);
+            return ResponseEntity.ok("Notification sent successfully");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Invalid booking bookingEvent: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error sending notification: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/resend")
+    public ResponseEntity<String> resendNotification(@RequestBody Long reservationId) {
+        try {
+            notificationService.resendNotification(reservationId);
             return ResponseEntity.ok("Notification sent successfully");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body("Invalid booking bookingEvent: " + e.getMessage());

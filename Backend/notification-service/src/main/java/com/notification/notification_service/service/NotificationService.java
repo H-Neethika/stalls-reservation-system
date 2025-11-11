@@ -35,6 +35,15 @@ public class NotificationService {
                         new IllegalArgumentException("Notification not found for reservationId: " + reservationId));
     }
 
+    public byte[] createQRCode(String qrcodeDetails, int width, int height) {
+        String encrypted = QRCodeEncryptor.encrypt(qrcodeDetails);
+        return qrCodeService.generateQRCode(encrypted, width, height);
+    }
+
+    public String getQRCodeDetails(String qrcodeSecret) {
+        return QRCodeEncryptor.decrypt(qrcodeSecret);
+    }
+
     @Transactional
     protected Notification saveNotification(BookingEvent bookingEvent) {
         return notificationRepository.findByReservationId(bookingEvent.getReservationId())
@@ -83,7 +92,7 @@ public class NotificationService {
         if (notification == null) return;
 
         try {
-            byte[] qrCode = qrCodeService.generateQRCode(
+            byte[] qrCode = createQRCode(
                     bookingEvent.getReservationId().toString(), 500, 500);
 
             sendConfirmationEmail(bookingEvent, qrCode);
@@ -114,7 +123,7 @@ public class NotificationService {
         bookingEvent.setEventLink(details.getEventLink());
 
         try {
-            byte[] qrCode = qrCodeService.generateQRCode(reservationId.toString(), 500, 500);
+            byte[] qrCode = createQRCode(reservationId.toString(), 500, 500);
             sendConfirmationEmail(bookingEvent, qrCode);
             notification.setStatus(NotificationStatus.SENT);
             notification.setLastError(null);
@@ -201,9 +210,5 @@ public class NotificationService {
                 htmlBody,
                 qrCode
         );
-    }
-
-    public byte[] getQRCode(String reservationId) {
-        return qrCodeService.generateQRCode(reservationId, 250, 250);
     }
 }
