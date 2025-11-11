@@ -1,11 +1,12 @@
 package com.notification.notification_service.model;
 
 import com.notification.notification_service.enums.NotificationStatus;
+import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Type;
 
-import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -36,14 +37,9 @@ public class Notification {
 
     private LocalDateTime updatedAt;
 
-    private String fairName;
-    private String stallName;
-    private LocalDateTime bookingTime;
-    private LocalDateTime eventTime;
-    private String userName;
-
-    @Column(columnDefinition = "TEXT")
-    private URI eventLink;
+    @Type(JsonType.class)
+    @Column(columnDefinition = "jsonb")
+    private EmailDetails emailDetails;
 
     @PrePersist
     protected void onCreate() {

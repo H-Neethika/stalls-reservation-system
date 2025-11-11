@@ -20,7 +20,7 @@ public class NotificationController {
     @GetMapping("/{reservationId}")
     public ResponseEntity<Notification> getNotificationDetails(@PathVariable Long reservationId) {
         try {
-            return ResponseEntity.ok(notificationService.getNotificationDetails(reservationId));
+            return ResponseEntity.ok(notificationService.getNotification(reservationId));
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException(e);
         }

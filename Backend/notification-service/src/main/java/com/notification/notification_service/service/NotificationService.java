@@ -2,6 +2,7 @@ package com.notification.notification_service.service;
 
 import com.notification.notification_service.dto.BookingEvent;
 import com.notification.notification_service.enums.NotificationStatus;
+import com.notification.notification_service.model.EmailDetails;
 import com.notification.notification_service.model.Notification;
 import com.notification.notification_service.repository.NotificationRepository;
 import jakarta.mail.MessagingException;
@@ -12,45 +13,79 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.time.LocalDateTime;
-import java.util.Base64;
 
 @Service
 public class NotificationService {
 
     @Autowired
     private NotificationRepository notificationRepository;
+
     @Autowired
     private QRCodeService qrCodeService;
+
     @Autowired
     private EmailService emailService;
 
     @Value("${OFFICIAL_WEBSITE_LINK}")
     private String websiteLink;
 
-    public Notification getNotificationDetails(Long reservationId) {
+    public Notification getNotification(Long reservationId) {
         return notificationRepository.findByReservationId(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("Notification not found for reservationId: " + reservationId));
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Notification not found for reservationId: " + reservationId));
+    }
+
+    @Transactional
+    protected Notification saveNotification(BookingEvent bookingEvent) {
+        return notificationRepository.findByReservationId(bookingEvent.getReservationId())
+                .orElseGet(() -> {
+                    Notification notification = new Notification();
+                    notification.setReservationId(bookingEvent.getReservationId());
+                    notification.setRecipientEmail(bookingEvent.getUserEmail());
+
+                    EmailDetails emailDetails = new EmailDetails(
+                            bookingEvent.getFairName(),
+                            bookingEvent.getStallName(),
+                            bookingEvent.getBookingTime(),
+                            bookingEvent.getEventTime(),
+                            bookingEvent.getUserName(),
+                            bookingEvent.getEventLink()
+                    );
+                    notification.setEmailDetails(emailDetails);
+                    return notificationRepository.save(notification);
+                });
+    }
+
+    @Transactional
+    protected Notification updateNotification(Long reservationId, BookingEvent bookingEvent) {
+        Notification notification = getNotification(reservationId);
+
+        EmailDetails updatedDetails = new EmailDetails(
+                bookingEvent.getFairName(),
+                bookingEvent.getStallName(),
+                bookingEvent.getBookingTime(),
+                bookingEvent.getEventTime(),
+                bookingEvent.getUserName(),
+                bookingEvent.getEventLink()
+        );
+
+        notification.setRecipientEmail(bookingEvent.getUserEmail());
+        notification.setEmailDetails(updatedDetails);
+        notification.setStatus(NotificationStatus.PENDING);
+        notification.setLastError(null);
+
+        return notificationRepository.save(notification);
     }
 
     @Transactional
     public void processNotification(BookingEvent bookingEvent) {
-        if (notificationRepository.existsByReservationId(bookingEvent.getReservationId())) {
-            return;
-        }
-
-        Notification notification = new Notification();
-        notification.setReservationId(bookingEvent.getReservationId());
-        notification.setRecipientEmail(bookingEvent.getUserEmail());
-        notification.setFairName(bookingEvent.getFairName());
-        notification.setStallName(bookingEvent.getStallName());
-        notification.setBookingTime(bookingEvent.getBookingTime());
-        notification.setEventTime(bookingEvent.getEventTime());
-        notification.setUserName(bookingEvent.getUserName());
-        notification.setEventLink(bookingEvent.getEventLink());
-        notification = notificationRepository.save(notification);
+        Notification notification = saveNotification(bookingEvent);
+        if (notification == null) return;
 
         try {
-            byte[] qrCode = qrCodeService.generateQRCode(bookingEvent.getReservationId().toString(), 500, 500);
+            byte[] qrCode = qrCodeService.generateQRCode(
+                    bookingEvent.getReservationId().toString(), 500, 500);
+
             sendConfirmationEmail(bookingEvent, qrCode);
             notification.setStatus(NotificationStatus.SENT);
         } catch (Exception e) {
@@ -61,98 +96,62 @@ public class NotificationService {
         }
     }
 
-    /*@Retryable(
-            value = { MessagingException.class },
-            maxAttempts = 3,
-            backoff = @Backoff(delay = 2000) // 2 seconds delay between retries
-    )*/
+    @Transactional
+    public void resendNotification(Long reservationId) {
+        Notification notification = getNotification(reservationId);
+
+        BookingEvent bookingEvent = new BookingEvent();
+        bookingEvent.setReservationId(notification.getReservationId());
+        bookingEvent.setUserEmail(notification.getRecipientEmail());
+
+        // Restore data from stored JSON
+        EmailDetails details = notification.getEmailDetails();
+        bookingEvent.setFairName(details.getFairName());
+        bookingEvent.setStallName(details.getStallName());
+        bookingEvent.setBookingTime(details.getBookingTime());
+        bookingEvent.setEventTime(details.getEventTime());
+        bookingEvent.setUserName(details.getUserName());
+        bookingEvent.setEventLink(details.getEventLink());
+
+        try {
+            byte[] qrCode = qrCodeService.generateQRCode(reservationId.toString(), 500, 500);
+            sendConfirmationEmail(bookingEvent, qrCode);
+            notification.setStatus(NotificationStatus.SENT);
+            notification.setLastError(null);
+        } catch (Exception e) {
+            notification.setStatus(NotificationStatus.FAILED);
+            notification.setLastError(e.getMessage());
+        } finally {
+            notificationRepository.save(notification);
+        }
+    }
+
     private void sendConfirmationEmail(BookingEvent bookingEvent, byte[] qrCode) throws MessagingException {
         String fairName = bookingEvent.getFairName();
         Long reservationId = bookingEvent.getReservationId();
         String stallName = bookingEvent.getStallName();
         LocalDateTime bookingTime = bookingEvent.getBookingTime();
         LocalDateTime eventTime = bookingEvent.getEventTime();
-        URI websiteLink = URI.create(this.websiteLink);
+        URI websiteUri = URI.create(this.websiteLink);
         URI eventLink = bookingEvent.getEventLink();
-
 
         String htmlBody = """
         <html>
         <head>
             <style>
-                body {
-                    font-family: 'Segoe UI', Arial, sans-serif;
-                    background-color: #f8f9fa;
-                    color: #333;
-                    margin: 0;
-                    padding: 0;
-                }
-                .container {
-                    max-width: 600px;
-                    background: #ffffff;
-                    margin: 30px auto;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-                    overflow: hidden;
-                }
-                .header {
-                    background-color: #5b3cc4;
-                    color: #fff;
-                    text-align: center;
-                    padding: 25px 20px;
-                }
-                .header h1 {
-                    margin: 0;
-                    font-size: 24px;
-                }
-                .content {
-                    padding: 30px 40px;
-                    text-align: left;
-                }
-                .content h2 {
-                    color: #5b3cc4;
-                }
-                .details {
-                    margin-top: 20px;
-                    border-top: 1px solid #ddd;
-                    padding-top: 15px;
-                    line-height: 1.6;
-                }
-                .qr-section {
-                    text-align: center;
-                    margin-top: 30px;
-                }
-                #qrCode {
-                    width: 180px;
-                    height: 180px;
-                    margin-top: 10px;
-                    border: 4px solid #eee;
-                    border-radius: 10px;
-                }
-                .qr-section p {
-                    font-size: 14px;
-                    color: #777;
-                }
-                .footer {
-                    background: #f1f1f1;
-                    text-align: center;
-                    padding: 15px;
-                    font-size: 13px;
-                    color: #666;
-                }
-                .btn {
-                    display: inline-block;
-                    background-color: #5b3cc4;
-                    color: white;
-                    padding: 10px 20px;
-                    border-radius: 5px;
-                    text-decoration: none;
-                    margin-top: 15px;
-                }
-                .btn:hover {
-                    background-color: #4a2aa5;
-                    color: white;
-                }
+                body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8f9fa; color: #333; }
+                .container { max-width: 600px; background: #fff; margin: 30px auto; border-radius: 12px;
+                             box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
+                .header { background-color: #5b3cc4; color: #fff; text-align: center; padding: 25px 20px; }
+                .header h1 { margin: 0; font-size: 24px; }
+                .content { padding: 30px 40px; text-align: left; }
+                .details { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px; line-height: 1.6; }
+                .qr-section { text-align: center; margin-top: 30px; }
+                #qrCode { width: 180px; height: 180px; border: 4px solid #eee; border-radius: 10px; }
+                .footer { background: #f1f1f1; text-align: center; padding: 15px; font-size: 13px; color: #666; }
+                .btn { display: inline-block; background-color: #5b3cc4; color: white; padding: 10px 20px;
+                       border-radius: 5px; text-decoration: none; margin-top: 15px; }
+                .btn:hover { background-color: #4a2aa5; color: white; }
             </style>
         </head>
         <body>
@@ -172,7 +171,7 @@ public class NotificationService {
 
                     <div class="qr-section">
                         <p>Please present this QR code at the venue entrance for verification:</p>
-                        <img id="qrCode" src="cid:qrCode" alt="QR Code" style="width:180px;height:180px;border:4px solid #eee;border-radius:10px;" />
+                        <img id="qrCode" src="cid:qrCode" alt="QR Code" />
                         <p>We look forward to seeing you at the fair!</p>
                         <a href="%s" class="btn">View Event Details</a>
                     </div>
@@ -190,10 +189,10 @@ public class NotificationService {
                 fairName,
                 reservationId,
                 stallName,
-                bookingTime.toLocalDate().toString() + " " + bookingTime.toLocalTime().toString(),
-                eventTime.toLocalDate().toString() + " " + eventTime.toLocalTime().toString(),
-                eventLink.toString(),
-                websiteLink.toString()
+                bookingTime,
+                eventTime,
+                eventLink,
+                websiteUri
         );
 
         emailService.sendStallReservationConfirmation(
@@ -203,8 +202,6 @@ public class NotificationService {
                 qrCode
         );
     }
-
-
 
     public byte[] getQRCode(String reservationId) {
         return qrCodeService.generateQRCode(reservationId, 250, 250);
