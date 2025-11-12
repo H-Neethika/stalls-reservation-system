@@ -14,7 +14,6 @@ import java.util.List;
 @NoArgsConstructor
 public class ExhibitionStall {
 
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -22,13 +21,10 @@ public class ExhibitionStall {
     @ManyToOne
     private ExhibitionHall exhibitionHallId;
 
-
     private String stallName;
-
 
     @ManyToOne
     private StallType stallType;
-
 
     private Long price;
 
@@ -41,6 +37,5 @@ public class ExhibitionStall {
     private Long rowPosition;
 
     private Long columnPosition;
-
 
 }
