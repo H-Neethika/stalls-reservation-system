@@ -7,12 +7,11 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Eye, MapPin, Pencil, Users } from "lucide-react";
+import { CalendarDays, Eye, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { exhibitionService } from "@/services/exhibitionService";
@@ -27,10 +26,51 @@ type ExhibitionCard = Exhibition & {
   dateRange?: string;
 };
 
-const statusVariant: Record<string, "default" | "secondary" | "outline"> = {
-  Planning: "secondary",
-  Active: "default",
-  Archived: "outline",
+const stateVariant: Record<string, "default" | "secondary" | "outline"> = {
+  DRAFT: "secondary",
+  PLANNING: "secondary",
+  ACTIVE: "default",
+  PUBLISHED: "default",
+  ARCHIVED: "outline",
+};
+
+const extractErrorSection = (body: unknown): string | null => {
+  if (!body || typeof body !== "object") {
+    return null;
+  }
+
+  const obj = body as Record<string, unknown>;
+  if (!("error" in obj)) {
+    return null;
+  }
+
+  const section = obj.error;
+  if (typeof section === "string") {
+    return section;
+  }
+
+  if (section && typeof section === "object") {
+    const nested = section as Record<string, unknown>;
+    if (typeof nested.message === "string") {
+      return nested.message;
+    }
+    if (typeof nested.detail === "string") {
+      return nested.detail;
+    }
+    const firstString = Object.values(nested).find(
+      (value): value is string => typeof value === "string",
+    );
+    if (firstString) {
+      return firstString;
+    }
+    try {
+      return JSON.stringify(nested);
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
 };
 
 const OrganizerExhibitions = () => {
@@ -46,12 +86,7 @@ const OrganizerExhibitions = () => {
   const toCard = (expo: Exhibition): ExhibitionCard => ({
     ...expo,
     status: expo.status || "Planning",
-    venue: expo.venue || "Venue TBD",
-    halls: expo.halls ?? 0,
-    stalls: expo.stalls ?? expo.stallsPerPerson,
-    description:
-      expo.description ||
-      "Add more context and logistics details from the edit screen.",
+    exhibitionState: expo.exhibitionState || expo.status || "Planning",
     dateRange: `${dayjs(expo.startDateTime).format("MMM DD")} - ${dayjs(
       expo.endDateTime,
     ).format("MMM DD, YYYY")}`,
@@ -73,13 +108,15 @@ const OrganizerExhibitions = () => {
       } catch (error) {
         const err = error as ApiError;
         const backendMessage =
-          typeof err.responseBody === "string"
+          extractErrorSection(err.responseBody) ||
+          (typeof err.responseBody === "object" &&
+          err.responseBody !== null &&
+          "message" in err.responseBody &&
+          typeof (err.responseBody as { message?: string }).message === "string"
+            ? (err.responseBody as { message: string }).message
+            : typeof err.responseBody === "string"
             ? err.responseBody
-            : err.responseBody && typeof err.responseBody === "object"
-            ? (err.responseBody as { message?: string; error?: string })
-                .message ??
-              (err.responseBody as { message?: string; error?: string }).error
-            : null;
+            : null);
 
         toast({
           title: "Failed to load exhibitions",
@@ -144,12 +181,15 @@ const OrganizerExhibitions = () => {
     } catch (error: unknown) {
       const err = error as ApiError;
       const backendMessage =
-        typeof err.responseBody === "string"
+        extractErrorSection(err.responseBody) ||
+        (typeof err.responseBody === "object" &&
+        err.responseBody !== null &&
+        "message" in err.responseBody &&
+        typeof (err.responseBody as { message?: string }).message === "string"
+          ? (err.responseBody as { message: string }).message
+          : typeof err.responseBody === "string"
           ? err.responseBody
-          : err.responseBody && typeof err.responseBody === "object"
-          ? (err.responseBody as { message?: string; error?: string }).message ??
-            (err.responseBody as { message?: string; error?: string }).error
-          : null;
+          : null);
 
       const description =
         backendMessage ||
@@ -200,34 +240,54 @@ const OrganizerExhibitions = () => {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <CardTitle>{expo.exhibitionName}</CardTitle>
-                      <CardDescription>{expo.venue || "Venue TBD"}</CardDescription>
                     </div>
                     <Badge
                       variant={
-                        statusVariant[expo.status || "Planning"] || "outline"
+                        stateVariant[
+                          (expo.exhibitionState || expo.status || "PLANNING").toUpperCase()
+                        ] || "outline"
                       }
                     >
-                      {expo.status || "Planning"}
+                      {(expo.exhibitionState || expo.status || "Planning").toString()}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {expo.description ||
-                      "Add more context and logistics details from the edit screen."}
-                  </p>
                 </CardHeader>
                 <CardContent className="flex flex-1 flex-col gap-4">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <CalendarDays className="h-4 w-4" />
-                      <span>{expo.dateRange}</span>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <CalendarDays className="h-4 w-4" />
+                        <span>Event Dates</span>
+                      </div>
+                      <span className="font-medium">{expo.dateRange}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span>{expo.halls ?? 0} halls</span>
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>Start</span>
+                      <span className="font-medium">
+                        {dayjs(expo.startDateTime).format("MMM DD, YYYY hh:mm A")}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>{expo.stalls ?? expo.stallsPerPerson} stalls</span>
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>End</span>
+                      <span className="font-medium">
+                        {dayjs(expo.endDateTime).format("MMM DD, YYYY hh:mm A")}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>Booking Opens</span>
+                      <span className="font-medium">
+                        {dayjs(expo.bookingOpenDateTime).format("MMM DD, YYYY hh:mm A")}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>Booking Closes</span>
+                      <span className="font-medium">
+                        {dayjs(expo.bookingCloseDateTime).format("MMM DD, YYYY hh:mm A")}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-muted-foreground">
+                      <span>Stalls Per Person</span>
+                      <span className="font-medium">{expo.stallsPerPerson}</span>
                     </div>
                   </div>
 

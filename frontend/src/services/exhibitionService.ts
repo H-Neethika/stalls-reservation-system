@@ -7,6 +7,25 @@ type ApiError = Error & {
   responseBody?: unknown;
 };
 
+const extractErrorMessage = (payload: unknown): string | undefined => {
+  if (!payload) return undefined;
+  if (typeof payload === "string") return payload;
+
+  if (typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    if (typeof obj.message === "string") return obj.message;
+    if (typeof obj.error === "string") return obj.error;
+
+    if (obj.error && typeof obj.error === "object") {
+      const nested = obj.error as Record<string, unknown>;
+      if (typeof nested.message === "string") return nested.message;
+      if (typeof nested.detail === "string") return nested.detail;
+    }
+  }
+
+  return undefined;
+};
+
 const parseErrorResponse = async (response: Response): Promise<ApiError> => {
   let errorBody: unknown = null;
   const contentType = response.headers.get("content-type");
@@ -23,10 +42,7 @@ const parseErrorResponse = async (response: Response): Promise<ApiError> => {
   }
 
   const message =
-    (typeof errorBody === "object" && errorBody !== null
-      ? (errorBody as { message?: string; error?: string }).message ||
-        (errorBody as { message?: string; error?: string }).error
-      : null) ||
+    extractErrorMessage(errorBody) ||
     (typeof errorBody === "string" ? errorBody : null) ||
     "Request failed";
 
