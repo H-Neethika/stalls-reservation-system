@@ -1,8 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Building2, LayoutDashboard, ListChecks } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 
 const OrganizerDashboard = () => {
   const navigate = useNavigate();
@@ -52,7 +58,7 @@ const OrganizerDashboard = () => {
           {menuItems.map((item) => {
             const Icon = item.icon;
             return (
-              <Card 
+              <Card
                 key={item.path}
                 className="hover-scale cursor-pointer"
                 onClick={() => navigate(item.path)}

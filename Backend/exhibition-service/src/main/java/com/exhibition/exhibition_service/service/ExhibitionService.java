@@ -9,11 +9,12 @@ import java.util.List;
 public interface ExhibitionService {
 
     ExhibitionDTO createExhibition(ExhibitionDTO exhibition);
-    ExhibitionDTO updateExhibition(Long id,ExhibitionDTO exhibition);
+    ExhibitionDTO updateExhibition(Long id,ExhibitionDTO exhibition, Long requesterUserId);
 
     void deleteExhibition(Long id);
     ExhibitionDTO getExhibitionById(Long id);
     List<ExhibitionDTO> getAllExhibitions();
     List<ExhibitionDTO> getExhibitionsByState(EXHIBITION_STATE state);
+    List<ExhibitionDTO> getExhibitionsByUserId(Long userId);
 
 }

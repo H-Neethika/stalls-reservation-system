@@ -21,6 +21,8 @@ public class Exhibition {
 
 
     private Long id;
+    @Column(name = "organizer_id")
+    private Long organizerId;
     private String exhibitionName;
     private LocalDateTime startDateTime;
     private LocalDateTime endDateTime;

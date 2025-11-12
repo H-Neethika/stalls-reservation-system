@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ArrowLeft, Download } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 
 interface Booking {
@@ -94,7 +94,11 @@ const MyBookings = () => {
       <nav className="border-b bg-card/50 backdrop-blur">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/halls")}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/halls")}
+            >
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <h1 className="text-2xl font-bold">My Bookings</h1>
@@ -109,7 +113,9 @@ const MyBookings = () => {
         {bookings.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
-              <p className="text-muted-foreground mb-4">You haven't made any bookings yet.</p>
+              <p className="text-muted-foreground mb-4">
+                You haven't made any bookings yet.
+              </p>
               <Button onClick={() => navigate("/halls")}>Browse Halls</Button>
             </CardContent>
           </Card>
@@ -121,7 +127,9 @@ const MyBookings = () => {
                   <CardTitle className="flex items-center justify-between">
                     <span>{booking.hall.name}</span>
                     <Badge
-                      variant={booking.status === "CONFIRMED" ? "default" : "secondary"}
+                      variant={
+                        booking.status === "CONFIRMED" ? "default" : "secondary"
+                      }
                     >
                       {booking.status}
                     </Badge>
@@ -139,25 +147,31 @@ const MyBookings = () => {
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Price:</span>
-                      <span className="font-medium">LKR {Number(booking.stall.price).toLocaleString()}</span>
+                      <span className="font-medium">
+                        LKR {Number(booking.stall.price).toLocaleString()}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Booked on:</span>
-                      <span>{new Date(booking.created_at).toLocaleDateString()}</span>
+                      <span>
+                        {new Date(booking.created_at).toLocaleDateString()}
+                      </span>
                     </div>
                   </div>
 
                   {booking.qr_code && (
                     <div className="space-y-2">
-                      <img 
-                        src={booking.qr_code} 
-                        alt="QR Code" 
+                      <img
+                        src={booking.qr_code}
+                        alt="QR Code"
                         className="w-full h-auto border rounded"
                       />
                       <Button
                         variant="outline"
                         className="w-full"
-                        onClick={() => downloadQRCode(booking.qr_code!, booking.stall.name)}
+                        onClick={() =>
+                          downloadQRCode(booking.qr_code!, booking.stall.name)
+                        }
                       >
                         <Download className="w-4 h-4 mr-2" />
                         Download QR Code

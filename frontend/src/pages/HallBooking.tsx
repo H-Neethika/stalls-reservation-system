@@ -1,13 +1,26 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { mockApi, Stall as MockStall, Hall as MockHall } from "@/lib/mockData";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, ArrowLeft, ShoppingCart } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { generateQRCodeForReservation } from "@/utils/qrGenerator";
 
 type Stall = MockStall;
@@ -74,7 +87,7 @@ const HallBooking = () => {
 
   const handleConfirmBooking = async () => {
     if (!user) return;
-    
+
     setBookingLoading(true);
     try {
       // Create reservations with QR codes
@@ -104,7 +117,8 @@ const HallBooking = () => {
 
       toast({
         title: "Success!",
-        description: "Your stalls have been booked successfully. Check My Bookings to view your QR codes.",
+        description:
+          "Your stalls have been booked successfully. Check My Bookings to view your QR codes.",
       });
 
       setShowConfirmation(false);
@@ -120,7 +134,10 @@ const HallBooking = () => {
     }
   };
 
-  const totalPrice = selectedStalls.reduce((sum, stall) => sum + Number(stall.price), 0);
+  const totalPrice = selectedStalls.reduce(
+    (sum, stall) => sum + Number(stall.price),
+    0
+  );
 
   const getSizeColor = (size: string) => {
     switch (size) {
@@ -150,12 +167,18 @@ const HallBooking = () => {
       <nav className="border-b bg-card/50 backdrop-blur">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/halls")}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/halls")}
+            >
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <div>
               <h1 className="text-2xl font-bold">{hall.name}</h1>
-              <p className="text-sm text-muted-foreground">{hall.description}</p>
+              <p className="text-sm text-muted-foreground">
+                {hall.description}
+              </p>
             </div>
           </div>
           <Button variant="ghost" onClick={signOut}>
@@ -172,9 +195,10 @@ const HallBooking = () => {
               <CardHeader>
                 <CardTitle>Select Your Stalls</CardTitle>
                 <CardDescription>
-                  Cinema-style layout - Click on available stalls to select (max 3)
+                  Cinema-style layout - Click on available stalls to select (max
+                  3)
                 </CardDescription>
-                
+
                 {/* Legend */}
                 <div className="flex flex-wrap gap-4 mt-4">
                   <div className="flex items-center gap-2">
@@ -209,34 +233,48 @@ const HallBooking = () => {
                 <div className="space-y-2">
                   {Array.from({ length: hall.rows }).map((_, rowIndex) => (
                     <div key={rowIndex} className="flex gap-2 justify-center">
-                      {Array.from({ length: hall.columns }).map((_, colIndex) => {
-                        const stall = stalls.find(
-                          (s) => s.row_position === rowIndex && s.col_position === colIndex
-                        );
+                      {Array.from({ length: hall.columns }).map(
+                        (_, colIndex) => {
+                          const stall = stalls.find(
+                            (s) =>
+                              s.row_position === rowIndex &&
+                              s.col_position === colIndex
+                          );
 
-                        if (!stall) {
-                          return <div key={colIndex} className="w-16 h-16" />;
-                        }
+                          if (!stall) {
+                            return <div key={colIndex} className="w-16 h-16" />;
+                          }
 
-                        const isSelected = selectedStalls.find((s) => s.id === stall.id);
+                          const isSelected = selectedStalls.find(
+                            (s) => s.id === stall.id
+                          );
 
-                        return (
-                          <button
-                            key={stall.id}
-                            onClick={() => toggleStallSelection(stall)}
-                            disabled={stall.is_reserved}
-                            className={`
+                          return (
+                            <button
+                              key={stall.id}
+                              onClick={() => toggleStallSelection(stall)}
+                              disabled={stall.is_reserved}
+                              className={`
                               w-16 h-16 rounded flex flex-col items-center justify-center text-xs font-medium
                               transition-all hover:scale-105 disabled:cursor-not-allowed disabled:hover:scale-100
-                              ${stall.is_reserved ? "bg-gray-300 text-gray-500" : getSizeColor(stall.size) + " text-white"}
-                              ${isSelected ? "ring-4 ring-primary ring-offset-2" : ""}
+                              ${
+                                stall.is_reserved
+                                  ? "bg-gray-300 text-gray-500"
+                                  : getSizeColor(stall.size) + " text-white"
+                              }
+                              ${
+                                isSelected
+                                  ? "ring-4 ring-primary ring-offset-2"
+                                  : ""
+                              }
                             `}
-                          >
-                            <span>{stall.name}</span>
-                            <span className="text-xs">LKR {stall.price}</span>
-                          </button>
-                        );
-                      })}
+                            >
+                              <span>{stall.name}</span>
+                              <span className="text-xs">LKR {stall.price}</span>
+                            </button>
+                          );
+                        }
+                      )}
                     </div>
                   ))}
                 </div>
@@ -256,12 +294,19 @@ const HallBooking = () => {
               <CardContent>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Selected Stalls ({selectedStalls.length}/3)</p>
+                    <p className="text-sm font-medium">
+                      Selected Stalls ({selectedStalls.length}/3)
+                    </p>
                     {selectedStalls.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No stalls selected</p>
+                      <p className="text-sm text-muted-foreground">
+                        No stalls selected
+                      </p>
                     ) : (
                       selectedStalls.map((stall) => (
-                        <div key={stall.id} className="flex justify-between items-center text-sm border-b pb-2">
+                        <div
+                          key={stall.id}
+                          className="flex justify-between items-center text-sm border-b pb-2"
+                        >
                           <span>{stall.name}</span>
                           <Badge variant="outline">{stall.size}</Badge>
                         </div>
@@ -276,8 +321,8 @@ const HallBooking = () => {
                     </div>
                   </div>
 
-                  <Button 
-                    className="w-full" 
+                  <Button
+                    className="w-full"
                     disabled={selectedStalls.length === 0}
                     onClick={() => setShowConfirmation(true)}
                   >
@@ -299,18 +344,23 @@ const HallBooking = () => {
               Please review your booking details before confirming.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <p className="font-medium mb-2">Selected Stalls:</p>
               {selectedStalls.map((stall) => (
-                <div key={stall.id} className="flex justify-between text-sm py-1">
-                  <span>{stall.name} ({stall.size})</span>
+                <div
+                  key={stall.id}
+                  className="flex justify-between text-sm py-1"
+                >
+                  <span>
+                    {stall.name} ({stall.size})
+                  </span>
                   <span>LKR {stall.price}</span>
                 </div>
               ))}
             </div>
-            
+
             <div className="border-t pt-2">
               <div className="flex justify-between font-bold">
                 <span>Total Amount:</span>
@@ -324,7 +374,11 @@ const HallBooking = () => {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowConfirmation(false)} disabled={bookingLoading}>
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirmation(false)}
+              disabled={bookingLoading}
+            >
               Cancel
             </Button>
             <Button onClick={handleConfirmBooking} disabled={bookingLoading}>

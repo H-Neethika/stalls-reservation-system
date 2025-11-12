@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Auth from "./pages/Auth";
+import OAuth2Callback from "./pages/OAuth2Callback";
 import HallsList from "./pages/HallsList";
 import HallBooking from "./pages/HallBooking";
 import MyBookings from "./pages/MyBookings";
@@ -28,7 +29,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/auth" element={<Auth />} />
-            
+            <Route path="/oauth2/callback" element={<OAuth2Callback />} />
+
             {/* Vendor Routes */}
             <Route
               path="/halls"

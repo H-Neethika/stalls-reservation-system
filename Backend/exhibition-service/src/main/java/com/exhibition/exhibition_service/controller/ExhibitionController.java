@@ -30,10 +30,12 @@ public class ExhibitionController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> updateExhibition(@PathVariable Long id, @RequestBody ExhibitionDTO exhibition){
-
-        ExhibitionDTO updatedExhibition = exhibitionService.updateExhibition(id, exhibition);
-
+    public ResponseEntity<String> updateExhibition(
+            @PathVariable Long id,
+            @RequestBody ExhibitionDTO exhibition
+    ){
+        Long requesterUserId = exhibition.getOrganizerId();
+        ExhibitionDTO updatedExhibition = exhibitionService.updateExhibition(id, exhibition, requesterUserId);
         return ResponseEntity.ok("Exhibition has been updated");
     }
 
@@ -60,5 +62,10 @@ public class ExhibitionController {
     @GetMapping("/state/{state}")
     public ResponseEntity<List<ExhibitionDTO>> getByState(@PathVariable EXHIBITION_STATE state) {
         return ResponseEntity.ok(exhibitionService.getExhibitionsByState(state));
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<ExhibitionDTO>> getByUser(@PathVariable Long userId) {
+        return ResponseEntity.ok(exhibitionService.getExhibitionsByUserId(userId));
     }
 }
