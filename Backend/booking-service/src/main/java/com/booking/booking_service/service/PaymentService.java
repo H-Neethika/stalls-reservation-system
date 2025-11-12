@@ -1,6 +1,6 @@
 package com.booking.booking_service.service;
 
-import com.booking.booking_service.response.CreatePaymentRequest;
+import com.booking.booking_service.request.CreatePaymentRequest;
 import com.booking.booking_service.response.PaymentIntentResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;

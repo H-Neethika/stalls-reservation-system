@@ -1,4 +1,4 @@
-package com.booking.booking_service.response;
+package com.booking.booking_service.request;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;

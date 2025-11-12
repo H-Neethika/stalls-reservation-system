@@ -1,17 +1,27 @@
 package com.booking.booking_service.service.serviceImpl;
 
+import com.booking.booking_service.dto.StallDto;
 import com.booking.booking_service.model.BookingStatus;
 import com.booking.booking_service.model.ExhibitionHall;
 import com.booking.booking_service.model.ExhibitionStall;
+import com.booking.booking_service.model.Reservation;
 import com.booking.booking_service.model.StallType;
+import com.booking.booking_service.model.User;
 import com.booking.booking_service.repository.BookingStatusRepository;
 import com.booking.booking_service.repository.ExhibitionHallRepository;
 import com.booking.booking_service.repository.ExhibitionStallRepository;
+import com.booking.booking_service.repository.ReservationRepository;
 import com.booking.booking_service.repository.StallTypeRepository;
 import com.booking.booking_service.request.BulkCreateExhibitionStallsRequest;
 import com.booking.booking_service.request.CreateExhibitionStallRequest;
+import com.booking.booking_service.request.ReservationRequest;
 import com.booking.booking_service.response.ExhibitionStallResponse;
+import com.booking.booking_service.response.MessageResponse;
+import com.booking.booking_service.response.PaymentSuccessResponse;
+import com.booking.booking_service.response.UserResponse;
 import com.booking.booking_service.service.ExhibitionStallService;
+import com.booking.booking_service.service.UserService;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +43,12 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
 
     @Autowired
     private StallTypeRepository stallTypeRepository;
+
+    @Autowired
+    private ReservationRepository reservationRepository;
+
+    @Autowired
+    private UserService userService;
 
     @Override
     public ExhibitionStall createExhibitionStall(CreateExhibitionStallRequest request) {
@@ -157,5 +173,39 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
             throw new RuntimeException("ExhibitionStall not found with id " + id);
         }
         exhibitionStallRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public PaymentSuccessResponse updateStallBookingStatus(Long reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId).get();
+        List<ExhibitionStall> exhibitionStalls = reservation.getStall();
+        for(ExhibitionStall stall: exhibitionStalls){
+            stall.setBookingStatus(bookingStatusRepository.findById(3L).get());
+
+        }
+        reservation.setStall(exhibitionStalls);
+        reservationRepository.save(reservation);
+
+        UserResponse user = userService.getUserById(reservation.getUserId()).getBody();
+        PaymentSuccessResponse response = new PaymentSuccessResponse();
+        response.setReservationId(reservation.getId());
+        response.setUserId(user.getId());
+        response.setUsername(user.getName());
+        response.setEmail(user.getEmail());
+        response.setBookingDateTime(reservation.getCreatedAt());
+
+        List<ExhibitionStall> reservationStalls  = reservation.getStall();
+        List<StallDto> stallDetails = new ArrayList<>();
+        for(ExhibitionStall stall: reservationStalls){
+            StallDto stallDto = new StallDto();
+            stallDto.setStallName(stall.getStallName());
+            stallDto.setStallSize(stall.getStallType().getType());
+            stallDetails.add(stallDto);
+        }
+
+        response.setStalls(stallDetails);
+
+        return response;
     }
 }
