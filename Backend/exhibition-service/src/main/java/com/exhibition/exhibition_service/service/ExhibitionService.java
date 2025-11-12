@@ -15,5 +15,6 @@ public interface ExhibitionService {
     ExhibitionDTO getExhibitionById(Long id);
     List<ExhibitionDTO> getAllExhibitions();
     List<ExhibitionDTO> getExhibitionsByState(EXHIBITION_STATE state);
+    List<ExhibitionDTO> getExhibitionsByUserId(Long userId);
 
 }

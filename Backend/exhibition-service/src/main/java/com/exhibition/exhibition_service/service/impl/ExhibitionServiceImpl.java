@@ -179,4 +179,12 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 .map(exhibitionMapper::toDto)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public List<ExhibitionDTO> getExhibitionsByUserId(Long userId) {
+        return exhibitionRepository.findByOrganizerId(userId)
+                .stream()
+                .map(exhibitionMapper::toDto)
+                .collect(Collectors.toList());
+    }
 }
