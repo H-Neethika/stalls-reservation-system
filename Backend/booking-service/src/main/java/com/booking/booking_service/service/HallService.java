@@ -8,4 +8,7 @@ public interface HallService {
   public List<Hall> getAllHalls();
 
   public  Hall createHall(Hall hall);
+
+  public Hall updateHall(Long id, Hall hall);
+  public void deleteHall(Long id);
 }
