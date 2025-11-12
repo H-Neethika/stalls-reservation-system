@@ -26,7 +26,7 @@ public class ExhibitionStall {
     private String stallName;
 
 
-    @OneToOne
+    @ManyToOne
     private StallType stallType;
 
 
