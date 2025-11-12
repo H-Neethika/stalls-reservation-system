@@ -6,6 +6,7 @@ import com.booking.booking_service.request.BulkCreateExhibitionStallsRequest;
 import com.booking.booking_service.request.CreateExhibitionStallRequest;
 import com.booking.booking_service.response.ExhibitionStallResponse;
 import com.booking.booking_service.response.MessageResponse;
+import com.booking.booking_service.response.PaymentSuccessResponse;
 import com.booking.booking_service.service.ExhibitionStallService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -63,6 +64,13 @@ public class ExhibitionStallController {
         messageResponse.setMessage("Exhibition stallId "+id+" deleted successfully!");
         return new ResponseEntity<>(messageResponse, HttpStatus.OK);
 
+    }
+
+    @PutMapping("/booking-status/{id}")
+    public ResponseEntity<PaymentSuccessResponse> updateExhibitionStall(
+        @PathVariable Long id) {
+        PaymentSuccessResponse response = exhibitionStallService.updateStallBookingStatus(id);
+        return ResponseEntity.ok(response);
     }
 
 }
