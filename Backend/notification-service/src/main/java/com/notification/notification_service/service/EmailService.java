@@ -63,7 +63,7 @@ public class EmailService {
             }
 
             mailSender.send(message);
-            logger.info("✅ Email sent successfully to {}", to);
+            logger.info("Email sent successfully to {}", to);
 
             // Update status → SENT
             notificationStatusService.updateStatus(notificationId, NotificationStatus.SENT, null);

@@ -2,25 +2,27 @@ package com.notification.notification_service.dto;
 
 import com.notification.notification_service.enums.NotificationType;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.net.URI;
 import java.time.LocalDateTime;
 
 @Data
-@AllArgsConstructor
+@Builder
 @NoArgsConstructor
-public class ReservationNotificationRequest {
+@AllArgsConstructor
+public class ReservationNotificationResponse {
     private Long userId;
-    private String userName;
+    private String recipientEmail;
     private NotificationType notificationType;
-    private String email;
+    private String status;
+    private String userName;
     private Long reservationId;
     private String fairName;
     private String stallName;
     private String stallSize;
     private LocalDateTime bookingTime;
     private LocalDateTime eventTime;
-    private URI eventLink;
+    private String eventLink;
 }

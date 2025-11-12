@@ -1,17 +1,18 @@
 package com.notification.notification_service.controller;
 
-import com.notification.notification_service.dto.AccountActivationNotificationRequest;
-import com.notification.notification_service.dto.ReservationNotificationRequest;
+import com.notification.notification_service.dto.*;
 import com.notification.notification_service.enums.NotificationType;
 import com.notification.notification_service.model.Notification;
 import com.notification.notification_service.service.NotificationService;
-import org.springframework.web.bind.annotation.RestController;
+import com.notification.notification_service.exception.NotificationNotFoundException;
+import com.notification.notification_service.exception.NotificationException;
+import org.springframework.web.bind.annotation.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -21,83 +22,99 @@ public class NotificationController {
     @Autowired
     private NotificationService notificationService;
 
+    /**
+     * Fetch reservation notification details for a user.
+     */
     @GetMapping("/reservation/details")
-    public ResponseEntity<Notification> getReservationNotificationDetails(@RequestParam Long userId, @RequestParam Long reservationId) {
-        try {
-            Optional<Notification> notification = notificationService.getReservationNotification(reservationId, userId);
-            if (notification.isPresent()) {
-                return ResponseEntity.ok(notification.get());
-            } else {
-                throw new IllegalArgumentException("There is no notification details for this reservation.");
-            }
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException(e);
-        }
-    }
-
-    @PostMapping(value = "/qr/generate", produces = MediaType.IMAGE_PNG_VALUE)
-    public ResponseEntity<byte[]> generateQrCode(@RequestParam Long reservationId, @RequestParam Long userId) {
-        try {
-            byte[] qrCode = notificationService.getQRCodeBytes(reservationId, userId);
-            return ResponseEntity.ok(qrCode);
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    @PostMapping("/account/send")
-    public ResponseEntity<Void> sendAccountActivationNotification(@RequestBody AccountActivationNotificationRequest notificationRequest) {
-        try {
-            notificationService.sendAccountCreationEmail(notificationRequest);
-            return ResponseEntity.ok().build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    @PostMapping("/reservation/send")
-    public ResponseEntity<Void> sendReservationNotification(@RequestBody ReservationNotificationRequest notificationRequest) {
-        try {
-            notificationService.sendReservationConfirmationEmail(notificationRequest);
-            return ResponseEntity.ok().build();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    @PostMapping("/resend")
-    public ResponseEntity<Void> resendNotification(
+    public ResponseEntity<ReservationNotificationResponse> getReservationNotificationDetails(
             @RequestParam Long userId,
-            @RequestParam NotificationType notificationType,
-            @RequestParam(required = false) Long reservationId
+            @RequestParam Long reservationId
     ) {
-        try {
-            switch (notificationType) {
-                case STALL_RESERVATION -> {
-                    notificationService.resendAccountCreationEmail(userId);
+        ReservationNotificationResponse response = notificationService.getReservationNotificationStatus(reservationId, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Fetch account activation notification details for a user
+     */
+    @GetMapping("/account/details")
+    public ResponseEntity<AccountActivationNotificationResponse> getAccountActivationNotificationDetails(
+            @RequestParam Long userId
+    ) {
+        AccountActivationNotificationResponse response = notificationService.getAccountActivationNotificationStatus(userId);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Generate a QR code for a reservation.
+     */
+    @PostMapping(value = "/qr/generate", produces = MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<byte[]> generateQrCode(
+            @RequestParam Long reservationId,
+            @RequestParam Long userId
+    ) {
+        byte[] qrCode = notificationService.getQRCodeBytes(reservationId, userId);
+        return ResponseEntity.ok(qrCode);
+    }
+
+    /**
+     * Get details from Scan QR code secret.
+     */
+    @GetMapping("/qr/scan")
+    public ResponseEntity<Map<String, Object>> scanQRCode(@RequestBody ScannedQRCodeResponse scannedQRCodeResponse) {
+        Map<String, Object> qrCodeDetails = notificationService.getQRCodeDetails(
+                scannedQRCodeResponse.getEncryptedSecret()
+        );
+        return ResponseEntity.ok(qrCodeDetails);
+    }
+
+    /**
+     * Send an account activation email.
+     */
+    @PostMapping("/account/send")
+    public ResponseEntity<Void> sendAccountActivationNotification(
+            @RequestBody AccountActivationNotificationRequest notificationRequest
+    ) {
+        notificationService.sendAccountActivationEmail(notificationRequest);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Send a reservation confirmation email.
+     */
+    @PostMapping("/reservation/send")
+    public ResponseEntity<Void> sendReservationNotification(
+            @RequestBody ReservationNotificationRequest notificationRequest
+    ) {
+        notificationService.sendReservationConfirmationEmail(notificationRequest);
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Resend a notification based on type.
+     */
+    @PostMapping("/resend")
+    public ResponseEntity<Void> resendNotification(@RequestBody ResendNotificationRequest request) {
+        NotificationType type = request.getNotificationType();
+        Long userId = request.getUserId();
+        Long reservationId = request.getReservationId();
+
+        switch (type) {
+            case ACCOUNT_ACTIVATION ->
+                    notificationService.resendAccountActivationEmail(userId);
+            case STALL_RESERVATION -> {
+                if (reservationId == null) {
+                    throw new IllegalArgumentException("Reservation ID is required for STALL_RESERVATION notifications.");
                 }
-                case ACCOUNT_ACTIVATION -> {
-                    notificationService.resendStallConfirmationEmail(reservationId, userId);
-                }
-                case PASSWORD_RESET -> {}
-                case EVENT_REMINDER -> {}
-                default -> throw new IllegalArgumentException("Unsupported notification type: " + notificationType);
+                notificationService.resendStallConfirmationEmail(reservationId, userId);
             }
-
-            return ResponseEntity.ok().build();
-
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            case PASSWORD_RESET, EVENT_REMINDER ->
+                    throw new NotificationException("Resending for this type is not yet implemented: " + type);
+            default ->
+                    throw new NotificationException("Unsupported notification type: " + type);
         }
+
+        return ResponseEntity.ok().build();
     }
 
 }
