@@ -25,4 +25,25 @@ public class HallServiceImpl implements HallService {
         return hallRepository.save(hall);
     }
 
+
+    @Override
+    public Hall updateHall(Long id, Hall hall) {
+        Hall existingHall = hallRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Hall not found with id: " + id));
+
+        existingHall.setHallName(hall.getHallName());
+        existingHall.setRows(hall.getRows());
+        existingHall.setColumns(hall.getColumns());
+
+        return hallRepository.save(existingHall);
+    }
+
+    @Override
+    public void deleteHall(Long id) {
+        if (!hallRepository.existsById(id)) {
+            throw new RuntimeException("Hall not found with id: " + id);
+        }
+        hallRepository.deleteById(id);
+    }
+
 }
