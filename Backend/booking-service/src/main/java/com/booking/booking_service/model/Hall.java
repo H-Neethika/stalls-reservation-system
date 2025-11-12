@@ -21,6 +21,9 @@ public class Hall {
 
     private String hallName;
 
+    private Long rows;
+    private Long columns;
+
 
 
 }

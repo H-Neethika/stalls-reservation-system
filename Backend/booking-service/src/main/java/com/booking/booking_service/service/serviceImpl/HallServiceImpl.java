@@ -24,4 +24,5 @@ public class HallServiceImpl implements HallService {
     public Hall createHall(Hall hall) {
         return hallRepository.save(hall);
     }
+
 }

@@ -18,8 +18,8 @@ public class ExhibitionHall {
     @ManyToOne
     private Hall hallId;
     private Long exhibitionId;
-    private Long rows;
-    private Long columns;
+//    private Long rows;
+//    private Long columns;
 
 
 
