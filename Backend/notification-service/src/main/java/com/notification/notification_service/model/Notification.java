@@ -1,12 +1,15 @@
 package com.notification.notification_service.model;
 
 import com.notification.notification_service.enums.NotificationStatus;
+import com.notification.notification_service.enums.NotificationType;
+import com.notification.notification_service.model.email_details.EmailDetails;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Type;
 
+import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -20,8 +23,8 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    @Column(nullable = false, unique = true)
-    private Long reservationId;
+    @Column(nullable = false)
+    private Long userId;
 
     @Column(nullable = false)
     private String recipientEmail;
@@ -29,6 +32,10 @@ public class Notification {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private NotificationStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private NotificationType notificationType;
 
     private String lastError;
 

@@ -93,9 +93,8 @@
 		<dependency>
 			<groupId>io.hypersistence</groupId>
 			<artifactId>hypersistence-utils-hibernate-60</artifactId>
-			<version>3.7.0</version> <!-- check for latest -->
+			<version>3.7.0</version>
 		</dependency>
-
 	</dependencies>
 
 	<build>

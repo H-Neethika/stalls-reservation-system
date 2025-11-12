@@ -1,6 +1,8 @@
 package com.notification.notification_service.controller;
 
-import com.notification.notification_service.dto.BookingEvent;
+import com.notification.notification_service.dto.AccountActivationNotificationRequest;
+import com.notification.notification_service.dto.ReservationNotificationRequest;
+import com.notification.notification_service.enums.NotificationType;
 import com.notification.notification_service.model.Notification;
 import com.notification.notification_service.service.NotificationService;
 import org.springframework.web.bind.annotation.RestController;
@@ -10,6 +12,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
+
 @RestController
 @RequestMapping("/api/notification")
 public class NotificationController {
@@ -17,10 +21,15 @@ public class NotificationController {
     @Autowired
     private NotificationService notificationService;
 
-    @GetMapping("/{reservationId}")
-    public ResponseEntity<Notification> getNotificationDetails(@PathVariable Long reservationId) {
+    @GetMapping("/reservation/details/{reservationId}")
+    public ResponseEntity<Notification> getReservationNotificationDetails(@RequestParam Long userId, @PathVariable Long reservationId) {
         try {
-            return ResponseEntity.ok(notificationService.getNotification(reservationId));
+            Optional<Notification> notification = notificationService.getReservationNotification(reservationId, userId);
+            if (notification.isPresent()) {
+                return ResponseEntity.ok(notification.get());
+            } else {
+                throw new IllegalArgumentException("There is no notification details for this reservation.");
+            }
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException(e);
         }
@@ -36,27 +45,58 @@ public class NotificationController {
         }
     }
 
-    @PostMapping("/send")
-    public ResponseEntity<String> sendNotification(@RequestBody BookingEvent bookingEvent) {
+    @PostMapping("/account/send")
+    public ResponseEntity<Void> sendAccountActivationNotification(@RequestBody AccountActivationNotificationRequest notificationRequest) {
         try {
-            notificationService.processNotification(bookingEvent);
-            return ResponseEntity.ok("Notification sent successfully");
+            notificationService.sendAccountCreationEmail(notificationRequest);
+            return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("Invalid booking bookingEvent: " + e.getMessage());
+            return ResponseEntity.badRequest().build();
+
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Error sending notification: " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @PostMapping("/reservation/send")
+    public ResponseEntity<Void> sendReservationNotification(@RequestBody ReservationNotificationRequest notificationRequest) {
+        try {
+            notificationService.sendReservationConfirmationEmail(notificationRequest);
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 
     @PostMapping("/resend")
-    public ResponseEntity<String> resendNotification(@RequestBody Long reservationId) {
+    public ResponseEntity<Void> resendNotification(
+            @RequestParam Long userId,
+            @RequestParam NotificationType notificationType,
+            @RequestParam(required = false) Long reservationId
+    ) {
         try {
-            notificationService.resendNotification(reservationId);
-            return ResponseEntity.ok("Notification sent successfully");
+            switch (notificationType) {
+                case STALL_RESERVATION -> {
+                    notificationService.resendAccountCreationEmail(userId);
+                }
+                case ACCOUNT_ACTIVATION -> {
+                    notificationService.resendStallConfirmationEmail(reservationId, userId);
+                }
+                case PASSWORD_RESET -> {}
+                case EVENT_REMINDER -> {}
+                default -> throw new IllegalArgumentException("Unsupported notification type: " + notificationType);
+            }
+
+            return ResponseEntity.ok().build();
+
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body("Invalid booking bookingEvent: " + e.getMessage());
+            return ResponseEntity.badRequest().build();
+
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Error sending notification: " + e.getMessage());
+            return ResponseEntity.internalServerError().build();
         }
     }
 

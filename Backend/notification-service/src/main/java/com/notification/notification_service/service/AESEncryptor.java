@@ -1,7 +1,5 @@
 package com.notification.notification_service.service;
 
-import org.springframework.beans.factory.annotation.Value;
-
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
@@ -9,15 +7,12 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
-public class QRCodeEncryptor {
+public class AESEncryptor {
     private static final String ALGO = "AES/GCM/NoPadding";
     private static final int TAG_LENGTH_BIT = 128;
     private static final int IV_LENGTH_BYTE = 12;
 
-    @Value("${NOTIFICATION_QRCODE_SECRET}")
-    private static String base64Secret;
-
-    public static String encrypt(String plainText) {
+    public static String encrypt(String plainText, String base64Secret) {
         try {
             byte[] keyBytes = Base64.getDecoder().decode(base64Secret);
             SecretKey key = new SecretKeySpec(keyBytes, "AES");
@@ -38,7 +33,7 @@ public class QRCodeEncryptor {
         }
     }
 
-    public static String decrypt(String encryptedText) {
+    public static String decrypt(String encryptedText, String base64Secret) {
         try {
             byte[] decoded = Base64.getUrlDecoder().decode(encryptedText);
             byte[] iv = new byte[IV_LENGTH_BYTE];
