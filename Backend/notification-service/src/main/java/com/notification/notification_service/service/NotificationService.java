@@ -67,13 +67,38 @@ public class NotificationService {
                 .findFirst();
     }
 
-    public byte[] createQRCode(String qrcodeDetails, int width, int height) {
+    private byte[] createEncryptedQRCode(String qrcodeDetails, int width, int height) {
         String encrypted = AESEncryptor.encrypt(qrcodeDetails, this.base64Secret);
         return qrCodeService.generateQRCode(encrypted, width, height);
     }
 
     public String getQRCodeDetails(String qrcodeSecret) {
         return AESEncryptor.decrypt(qrcodeSecret, this.base64Secret);
+    }
+
+    private byte[] getQRCodeBytes(ReservationEmailDetails reservationEmailDetails) {
+        Map<String, Object> qrcodeDetails = new HashMap<>();
+        qrcodeDetails.put("reservationId", reservationEmailDetails.getReservationId());
+        qrcodeDetails.put("stallName", reservationEmailDetails.getStallName());
+        qrcodeDetails.put("fairName", reservationEmailDetails.getFairName());
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        String jsonString = null;
+        try {
+            jsonString = objectMapper.writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(qrcodeDetails);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+        return createEncryptedQRCode(jsonString, 500, 500);
+    }
+
+    public byte[] getQRCodeBytes(Long reservationId, Long userId) {
+        Notification notification = getReservationNotification(reservationId, userId).orElseThrow(
+                () -> new IllegalArgumentException("Reservation not found")
+        );
+        ReservationEmailDetails reservationEmailDetails = (ReservationEmailDetails) notification.getEmailDetails();
+        return getQRCodeBytes(reservationEmailDetails);
     }
 
     @Transactional
@@ -167,15 +192,7 @@ public class NotificationService {
         URI eventLink = reservationEmailDetails.getEventLink();
         String email = notificationRequest.getEmail();
 
-        Map<String, Object> qrcodeDetails = new HashMap<>();
-        qrcodeDetails.put("reservationId", reservationEmailDetails.getReservationId());
-        qrcodeDetails.put("stallName", reservationEmailDetails.getStallName());
-        qrcodeDetails.put("fairName", reservationEmailDetails.getFairName());
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        String jsonString = objectMapper.writerWithDefaultPrettyPrinter()
-                .writeValueAsString(qrcodeDetails);
-        byte[] qrCodeBytes = createQRCode(jsonString, 500, 500);
+        byte[] qrCodeBytes = getQRCodeBytes(reservationEmailDetails);
 
         String htmlBody = getReservationConfirmationHTMLBody(
                 reservationEmailDetails,

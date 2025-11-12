@@ -21,8 +21,8 @@ public class NotificationController {
     @Autowired
     private NotificationService notificationService;
 
-    @GetMapping("/reservation/details/{reservationId}")
-    public ResponseEntity<Notification> getReservationNotificationDetails(@RequestParam Long userId, @PathVariable Long reservationId) {
+    @GetMapping("/reservation/details")
+    public ResponseEntity<Notification> getReservationNotificationDetails(@RequestParam Long userId, @RequestParam Long reservationId) {
         try {
             Optional<Notification> notification = notificationService.getReservationNotification(reservationId, userId);
             if (notification.isPresent()) {
@@ -35,10 +35,10 @@ public class NotificationController {
         }
     }
 
-    @PostMapping(value = "/qr/generate/{reservationId}", produces = MediaType.IMAGE_PNG_VALUE)
-    public ResponseEntity<byte[]> generateQrCode(@PathVariable String reservationId) {
+    @PostMapping(value = "/qr/generate", produces = MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<byte[]> generateQrCode(@RequestParam Long reservationId, @RequestParam Long userId) {
         try {
-            byte[] qrCode = notificationService.createQRCode(reservationId, 500, 500);
+            byte[] qrCode = notificationService.getQRCodeBytes(reservationId, userId);
             return ResponseEntity.ok(qrCode);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
