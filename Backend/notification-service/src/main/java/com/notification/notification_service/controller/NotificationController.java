@@ -2,25 +2,22 @@ package com.notification.notification_service.controller;
 
 import com.notification.notification_service.dto.*;
 import com.notification.notification_service.enums.NotificationType;
-import com.notification.notification_service.model.Notification;
 import com.notification.notification_service.service.NotificationService;
-import com.notification.notification_service.exception.NotificationNotFoundException;
 import com.notification.notification_service.exception.NotificationException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/notification")
+@RequiredArgsConstructor
 public class NotificationController {
 
-    @Autowired
-    private NotificationService notificationService;
+    private final NotificationService notificationService;
 
     /**
      * Fetch reservation notification details for a user.

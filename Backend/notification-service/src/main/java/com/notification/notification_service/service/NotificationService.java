@@ -15,8 +15,10 @@ import com.notification.notification_service.model.email_details.AccountActivati
 import com.notification.notification_service.model.email_details.EmailDetails;
 import com.notification.notification_service.model.email_details.ReservationEmailDetails;
 import com.notification.notification_service.repository.NotificationRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.notification.notification_service.service.event.EmailNotificationEvent;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,16 +26,12 @@ import java.net.URI;
 import java.util.*;
 
 @Service
+@RequiredArgsConstructor
 public class NotificationService {
 
-    @Autowired
-    private NotificationRepository notificationRepository;
-
-    @Autowired
-    private QRCodeService qrCodeService;
-
-    @Autowired
-    private EmailService emailService;
+    private final NotificationRepository notificationRepository;
+    private final ApplicationEventPublisher publisher;
+    private final QRCodeService qrCodeService;
 
     @Value("${OFFICIAL_WEBSITE_LINK}")
     private String websiteLink;
@@ -91,7 +89,8 @@ public class NotificationService {
             String decryptedJson = AESEncryptor.decrypt(qrcodeSecret, base64Secret);
 
             ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.readValue(decryptedJson, new TypeReference<>() {});
+            return objectMapper.readValue(decryptedJson, new TypeReference<>() {
+            });
         } catch (Exception e) {
             throw new QRCodeDecodingException("Failed to decode QR code details", e);
         }
@@ -114,11 +113,11 @@ public class NotificationService {
         }
     }
 
-
     public byte[] getQRCodeBytes(Long reservationId, Long userId) {
         Notification notification = getReservationNotification(reservationId, userId)
                 .orElseThrow(() -> new NotificationNotFoundException("Reservation not found for ID: " + reservationId));
-        ReservationNotificationRequest notificationRequest = NotificationMapper.toReservationNotificationRequest(notification);
+        ReservationNotificationRequest notificationRequest = NotificationMapper
+                .toReservationNotificationRequest(notification);
         return getQRCodeBytes(notificationRequest);
     }
 
@@ -131,9 +130,12 @@ public class NotificationService {
 
         if (optionalNotification.isPresent()) {
             Notification notification = optionalNotification.get();
-            if (notification.getStatus().equals(NotificationStatus.FAILED) || notification.getStatus().equals(NotificationStatus.PENDING)) {
-                emailService.sendEmail(
-                        null,
+            if (
+                    notification.getStatus().equals(NotificationStatus.FAILED)
+                            || notification.getStatus().equals(NotificationStatus.PENDING)
+            ) {
+                publisher.publishEvent(new EmailNotificationEvent(
+                        notification.getId(),
                         email,
                         "Welcome to the Book Fair Platform!",
                         htmlBody,
@@ -141,7 +143,8 @@ public class NotificationService {
                         null,
                         null,
                         null
-                );
+                ));
+
                 return;
             }
             throw new NotificationAlreadySentException("An account creation email has already been sent to " + email);
@@ -149,8 +152,8 @@ public class NotificationService {
             Notification notification = NotificationMapper.toNotification(notificationRequest);
             notificationRepository.save(notification);
 
-            emailService.sendEmail(
-                    null,
+            publisher.publishEvent(new EmailNotificationEvent(
+                    notification.getId(),
                     email,
                     "Welcome to the Book Fair Platform!",
                     htmlBody,
@@ -158,7 +161,7 @@ public class NotificationService {
                     null,
                     null,
                     null
-            );
+            ));
         }
     }
 
@@ -174,7 +177,8 @@ public class NotificationService {
             throw new NotificationAlreadySentException("The account creation email has already been sent.");
         }
 
-        AccountActivationNotificationRequest accountActivationNotificationRequest = NotificationMapper.toAccountActivationNotificationRequest(notification);
+        AccountActivationNotificationRequest accountActivationNotificationRequest = NotificationMapper
+                .toAccountActivationNotificationRequest(notification);
         sendAccountActivationEmail(accountActivationNotificationRequest);
     }
 
@@ -195,9 +199,9 @@ public class NotificationService {
             Notification existing = existingNotification.get();
             if (
                     existing.getStatus().equals(NotificationStatus.PENDING)
-                    || existing.getStatus().equals(NotificationStatus.FAILED)
+                            || existing.getStatus().equals(NotificationStatus.FAILED)
             ) {
-                emailService.sendEmail(
+                publisher.publishEvent(new EmailNotificationEvent(
                         existing.getId(),
                         notificationRequest.getEmail(),
                         notificationRequest.getFairName() + " - Reservation Confirmation",
@@ -206,39 +210,41 @@ public class NotificationService {
                         "reservation_qr.png",
                         EmailAttachmentType.IMAGE,
                         qrCodeBytes
-                );
+                ));
                 existing.setStatus(NotificationStatus.PENDING);
                 return;
             }
-            throw new NotificationAlreadySentException("The reservation with ID " + notificationRequest.getReservationId() + " has already been confirmed.");
+            throw new NotificationAlreadySentException(
+                    "The reservation with ID " + notificationRequest.getReservationId() + " has already been confirmed."
+            );
         }
 
         Notification notification = NotificationMapper.toNotification(notificationRequest);
         Notification savedNotification = notificationRepository.save(notification);
 
-        try {
-            emailService.sendEmail(
-                    savedNotification.getId(),
-                    notificationRequest.getEmail(),
-                    notificationRequest.getFairName() + " - Reservation Confirmation",
-                    htmlBody,
-                    true,
-                    "reservation_qr.png",
-                    EmailAttachmentType.IMAGE,
-                    qrCodeBytes
-            );
-        } catch (Exception e) {
-            throw new NotificationSendFailedException("Failed to send reservation confirmation email", e);
-        }
+        publisher.publishEvent(new EmailNotificationEvent(
+                savedNotification.getId(),
+                notificationRequest.getEmail(),
+                notificationRequest.getFairName() + " - Reservation Confirmation",
+                htmlBody,
+                true,
+                "reservation_qr.png",
+                EmailAttachmentType.IMAGE,
+                qrCodeBytes
+        ));
     }
 
     @Transactional
     public void resendStallConfirmationEmail(Long reservationId, Long userId) {
         Notification notification = getReservationNotification(reservationId, userId)
-                .orElseThrow(() -> new NotificationNotFoundException("No reservation found with ID " + reservationId + " for this user."));
+                .orElseThrow(() -> new NotificationNotFoundException(
+                        "No reservation found with ID " + reservationId + " for this user."
+                ));
 
         if (notification.getStatus().equals(NotificationStatus.SENT)) {
-            throw new NotificationAlreadySentException("The reservation with ID " + reservationId + " has already been confirmed and email sent.");
+            throw new NotificationAlreadySentException(
+                    "The reservation with ID " + reservationId + " has already been confirmed and email sent."
+            );
         }
 
         ReservationNotificationRequest reservationNotificationRequest = NotificationMapper
@@ -253,55 +259,55 @@ public class NotificationService {
             URI websiteUri
     ) {
         return """
-            <html>
-            <head>
-                <style>
-                    body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8f9fa; color: #333; }
-                    .container { max-width: 600px; background: #fff; margin: 30px auto; border-radius: 12px;
-                                 box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
-                    .header { background-color: #5b3cc4; color: #fff; text-align: center; padding: 25px 20px; }
-                    .header h1 { margin: 0; font-size: 24px; }
-                    .content { padding: 30px 40px; text-align: left; }
-                    .details { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px; line-height: 1.6; }
-                    .qr-section { text-align: center; margin-top: 30px; }
-                    #qrCode { width: 180px; height: 180px; border: 4px solid #eee; border-radius: 10px; }
-                    .footer { background: #f1f1f1; text-align: center; padding: 15px; font-size: 13px; color: #666; }
-                    .btn { display: inline-block; background-color: #5b3cc4; color: white; padding: 10px 20px;
-                           border-radius: 5px; text-decoration: none; margin-top: 15px; }
-                    .btn:hover { background-color: #4a2aa5; color: white; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div class="header">
-                        <h1>📖 %s - Stall Reservation Confirmed!</h1>
-                    </div>
-                    <div class="content">
-                        <h2>Dear %s,</h2>
-                        <p>We’re thrilled to confirm your stall reservation for the upcoming <b>%s</b>.</p>
-                        <div class="details">
-                            <p><b>Reservation ID:</b> %s</p>
-                            <p><b>Stall Name:</b> %s</p>
-                            <p><b>Stall Size:</b> %s</p>
-                            <p><b>Booking Time:</b> %s</p>
-                            <p><b>Event Date & Time:</b> %s</p>
+                <html>
+                <head>
+                    <style>
+                        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8f9fa; color: #333; }
+                        .container { max-width: 600px; background: #fff; margin: 30px auto; border-radius: 12px;
+                                     box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
+                        .header { background-color: #5b3cc4; color: #fff; text-align: center; padding: 25px 20px; }
+                        .header h1 { margin: 0; font-size: 24px; }
+                        .content { padding: 30px 40px; text-align: left; }
+                        .details { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px; line-height: 1.6; }
+                        .qr-section { text-align: center; margin-top: 30px; }
+                        #qrCode { width: 180px; height: 180px; border: 4px solid #eee; border-radius: 10px; }
+                        .footer { background: #f1f1f1; text-align: center; padding: 15px; font-size: 13px; color: #666; }
+                        .btn { display: inline-block; background-color: #5b3cc4; color: white; padding: 10px 20px;
+                               border-radius: 5px; text-decoration: none; margin-top: 15px; }
+                        .btn:hover { background-color: #4a2aa5; color: white; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <h1>📖 %s - Stall Reservation Confirmed!</h1>
                         </div>
-            
-                        <div class="qr-section">
-                            <p>Please present this QR code at the venue entrance for verification:</p>
-                            <img id="qrCode" src="cid:qrCode" alt="QR Code" />
-                            <p>We look forward to seeing you at the fair!</p>
-                            <a href="%s" class="btn">View Event Details</a>
+                        <div class="content">
+                            <h2>Dear %s,</h2>
+                            <p>We’re thrilled to confirm your stall reservation for the upcoming <b>%s</b>.</p>
+                            <div class="details">
+                                <p><b>Reservation ID:</b> %s</p>
+                                <p><b>Stall Name:</b> %s</p>
+                                <p><b>Stall Size:</b> %s</p>
+                                <p><b>Booking Time:</b> %s</p>
+                                <p><b>Event Date & Time:</b> %s</p>
+                            </div>
+                
+                            <div class="qr-section">
+                                <p>Please present this QR code at the venue entrance for verification:</p>
+                                <img id="qrCode" src="cid:qrCode" alt="QR Code" />
+                                <p>We look forward to seeing you at the fair!</p>
+                                <a href="%s" class="btn">View Event Details</a>
+                            </div>
+                        </div>
+                        <div class="footer">
+                            <p>© 2025 Book Fair Committee |
+                            <a href="%s" style="color:#5b3cc4;text-decoration:none;">Visit Website</a></p>
                         </div>
                     </div>
-                    <div class="footer">
-                        <p>© 2025 Book Fair Committee |
-                        <a href="%s" style="color:#5b3cc4;text-decoration:none;">Visit Website</a></p>
-                    </div>
-                </div>
-            </body>
-            </html>
-            """.formatted(
+                </body>
+                </html>
+                """.formatted(
                 notificationRequest.getFairName(),
                 notificationRequest.getUserName(),
                 notificationRequest.getFairName(),
