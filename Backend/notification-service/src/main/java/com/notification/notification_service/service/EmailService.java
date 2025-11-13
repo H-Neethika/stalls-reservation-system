@@ -1,78 +1,53 @@
 package com.notification.notification_service.service;
 
-import com.notification.notification_service.enums.EmailAttachmentType;
-import com.notification.notification_service.enums.NotificationStatus;
+import com.notification.notification_service.service.event.EmailNotificationEvent;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class EmailService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
-
-    @Autowired
-    private JavaMailSender mailSender;
-
-    @Autowired
-    private NotificationStatusService notificationStatusService;
+    private final JavaMailSender mailSender;
 
     @Value("${NOTIFICATION_EMAIL}")
     private String notificationEmail;
 
-    @Async
-    public void sendEmail(
-            UUID notificationId,
-            String to,
-            String subject,
-            String body,
-            boolean isHTMLBody,
-            String attachmentFileName,
-            EmailAttachmentType attachmentType,
-            byte[] attachmentBytes
-    ) {
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true);
+    public void sendEmail(EmailNotificationEvent event) throws MessagingException {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
-            helper.setFrom(notificationEmail);
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(body, isHTMLBody);
+        helper.setFrom(notificationEmail);
+        helper.setTo(event.to());
+        helper.setSubject(event.subject());
+        helper.setText(event.body(), event.isHTMLBody());
 
-            if (attachmentBytes != null) {
-                switch (attachmentType) {
-                    case IMAGE -> {
-                        ByteArrayResource inputStreamSource = new ByteArrayResource(attachmentBytes);
-                        helper.addInline("qrCode", inputStreamSource, "image/png");
-                        helper.addAttachment(attachmentFileName, inputStreamSource, "image/png");
-                    }
-                    case PDF -> helper.addAttachment(attachmentFileName, new ByteArrayResource(attachmentBytes), "application/pdf");
-                    default -> throw new IllegalArgumentException("Unsupported attachment type: " + attachmentType);
+        if (event.attachmentBytes() != null) {
+            switch (event.attachmentType()) {
+                case IMAGE -> {
+                    ByteArrayResource src = new ByteArrayResource(event.attachmentBytes());
+                    helper.addInline("qrCode", src, "image/png");
+                    helper.addAttachment(event.attachmentFileName(), src, "image/png");
                 }
+                case PDF ->
+                        helper.addAttachment(event.attachmentFileName(),
+                                new ByteArrayResource(event.attachmentBytes()), "application/pdf");
+                default -> throw new IllegalArgumentException(
+                        "Unsupported attachment type: " + event.attachmentType());
             }
-
-            mailSender.send(message);
-            logger.info("Email sent successfully to {}", to);
-
-            // Update status → SENT
-            notificationStatusService.updateStatus(notificationId, NotificationStatus.SENT, null);
-
-        } catch (MessagingException e) {
-            logger.error("Failed to send email to {}: {}", to, e.getMessage());
-
-            // Update status → FAILED
-            notificationStatusService.updateStatus(notificationId, NotificationStatus.FAILED, e.getMessage());
         }
+
+        mailSender.send(message);
+        logger.info("Email sent successfully to {}", event.to());
     }
 }

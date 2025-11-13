@@ -1,29 +1,33 @@
 package com.notification.notification_service.service;
 
 import com.notification.notification_service.enums.NotificationStatus;
+import com.notification.notification_service.exception.NotificationNotFoundException;
 import com.notification.notification_service.model.Notification;
 import com.notification.notification_service.repository.NotificationRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class NotificationStatusService {
 
-    @Autowired
-    private NotificationRepository notificationRepository;
+    private static final Logger logger = LoggerFactory.getLogger(NotificationStatusService.class);
+
+    private final NotificationRepository notificationRepository;
 
     @Transactional
     public void updateStatus(UUID id, NotificationStatus status, String errorMessage) {
-        Optional<Notification> optionalNotification = notificationRepository.findById(id);
-        if (optionalNotification.isPresent()) {
-            Notification notification = optionalNotification.get();
-            notification.setStatus(status);
-            notification.setLastError(errorMessage);
-            notificationRepository.save(notification);
-        }
+        Notification notification = notificationRepository.findById(id)
+                .orElseThrow(() -> new NotificationNotFoundException("Notification not found with id: " + id));
+
+        notification.setStatus(status);
+        notification.setLastError(errorMessage);
+
+        logger.info("Updated notification [{}] status to [{}] with errorMessage [{}]", id, status, errorMessage);
     }
 }

@@ -154,6 +154,7 @@ public class NotificationMapper {
         AccountActivationNotificationRequest notificationRequest = toAccountActivationNotificationRequest(notification);
         accountActivationNotificationResponse.setNotificationType(notificationRequest.getNotificationType());
         accountActivationNotificationResponse.setCreatedTime(notificationRequest.getCreatedTime());
+        accountActivationNotificationResponse.setRecipientEmail(notification.getRecipientEmail());
         return accountActivationNotificationResponse;
     }
 }
