@@ -20,12 +20,13 @@ public class EmailNotificationListener {
     private final EmailService emailService;
     private final NotificationStatusService notificationStatusService;
 
-    @Async
+    @Async("emailExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleEmailNotification(EmailNotificationEvent event) {
         try {
             emailService.sendEmail(event);
             notificationStatusService.updateStatus(event.notificationId(), NotificationStatus.SENT, null);
+
         } catch (Exception e) {
             logger.error("Email send failed for {}: {}", event.to(), e.getMessage());
             notificationStatusService.updateStatus(event.notificationId(), NotificationStatus.FAILED, e.getMessage());
