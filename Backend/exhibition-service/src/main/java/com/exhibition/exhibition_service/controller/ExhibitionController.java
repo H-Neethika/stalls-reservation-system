@@ -3,7 +3,6 @@ package com.exhibition.exhibition_service.controller;
 
 import com.exhibition.exhibition_service.dto.ExhibitionDTO;
 import com.exhibition.exhibition_service.domain.EXHIBITION_STATE;
-import com.exhibition.exhibition_service.model.Exhibition;
 import com.exhibition.exhibition_service.service.ExhibitionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,8 +22,6 @@ public class ExhibitionController {
     public ResponseEntity<String> createExhibition(@RequestBody ExhibitionDTO exhibition){
 
         ExhibitionDTO createdExhibition=  exhibitionService.createExhibition(exhibition);
-
-
 
         return ResponseEntity.ok("Exhibition has been created");
     }
