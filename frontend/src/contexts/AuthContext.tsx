@@ -9,6 +9,52 @@ import { User } from "@/types";
 import { apiService } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 
+const extractErrorMessage = (input: unknown, fallback = "Request failed") => {
+  if (!input) {
+    return fallback;
+  }
+
+  if (input instanceof Error) {
+    const rawMessage = input.message;
+    try {
+      const parsed = JSON.parse(rawMessage);
+      if (parsed && typeof parsed === "object") {
+        if (typeof parsed.message === "string") return parsed.message;
+        if (
+          parsed.error &&
+          typeof parsed.error === "object" &&
+          typeof parsed.error.message === "string"
+        ) {
+          return parsed.error.message;
+        }
+      }
+    } catch {
+      // not JSON, fall through
+    }
+    return rawMessage || fallback;
+  }
+
+  if (typeof input === "string") {
+    try {
+      const parsed = JSON.parse(input);
+      if (parsed && typeof parsed === "object") {
+        if (typeof parsed.message === "string") return parsed.message;
+        if (
+          parsed.error &&
+          typeof parsed.error === "object" &&
+          typeof parsed.error.message === "string"
+        ) {
+          return parsed.error.message;
+        }
+      }
+    } catch {
+      return input;
+    }
+  }
+
+  return fallback;
+};
+
 interface AuthContextType {
   user: User | null;
   userRole: string | null;
@@ -104,8 +150,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       return { error: null };
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Login failed";
+      const errorMessage = extractErrorMessage(error, "Login failed");
       toast({
         title: "Error",
         description: errorMessage,

@@ -57,3 +57,30 @@ export interface Reservation {
   qr_code?: string;
   created_at: string;
 }
+
+export interface CreateExhibitionRequest {
+  organizerId: number;
+  exhibitionName: string;
+  startDateTime: string;
+  endDateTime: string;
+  bookingOpenDateTime: string;
+  bookingCloseDateTime: string;
+  stallsPerPerson: number;
+}
+
+export interface Exhibition {
+  id: string;
+  organizerId: number;
+  exhibitionName: string;
+  startDateTime: string;
+  endDateTime: string;
+  bookingOpenDateTime: string;
+  bookingCloseDateTime: string;
+  stallsPerPerson: number;
+  status?: string;
+  exhibitionState?: string;
+  venue?: string;
+  halls?: number;
+  stalls?: number;
+  description?: string;
+}
