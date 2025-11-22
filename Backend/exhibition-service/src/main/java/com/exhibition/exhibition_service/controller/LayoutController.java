@@ -43,6 +43,16 @@ public class LayoutController {
         return ResponseEntity.ok(layoutService.getHalls());
     }
 
+    @GetMapping("/stall-types")
+    public ResponseEntity<List<com.exhibition.exhibition_service.model.StallType>> getStallTypes() {
+        return ResponseEntity.ok(layoutService.getStallTypes());
+    }
+
+    @GetMapping("/halls/{hallId}")
+    public ResponseEntity<com.exhibition.exhibition_service.dto.HallDetailsResponse> getHall(@PathVariable Long hallId) {
+        return ResponseEntity.ok(layoutService.getHallDetails(hallId));
+    }
+
     @PostMapping("/exhibitions/{exhibitionId}/halls")
     public ResponseEntity<ExhibitionHall> createExhibitionHall(@PathVariable Long exhibitionId,
                                                                @RequestBody CreateExhibitionHallRequest request) {

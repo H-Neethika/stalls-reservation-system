@@ -50,6 +50,10 @@ public class LayoutService {
         return hallRepository.findAll();
     }
 
+    public List<StallType> getStallTypes() {
+        return stallTypeRepository.findAll();
+    }
+
     @Transactional
     public ExhibitionHall createExhibitionHall(CreateExhibitionHallRequest request) {
         Hall hall = hallRepository.findById(request.getHallId())
@@ -166,6 +170,17 @@ public class LayoutService {
         Hall hall = hallRepository.findById(hallId)
                 .orElseThrow(() -> new IllegalArgumentException("Hall not found: " + hallId));
         return stallRepository.findByHall(hall);
+    }
+
+    public HallDetailsResponse getHallDetails(Long hallId) {
+        Hall hall = hallRepository.findById(hallId)
+                .orElseThrow(() -> new IllegalArgumentException("Hall not found: " + hallId));
+        List<Stall> stalls = stallRepository.findByHall(hall);
+        HallDetailsResponse dto = new HallDetailsResponse();
+        dto.setHallId(hall.getId());
+        dto.setHallName(hall.getHallName());
+        dto.setStalls(stalls.stream().map(this::toDetails).collect(Collectors.toList()));
+        return dto;
     }
 
     @Transactional
@@ -295,6 +310,25 @@ public class LayoutService {
         point.setX(dto.getX());
         point.setY(dto.getY());
         return point;
+    }
+
+    private StallDetailsResponse toDetails(Stall stall) {
+        StallDetailsResponse dto = new StallDetailsResponse();
+        dto.setId(stall.getId());
+        if (stall.getStallType() != null) {
+            dto.setStallTypeId(stall.getStallType().getId());
+            dto.setStallType(stall.getStallType().getType());
+        }
+        dto.setPath(stall.getPath());
+        if (stall.getPoints() != null) {
+            dto.setPoints(stall.getPoints().stream().map(p -> {
+                PointDto pd = new PointDto();
+                pd.setX(p.getX());
+                pd.setY(p.getY());
+                return pd;
+            }).collect(Collectors.toList()));
+        }
+        return dto;
     }
 
     private StallSummaryResponse toSummary(Stall stall) {
