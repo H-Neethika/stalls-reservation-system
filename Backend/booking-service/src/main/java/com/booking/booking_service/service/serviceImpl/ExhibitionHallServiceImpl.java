@@ -42,8 +42,8 @@ public class ExhibitionHallServiceImpl implements ExhibitionHallService {
         ExhibitionHall newExhibitionHall = new ExhibitionHall();
         newExhibitionHall.setHallId(hall);
         newExhibitionHall.setExhibitionId(exhibitionHallReq.getExhibitionId());
-        newExhibitionHall.setRows(exhibitionHallReq.getRows());
-        newExhibitionHall.setColumns(exhibitionHallReq.getColumns());
+//        newExhibitionHall.setRows(exhibitionHallReq.getRows());
+//        newExhibitionHall.setColumns(exhibitionHallReq.getColumns());
 
         ExhibitionHall savedExhibitionHall = exhibitionHallRepository.save(newExhibitionHall);
 
@@ -81,8 +81,8 @@ public class ExhibitionHallServiceImpl implements ExhibitionHallService {
         return exhibitionHallRepository.findById(id).map(existing -> {
             existing.setHallId(hallRepository.findById(updatedExhibitionHall.getHallId()).get());
             existing.setExhibitionId(updatedExhibitionHall.getExhibitionId());
-            existing.setRows(updatedExhibitionHall.getRows());
-            existing.setColumns(updatedExhibitionHall.getColumns());
+//            existing.setRows(updatedExhibitionHall.getRows());
+//            existing.setColumns(updatedExhibitionHall.getColumns());
             return exhibitionHallRepository.save(existing);
         }).orElseThrow(() -> new RuntimeException("ExhibitionHall not found with id " + id));
     }
@@ -97,13 +97,15 @@ public class ExhibitionHallServiceImpl implements ExhibitionHallService {
 
 
     private ExhibitionHallResponse mapToResponse(ExhibitionHall hall) {
+
+        Hall baseHall = hallRepository.findById(hall.getId()).get();
         ExhibitionHallResponse dto = new ExhibitionHallResponse();
         dto.setId(hall.getId());
         dto.setExhibitionId(hall.getExhibitionId());
         dto.setHallId(hall.getHallId().getId());
         dto.setHallName(hall.getHallId().getHallName());
-        dto.setRows(hall.getRows());
-        dto.setColumns(hall.getColumns());
+        dto.setRows(baseHall.getRows());
+        dto.setColumns(baseHall.getColumns());
 
         // ✅ Fetch all stall types for this hall
         List<StallTypeResponse> stallTypeResponses = stallTypeRepository

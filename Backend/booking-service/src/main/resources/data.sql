@@ -56,69 +56,69 @@ INSERT INTO genre (id, name)
 SELECT 10, 'Film & Entertainment'
 WHERE NOT EXISTS (SELECT 1 FROM genre WHERE id = 10);
 
--- Hall
-INSERT INTO hall (id, hall_name)
-SELECT 1, 'Hall-A'
+-- Insert halls only if they don't already exist
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-A', 10, 20
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-A');
 
-INSERT INTO hall (id, hall_name)
-SELECT 2, 'Hall-B'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-B', 12, 25
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-B');
 
-INSERT INTO hall (id, hall_name)
-SELECT 3, 'Hall-C'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-C', 8, 15
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-C');
 
-INSERT INTO hall (id, hall_name)
-SELECT 4, 'Hall-D'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-D', 10, 18
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-D');
 
-INSERT INTO hall (id, hall_name)
-SELECT 5, 'Hall-F'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-F', 9, 16
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-F');
 
-INSERT INTO hall (id, hall_name)
-SELECT 6, 'Hall-G'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-G', 11, 20
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-G');
 
-INSERT INTO hall (id, hall_name)
-SELECT 7, 'Hall-K'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-K', 10, 22
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-K');
 
-INSERT INTO hall (id, hall_name)
-SELECT 8, 'Hall-J'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-J', 14, 30
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-J');
 
-INSERT INTO hall (id, hall_name)
-SELECT 9, 'Hall-R'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-R', 7, 14
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-R');
 
-INSERT INTO hall (id, hall_name)
-SELECT 10, 'Hall-H'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-H', 9, 17
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-H');
 
-INSERT INTO hall (id, hall_name)
-SELECT 11, 'Hall-H1'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-H1', 12, 24
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-H1');
 
-INSERT INTO hall (id, hall_name)
-SELECT 12, 'Hall-L'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-L', 8, 18
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-L');
 
-INSERT INTO hall (id, hall_name)
-SELECT 13, 'Hall-M'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-M', 10, 20
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-M');
 
-INSERT INTO hall (id, hall_name)
-SELECT 14, 'Hall-N'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-N', 11, 21
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-N');
 
-INSERT INTO hall (id, hall_name)
-SELECT 15, 'Hall-P'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-P', 13, 26
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-P');
 
-INSERT INTO hall (id, hall_name)
-SELECT 16, 'Hall-Q'
+INSERT INTO hall (hall_name, rows, columns)
+SELECT 'Hall-Q', 10, 20
 WHERE NOT EXISTS (SELECT 1 FROM hall WHERE hall_name = 'Hall-Q');
 
 -- ✅ Reset sequences after inserts
