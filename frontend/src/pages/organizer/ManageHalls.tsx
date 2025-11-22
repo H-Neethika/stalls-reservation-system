@@ -1,13 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { mockApi, Hall } from "@/lib/mockData";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,9 +18,21 @@ import { Loader2, Grid3x3, Plus } from "lucide-react";
 import { OrganizerLayout } from "@/components/organizer/OrganizerLayout";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { hallService } from "@/services/hallService";
+import { Table, Space } from "antd";
+import type { ColumnsType } from "antd/es/table";
 
 interface HallWithCount extends Hall {
   stall_count: number;
+}
+
+interface CreatedHallResponse {
+  id?: string;
+  hallName?: string;
+  rows?: number;
+  columns?: number;
+  description?: string;
+  created_at?: string;
 }
 
 const ManageHalls = () => {
@@ -39,7 +45,6 @@ const ManageHalls = () => {
   const [creatingHall, setCreatingHall] = useState(false);
   const [hallForm, setHallForm] = useState({
     name: "",
-    description: "",
     rows: 8,
     columns: 8,
   });
@@ -50,9 +55,36 @@ const ManageHalls = () => {
 
   const fetchHalls = async () => {
     try {
+      const apiHalls = await hallService.getHalls();
+      const normalized: HallWithCount[] = apiHalls.map((hall) => ({
+        id: hall.id?.toString() ?? `hall-${Date.now()}-${Math.random()}`,
+        name: hall.hallName ?? "Untitled Hall",
+        description: hall.description ?? "",
+        rows: hall.rows ?? 0,
+        columns: hall.columns ?? 0,
+        created_by: user?.id || "organizer",
+        created_at: hall.createdAt || hall.created_at || new Date().toISOString(),
+        stall_count:
+          typeof hall.totalStalls === "number"
+            ? hall.totalStalls
+            : hall.rows && hall.columns
+            ? hall.rows * hall.columns
+            : 0,
+      }));
+
+      setHalls(normalized);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Failed to load halls.";
+      toast({
+        title: "Error loading halls",
+        description: `${message} (showing local sample data)`,
+        variant: "destructive",
+      });
+
+      // Fallback to mock data so UI still works
       const hallsData = await mockApi.getHalls();
       const allStalls = await mockApi.getStalls();
-
       const hallsWithCounts: HallWithCount[] = hallsData.map((hall) => {
         const stallCount = allStalls.filter((s) => s.hall_id === hall.id).length;
         return {
@@ -62,13 +94,6 @@ const ManageHalls = () => {
       });
 
       setHalls(hallsWithCounts);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to load halls.";
-      toast({
-        title: "Error",
-        description: message,
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
@@ -77,7 +102,6 @@ const ManageHalls = () => {
   const resetHallForm = () =>
     setHallForm({
       name: "",
-      description: "",
       rows: 8,
       columns: 8,
     });
@@ -103,24 +127,29 @@ const ManageHalls = () => {
 
     setCreatingHall(true);
     try {
-      const newHall = await mockApi.createHall({
-        name: hallForm.name.trim(),
-        description: hallForm.description.trim(),
+      const createdHall: CreatedHallResponse = await hallService.createHall({
+        hallName: hallForm.name.trim(),
         rows: Number(hallForm.rows),
         columns: Number(hallForm.columns),
-        created_by: user?.id || "organizer",
       });
 
       setHalls((prev) => [
         ...prev,
         {
-          ...newHall,
+          id: createdHall?.id || `hall-${Date.now()}`,
+          name: createdHall?.hallName || hallForm.name.trim(),
+          description: createdHall?.description || "",
+          rows: createdHall?.rows ?? hallForm.rows,
+          columns: createdHall?.columns ?? hallForm.columns,
+          created_by: user?.id || "organizer",
+          created_at: createdHall?.created_at || new Date().toISOString(),
           stall_count: 0,
         },
       ]);
+
       toast({
         title: "Hall created",
-        description: `${newHall.name} is now available.`,
+        description: `${hallForm.name.trim()} is now available.`,
       });
       resetHallForm();
       setIsCreateHallOpen(false);
@@ -135,6 +164,80 @@ const ManageHalls = () => {
       setCreatingHall(false);
     }
   };
+
+  const columns: ColumnsType<HallWithCount & { key: string }> = useMemo(
+    () => [
+      {
+        title: "Hall",
+        dataIndex: "name",
+        key: "hall",
+        render: (value) => <span className="font-semibold">{value}</span>,
+      },
+      {
+        title: "Layout (Rows x Columns)",
+        dataIndex: "layout",
+        key: "layout",
+        render: (_, record) => `${record.rows} × ${record.columns}`,
+      },
+      {
+        title: "Total Stalls",
+        dataIndex: "stall_count",
+        key: "stalls",
+      },
+      {
+        title: "Created",
+        dataIndex: "created_at",
+        key: "created_at",
+        render: (value) =>
+          value ? new Date(value).toLocaleDateString() : "—",
+      },
+      {
+        title: "Actions",
+        key: "actions",
+        render: (_, record) => (
+          <Space size="small">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/organizer/stalls?hallId=${record.id}`)}
+            >
+              View
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                toast({
+                  title: "Edit hall",
+                  description: "Hall editing is coming soon.",
+                })
+              }
+            >
+              Edit
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() =>
+                toast({
+                  title: "Delete hall",
+                  description: "Hall deletion is coming soon.",
+                })
+              }
+            >
+              Delete
+            </Button>
+          </Space>
+        ),
+      },
+    ],
+    [navigate, toast],
+  );
+
+  const tableData = useMemo(
+    () => halls.map((hall) => ({ ...hall, key: hall.id })),
+    [halls],
+  );
 
   const content = (
     <div className="space-y-8">
@@ -169,22 +272,8 @@ const ManageHalls = () => {
                     onChange={(e) =>
                       setHallForm((prev) => ({ ...prev, name: e.target.value }))
                     }
-                    placeholder="E.g. Hall D"
+                    placeholder="E.g. Hall W"
                     required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="hall-description">Description</Label>
-                  <Input
-                    id="hall-description"
-                    value={hallForm.description}
-                    onChange={(e) =>
-                      setHallForm((prev) => ({
-                        ...prev,
-                        description: e.target.value,
-                      }))
-                    }
-                    placeholder="Optional description"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -255,30 +344,16 @@ const ManageHalls = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {halls.map((hall) => (
-            <Card key={hall.id} className="hover-scale">
-              <CardHeader>
-                <CardTitle>{hall.name}</CardTitle>
-                <CardDescription>{hall.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Layout:</span>
-                    <span className="font-medium">
-                      {hall.rows} x {hall.columns}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Total Stalls:</span>
-                    <span className="font-medium">{hall.stall_count}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card>
+          <CardContent className="p-0">
+            <Table
+              columns={columns}
+              dataSource={tableData}
+              pagination={{ pageSize: 6 }}
+              rowKey="key"
+            />
+          </CardContent>
+        </Card>
       )}
     </div>
   );

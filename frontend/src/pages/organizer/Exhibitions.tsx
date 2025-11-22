@@ -1,17 +1,20 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import dayjs, { Dayjs } from "dayjs";
-import { Modal, Form, Input, DatePicker, InputNumber } from "antd";
+import {
+  Modal,
+  Form,
+  Input,
+  DatePicker,
+  InputNumber,
+  Table,
+  Space,
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
 import { OrganizerLayout } from "@/components/organizer/OrganizerLayout";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarDays, Eye, Pencil } from "lucide-react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { exhibitionService } from "@/services/exhibitionService";
@@ -24,6 +27,7 @@ type ApiError = Error & {
 
 type ExhibitionCard = Exhibition & {
   dateRange?: string;
+  bookingWindow?: string;
 };
 
 const stateVariant: Record<string, "default" | "secondary" | "outline"> = {
@@ -74,19 +78,25 @@ const extractErrorSection = (body: unknown): string | null => {
 };
 
 const OrganizerExhibitions = () => {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form] = Form.useForm();
   const [exhibitions, setExhibitions] = useState<ExhibitionCard[]>([]);
   const [isFetching, setIsFetching] = useState(false);
+  const [selectedExhibition, setSelectedExhibition] =
+    useState<ExhibitionCard | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const toCard = (expo: Exhibition): ExhibitionCard => ({
     ...expo,
     status: expo.status || "Planning",
     exhibitionState: expo.exhibitionState || expo.status || "Planning",
+    bookingWindow: `${dayjs(expo.bookingOpenDateTime).format(
+      "MMM DD, YYYY",
+    )} - ${dayjs(expo.bookingCloseDateTime).format("MMM DD, YYYY")}`,
     dateRange: `${dayjs(expo.startDateTime).format("MMM DD")} - ${dayjs(
       expo.endDateTime,
     ).format("MMM DD, YYYY")}`,
@@ -134,15 +144,93 @@ const OrganizerExhibitions = () => {
     fetchExhibitions();
   }, [user?.id, toast]);
 
-  const openModal = () => setIsModalOpen(true);
+  const openModal = () => {
+    setEditingId(null);
+    form.resetFields();
+    setIsModalOpen(true);
+  };
   const closeModal = () => {
     setIsModalOpen(false);
     form.resetFields();
+    setEditingId(null);
+  };
+
+  const handleViewExhibition = async (id: string) => {
+    try {
+      const data = await exhibitionService.getExhibition(id);
+      setSelectedExhibition(toCard(data));
+      setIsViewModalOpen(true);
+    } catch (error) {
+      const err = error as ApiError;
+      toast({
+        title: "Failed to load exhibition",
+        description:
+          extractErrorSection(err.responseBody) ||
+          err.message ||
+          "Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditExhibition = async (id: string) => {
+    try {
+      const data = await exhibitionService.getExhibition(id);
+      setEditingId(id);
+      form.setFieldsValue({
+        exhibitionName: data.exhibitionName,
+        startDateTime: dayjs(data.startDateTime),
+        endDateTime: dayjs(data.endDateTime),
+        bookingOpenDateTime: dayjs(data.bookingOpenDateTime),
+        bookingCloseDateTime: dayjs(data.bookingCloseDateTime),
+        stallsPerPerson: data.stallsPerPerson,
+      });
+      setIsModalOpen(true);
+    } catch (error) {
+      const err = error as ApiError;
+      toast({
+        title: "Failed to load exhibition",
+        description:
+          extractErrorSection(err.responseBody) ||
+          err.message ||
+          "Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteExhibition = (id: string) => {
+    Modal.confirm({
+      title: "Delete exhibition",
+      content: "Are you sure you want to delete this exhibition?",
+      okText: "Delete",
+      okType: "danger",
+      onOk: async () => {
+        try {
+          await exhibitionService.deleteExhibition(id);
+          setExhibitions((prev) => prev.filter((expo) => expo.id !== id));
+          toast({
+            title: "Exhibition deleted",
+            description: "The exhibition has been deleted successfully.",
+          });
+        } catch (error) {
+          const err = error as ApiError;
+          toast({
+            title: "Failed to delete exhibition",
+            description:
+              extractErrorSection(err.responseBody) ||
+              err.message ||
+              "Please try again later.",
+            variant: "destructive",
+          });
+        }
+      },
+    });
   };
 
   const formatDate = (value: Dayjs) => value.format("YYYY-MM-DDTHH:mm:ss");
 
-  const handleCreateExhibition = async (values: {
+  const handleSubmitExhibition = async (values: {
     exhibitionName: string;
     startDateTime: Dayjs;
     endDateTime: Dayjs;
@@ -171,12 +259,26 @@ const OrganizerExhibitions = () => {
 
     setIsSubmitting(true);
     try {
-      const created = await exhibitionService.createExhibition(payload);
-      toast({
-        title: "Exhibition created",
-        description: `${created.exhibitionName} has been created successfully.`,
-      });
-      setExhibitions((prev) => [toCard(created), ...prev]);
+      if (editingId) {
+        const updated = await exhibitionService.updateExhibition(
+          editingId,
+          payload,
+        );
+        toast({
+          title: "Exhibition updated",
+          description: `${updated.exhibitionName} has been updated.`,
+        });
+        setExhibitions((prev) =>
+          prev.map((expo) => (expo.id === editingId ? toCard(updated) : expo)),
+        );
+      } else {
+        const created = await exhibitionService.createExhibition(payload);
+        toast({
+          title: "Exhibition created",
+          description: `${created.exhibitionName} has been created successfully.`,
+        });
+        setExhibitions((prev) => [toCard(created), ...prev]);
+      }
       closeModal();
     } catch (error: unknown) {
       const err = error as ApiError;
@@ -197,7 +299,7 @@ const OrganizerExhibitions = () => {
         "Something went wrong while creating the exhibition.";
 
       toast({
-        title: "Failed to create exhibition",
+        title: editingId ? "Failed to update exhibition" : "Failed to create exhibition",
         description,
         variant: "destructive",
       });
@@ -205,6 +307,78 @@ const OrganizerExhibitions = () => {
       setIsSubmitting(false);
     }
   };
+
+  const columns: ColumnsType<ExhibitionCard & { key: string }> = useMemo(
+    () => [
+      {
+        title: "Exhibition",
+        dataIndex: "exhibitionName",
+        key: "exhibitionName",
+        render: (value) => <span className="font-semibold">{value}</span>,
+      },
+      {
+        title: "Event Dates",
+        dataIndex: "dateRange",
+        key: "dateRange",
+      },
+      {
+        title: "Booking Window",
+        dataIndex: "bookingWindow",
+        key: "bookingWindow",
+      },
+      {
+        title: "Stalls / Person",
+        dataIndex: "stallsPerPerson",
+        key: "stallsPerPerson",
+      },
+      {
+        title: "State",
+        dataIndex: "exhibitionState",
+        key: "exhibitionState",
+        render: (value, record) => (
+          <Badge
+            variant={
+              stateVariant[
+                (value || record.status || "PLANNING").toString().toUpperCase()
+              ] || "outline"
+            }
+          >
+            {value || record.status || "Planning"}
+          </Badge>
+        ),
+      },
+      {
+        title: "Actions",
+        key: "actions",
+        render: (_, record) => (
+          <Space size="small">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleViewExhibition(record.id)}
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleEditExhibition(record.id)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => handleDeleteExhibition(record.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </Space>
+        ),
+      },
+    ],
+    [],
+  );
 
   return (
     <OrganizerLayout title="Exhibitions">
@@ -233,89 +407,22 @@ const OrganizerExhibitions = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {exhibitions.map((expo) => (
-              <Card key={expo.id} className="flex flex-col">
-                <CardHeader className="space-y-3">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <CardTitle>{expo.exhibitionName}</CardTitle>
-                    </div>
-                    <Badge
-                      variant={
-                        stateVariant[
-                          (expo.exhibitionState || expo.status || "PLANNING").toUpperCase()
-                        ] || "outline"
-                      }
-                    >
-                      {(expo.exhibitionState || expo.status || "Planning").toString()}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex flex-1 flex-col gap-4">
-                  <div className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <CalendarDays className="h-4 w-4" />
-                        <span>Event Dates</span>
-                      </div>
-                      <span className="font-medium">{expo.dateRange}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-muted-foreground">
-                      <span>Start</span>
-                      <span className="font-medium">
-                        {dayjs(expo.startDateTime).format("MMM DD, YYYY hh:mm A")}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-muted-foreground">
-                      <span>End</span>
-                      <span className="font-medium">
-                        {dayjs(expo.endDateTime).format("MMM DD, YYYY hh:mm A")}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-muted-foreground">
-                      <span>Booking Opens</span>
-                      <span className="font-medium">
-                        {dayjs(expo.bookingOpenDateTime).format("MMM DD, YYYY hh:mm A")}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-muted-foreground">
-                      <span>Booking Closes</span>
-                      <span className="font-medium">
-                        {dayjs(expo.bookingCloseDateTime).format("MMM DD, YYYY hh:mm A")}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between text-muted-foreground">
-                      <span>Stalls Per Person</span>
-                      <span className="font-medium">{expo.stallsPerPerson}</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-auto flex gap-3">
-                    <Button
-                      variant="outline"
-                      className="flex-1 flex items-center justify-center gap-2"
-                      onClick={() =>
-                        navigate(`/organizer/exhibitions/${expo.id}/edit`)
-                      }
-                    >
-                      <Pencil className="h-4 w-4" />
-                      Edit
-                    </Button>
-                    <Button
-                      className="flex-1 flex items-center justify-center gap-2"
-                      onClick={() =>
-                        navigate(`/organizer/exhibitions/${expo.id}`)
-                      }
-                    >
-                      <Eye className="h-4 w-4" />
-                      View
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Exhibitions</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table
+                columns={columns}
+                dataSource={exhibitions.map((expo) => ({
+                  ...expo,
+                  key: expo.id,
+                }))}
+                pagination={{ pageSize: 5 }}
+                rowKey="key"
+              />
+            </CardContent>
+          </Card>
         )}
       </div>
 
@@ -329,7 +436,7 @@ const OrganizerExhibitions = () => {
         <Form
           layout="vertical"
           form={form}
-          onFinish={handleCreateExhibition}
+          onFinish={handleSubmitExhibition}
           initialValues={{ stallsPerPerson: 1 }}
         >
           <Form.Item
@@ -403,15 +510,69 @@ const OrganizerExhibitions = () => {
             <InputNumber min={1} className="w-full" />
           </Form.Item>
           <Form.Item className="mb-0">
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Creating..." : "Create Exhibition"}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting
+                ? editingId
+                  ? "Saving..."
+                  : "Creating..."
+                : editingId
+                ? "Save Changes"
+                : "Create Exhibition"}
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={selectedExhibition?.exhibitionName || "Exhibition Details"}
+        open={isViewModalOpen}
+        onCancel={() => setIsViewModalOpen(false)}
+        footer={
+          <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
+            Close
+          </Button>
+        }
+      >
+        {selectedExhibition ? (
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Event Dates</span>
+              <span className="font-medium">{selectedExhibition.dateRange}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Booking Window</span>
+              <span className="font-medium">
+                {selectedExhibition.bookingWindow}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Stalls Per Person</span>
+              <span className="font-medium">
+                {selectedExhibition.stallsPerPerson}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">State</span>
+              <Badge
+                variant={
+                  stateVariant[
+                    (selectedExhibition.exhibitionState ||
+                      selectedExhibition.status ||
+                      "PLANNING")!
+                      .toString()
+                      .toUpperCase()
+                  ] || "outline"
+                }
+              >
+                {selectedExhibition.exhibitionState ||
+                  selectedExhibition.status ||
+                  "Planning"}
+              </Badge>
+            </div>
+          </div>
+        ) : (
+          <p className="text-muted-foreground">No data available.</p>
+        )}
       </Modal>
     </OrganizerLayout>
   );

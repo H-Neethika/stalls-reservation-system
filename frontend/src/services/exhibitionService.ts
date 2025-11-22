@@ -60,6 +60,17 @@ const parseErrorResponse = async (response: Response): Promise<ApiError> => {
 };
 
 class ExhibitionService {
+  private async parseJsonSafe<T>(response: Response): Promise<T> {
+    const text = await response.text();
+    if (!text) {
+      return {} as T;
+    }
+    try {
+      return JSON.parse(text) as T;
+    } catch {
+      throw new Error("Invalid JSON response from server");
+    }
+  }
   private getAuthHeaders() {
     const token = localStorage.getItem("accessToken");
     if (!token) {
@@ -85,7 +96,7 @@ class ExhibitionService {
       throw await parseErrorResponse(response);
     }
 
-    return response.json();
+    return this.parseJsonSafe<Exhibition>(response);
   }
 
   async getExhibitionsByOrganizer(
@@ -103,7 +114,68 @@ class ExhibitionService {
       throw await parseErrorResponse(response);
     }
 
-    return response.json();
+    return this.parseJsonSafe<Exhibition[]>(response);
+  }
+
+  async getExhibition(id: string): Promise<Exhibition> {
+    const response = await fetch(`${API_BASE_URL}/api/exhibition/${id}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw await parseErrorResponse(response);
+    }
+
+    return this.parseJsonSafe<Exhibition>(response);
+  }
+
+  async updateExhibition(
+    id: string,
+    payload: CreateExhibitionRequest
+  ): Promise<Exhibition> {
+    const response = await fetch(`${API_BASE_URL}/api/exhibition/${id}`, {
+      method: "PUT",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw await parseErrorResponse(response);
+    }
+
+    let parsed: Exhibition | null = null;
+    try {
+      parsed = await this.parseJsonSafe<Exhibition>(response);
+    } catch (_error) {
+      // Some backends respond with plain text on 2xx, so fall back to payload data.
+      parsed = null;
+    }
+
+    if (parsed && parsed.id) {
+      return parsed;
+    }
+    return {
+      id,
+      organizerId: payload.organizerId,
+      exhibitionName: payload.exhibitionName,
+      startDateTime: payload.startDateTime,
+      endDateTime: payload.endDateTime,
+      bookingOpenDateTime: payload.bookingOpenDateTime,
+      bookingCloseDateTime: payload.bookingCloseDateTime,
+      stallsPerPerson: payload.stallsPerPerson,
+    };
+  }
+
+  async deleteExhibition(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/api/exhibition/${id}`, {
+      method: "DELETE",
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw await parseErrorResponse(response);
+    }
   }
 }
 

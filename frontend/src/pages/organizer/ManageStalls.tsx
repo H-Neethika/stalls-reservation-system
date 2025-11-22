@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { mockApi, Hall, Stall } from "@/lib/mockData";
 import { OrganizerLayout } from "@/components/organizer/OrganizerLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,10 +28,21 @@ type StallWithHall = Stall & { hallName: string };
 const ManageStalls = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const hallIdFromQuery = searchParams.get("hallId");
   const [stalls, setStalls] = useState<StallWithHall[]>([]);
   const [halls, setHalls] = useState<Hall[]>([]);
-  const [selectedHall, setSelectedHall] = useState<string>("all");
+  const [selectedHall, setSelectedHall] = useState<string>(
+    hallIdFromQuery || "all",
+  );
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (hallIdFromQuery) {
+      setSelectedHall(hallIdFromQuery);
+    }
+  }, [hallIdFromQuery]);
 
   useEffect(() => {
     const fetchData = async () => {
