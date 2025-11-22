@@ -50,6 +50,12 @@ public class LayoutService {
         return hallRepository.findAll();
     }
 
+    public List<HallSummaryResponse> getHallSummaries() {
+        return hallRepository.findAll().stream()
+                .map(this::toHallSummary)
+                .collect(Collectors.toList());
+    }
+
     public List<StallType> getStallTypes() {
         return stallTypeRepository.findAll();
     }
@@ -328,6 +334,32 @@ public class LayoutService {
                 return pd;
             }).collect(Collectors.toList()));
         }
+        return dto;
+    }
+
+    private HallSummaryResponse toHallSummary(Hall hall) {
+        List<Stall> stalls = stallRepository.findByHall(hall);
+        HallSummaryResponse dto = new HallSummaryResponse();
+        dto.setId(hall.getId());
+        dto.setHallName(hall.getHallName());
+        dto.setTotalStalls(stalls.size());
+
+        Map<Long, StallTypeCountResponse> counts = new java.util.LinkedHashMap<>();
+        for (Stall s : stalls) {
+            StallType type = s.getStallType();
+            if (type == null) {
+                continue;
+            }
+            counts.computeIfAbsent(type.getId(), k -> {
+                StallTypeCountResponse c = new StallTypeCountResponse();
+                c.setStallTypeId(type.getId());
+                c.setStallType(type.getType());
+                c.setCount(0);
+                return c;
+            });
+            counts.get(type.getId()).setCount(counts.get(type.getId()).getCount() + 1);
+        }
+        dto.setStallTypes(new java.util.ArrayList<>(counts.values()));
         return dto;
     }
 
