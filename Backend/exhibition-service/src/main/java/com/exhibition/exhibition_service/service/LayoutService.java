@@ -20,6 +20,7 @@ import com.exhibition.exhibition_service.repository.StallTypeRepository;
 import com.exhibition.exhibition_service.repository.BookingStatusRepository;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -77,10 +78,10 @@ public class LayoutService {
         for (Long hallId : hallIds) {
             Hall hall = hallRepository.findById(hallId)
                     .orElseThrow(() -> new IllegalArgumentException("Hall not found: " + hallId));
-        ExhibitionHall exhibitionHall = new ExhibitionHall();
-        exhibitionHall.setHall(hall);
-        exhibitionHall.setExhibition(exhibition);
-        ExhibitionHall savedHall = exhibitionHallRepository.save(exhibitionHall);
+            ExhibitionHall exhibitionHall = new ExhibitionHall();
+            exhibitionHall.setHall(hall);
+            exhibitionHall.setExhibition(exhibition);
+            exhibitionHallRepository.save(exhibitionHall);
 
             List<Stall> stalls = stallRepository.findByHall(hall);
             List<ExhibitionStall> exhibitionStalls = new ArrayList<>();
@@ -94,6 +95,34 @@ public class LayoutService {
             if (!exhibitionStalls.isEmpty()) {
                 exhibitionStallRepository.saveAll(exhibitionStalls);
             }
+        }
+    }
+
+    @Transactional
+    public void upsertHallPrices(Exhibition exhibition, List<HallPriceDTO> hallPrices) {
+        if (exhibition == null || hallPrices == null || hallPrices.isEmpty()) {
+            return;
+        }
+        Map<Long, ExhibitionHall> exhibitionHallMap = exhibitionHallRepository.findByExhibition(exhibition).stream()
+                .collect(Collectors.toMap(h -> h.getHall().getId(), h -> h));
+
+        for (HallPriceDTO hallPriceDTO : hallPrices) {
+            ExhibitionHall hall = exhibitionHallMap.get(hallPriceDTO.getHallId());
+            if (hall == null) {
+                throw new IllegalArgumentException("Hall not attached to exhibition: " + hallPriceDTO.getHallId());
+            }
+            StallType stallType = stallTypeRepository.findById(hallPriceDTO.getStallTypeId())
+                    .orElseThrow(() -> new IllegalArgumentException("StallType not found: " + hallPriceDTO.getStallTypeId()));
+            ExhibitionHallPrice price = exhibitionHallPriceRepository
+                    .findByExhibitionHallAndStallType(hall, stallType)
+                    .orElseGet(() -> {
+                        ExhibitionHallPrice ph = new ExhibitionHallPrice();
+                        ph.setExhibitionHall(hall);
+                        ph.setStallType(stallType);
+                        return ph;
+                    });
+            price.setPrice(hallPriceDTO.getPrice());
+            exhibitionHallPriceRepository.save(price);
         }
     }
 

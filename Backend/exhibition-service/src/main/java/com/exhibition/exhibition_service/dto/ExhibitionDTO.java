@@ -25,4 +25,5 @@ public class ExhibitionDTO {
     private int stallsPerPerson;
     private EXHIBITION_STATE exhibitionState;
     private List<Long> hallIds;
+    private List<HallPriceDTO> hallPrices;
 }

@@ -1,6 +1,7 @@
 package com.exhibition.exhibition_service.service.impl;
 
 import com.exhibition.exhibition_service.dto.ExhibitionDTO;
+import com.exhibition.exhibition_service.dto.HallPriceDTO;
 import com.exhibition.exhibition_service.exception.InvalidExhibitionDateException;
 import com.exhibition.exhibition_service.exception.ExhibitionConflictException;
 import com.exhibition.exhibition_service.mapper.ExhibitionMapper;
@@ -110,6 +111,10 @@ public class ExhibitionServiceImpl implements ExhibitionService {
         Exhibition exhibition = exhibitionRepository.save(entity);
         if (exhibitionDTO.getHallIds() != null && !exhibitionDTO.getHallIds().isEmpty()) {
             layoutService.attachHallsWithStalls(exhibition, exhibitionDTO.getHallIds());
+        }
+        List<HallPriceDTO> hallPrices = exhibitionDTO.getHallPrices();
+        if (hallPrices != null && !hallPrices.isEmpty()) {
+            layoutService.upsertHallPrices(exhibition, hallPrices);
         }
         return exhibitionMapper.toDto(exhibition);
     }
