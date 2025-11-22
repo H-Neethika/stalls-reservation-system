@@ -1,6 +1,5 @@
 package com.exhibition.exhibition_service.service.impl;
 
-
 import com.exhibition.exhibition_service.dto.ExhibitionDTO;
 import com.exhibition.exhibition_service.exception.InvalidExhibitionDateException;
 import com.exhibition.exhibition_service.exception.ExhibitionConflictException;
@@ -8,6 +7,7 @@ import com.exhibition.exhibition_service.mapper.ExhibitionMapper;
 import com.exhibition.exhibition_service.model.Exhibition;
 import com.exhibition.exhibition_service.repository.ExhibitionRepository;
 import com.exhibition.exhibition_service.service.ExhibitionService;
+import com.exhibition.exhibition_service.service.LayoutService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +24,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionMapper exhibitionMapper;
+    private final LayoutService layoutService;
 
 
 
@@ -102,12 +103,15 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
 
     @Override
-    public ExhibitionDTO createExhibition(ExhibitionDTO exhibition) {
-        Exhibition entity = exhibitionMapper.toEntity(exhibition);
+    public ExhibitionDTO createExhibition(ExhibitionDTO exhibitionDTO) {
+        Exhibition entity = exhibitionMapper.toEntity(exhibitionDTO);
         validateExhibitionDates(entity);
         validateNoOverlapWithPublished(entity, null);
-        Exhibition saved = exhibitionRepository.save(entity);
-        return exhibitionMapper.toDto(saved);
+        Exhibition exhibition = exhibitionRepository.save(entity);
+        if (exhibitionDTO.getHallIds() != null && !exhibitionDTO.getHallIds().isEmpty()) {
+            layoutService.attachHallsWithStalls(exhibition, exhibitionDTO.getHallIds());
+        }
+        return exhibitionMapper.toDto(exhibition);
     }
 
     @Override
