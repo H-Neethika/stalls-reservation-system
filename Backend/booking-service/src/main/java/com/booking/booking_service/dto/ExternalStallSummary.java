@@ -1,12 +1,11 @@
-package com.booking.booking_service.response;
+package com.booking.booking_service.dto;
 
 import lombok.Data;
 
 @Data
-public class ReservedStallResponse {
+public class ExternalStallSummary {
     private Long id;
     private Long price;
     private String stallType;
     private String hallName;
-    private String bookingStatus;
 }

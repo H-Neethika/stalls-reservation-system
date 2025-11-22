@@ -1,42 +1,56 @@
 package com.booking.booking_service.service.serviceImpl;
 
-import com.booking.booking_service.model.ExhibitionStall;
+import com.booking.booking_service.dto.ExternalStallSummary;
 import com.booking.booking_service.model.Reservation;
-import com.booking.booking_service.repository.ExhibitionStallRepository;
 import com.booking.booking_service.repository.ReservationRepository;
 import com.booking.booking_service.request.ReservationRequest;
 import com.booking.booking_service.response.ReservationResponse;
 import com.booking.booking_service.response.ReservedStallResponse;
 import com.booking.booking_service.service.ReservationService;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 @Service
 public class ReservationServiceImpl implements ReservationService {
 
   @Autowired
   private ReservationRepository reservationRepository;
+
   @Autowired
-  private ExhibitionStallRepository exhibitionStallRepository;
+  private RestTemplate restTemplate;
+
+  @Value("${EXHIBITION_SERVICE_BASE_URL:http://localhost:8082}")
+  private String exhibitionServiceBaseUrl;
 
 
   @Override
   public Reservation createReservation(ReservationRequest reservationRequest) {
-    List<ExhibitionStall> stalls = exhibitionStallRepository.findAllById(
-        reservationRequest.getStallIds());
+    List<Long> stallIds = reservationRequest.getStallIds();
+    List<ExternalStallSummary> summaries = fetchStallSummaries(stallIds);
 
-    Long totalAmount = 0L;
-    for (ExhibitionStall stall : stalls) {
-      totalAmount += stall.getPrice();
-    }
+    Long totalAmount = summaries.stream()
+            .map(ExternalStallSummary::getPrice)
+            .filter(p -> p != null)
+            .reduce(0L, Long::sum);
+
     Reservation newReservation = new Reservation();
     newReservation.setUserId(reservationRequest.getUserId());
-    newReservation.setStall(stalls);
+    newReservation.setExhibitionId(reservationRequest.getExhibitionId());
+    newReservation.setStallIds(stallIds);
     newReservation.setTotalAmount(totalAmount);
     newReservation.setCreatedAt(new Date());
 
@@ -65,27 +79,46 @@ public class ReservationServiceImpl implements ReservationService {
     ReservationResponse dto = new ReservationResponse();
     dto.setId(reservation.getId());
     dto.setUserId(reservation.getUserId());
+    dto.setExhibitionId(reservation.getExhibitionId());
     dto.setTotalAmount(reservation.getTotalAmount());
     dto.setCreatedAt(reservation.getCreatedAt());
 
-    // Simplify stalls
-    List<ReservedStallResponse> stalls = reservation.getStall()
-            .stream()
+    List<ExternalStallSummary> summaries = fetchStallSummaries(reservation.getStallIds());
+
+    List<ReservedStallResponse> stalls = summaries.stream()
             .map(st -> {
               ReservedStallResponse stallDto = new ReservedStallResponse();
               stallDto.setId(st.getId());
-              stallDto.setStallName(st.getStallName());
               stallDto.setPrice(st.getPrice());
-              stallDto.setStallType(st.getStallType() != null ? st.getStallType().getType() : null);
-              stallDto.setHallName(st.getExhibitionHallId() != null ?
-                      st.getExhibitionHallId().getHallId().getHallName() : null);
-              stallDto.setBookingStatus(st.getBookingStatus() != null ?
-                      st.getBookingStatus().getStatus() : null);
+              stallDto.setStallType(st.getStallType());
+              stallDto.setHallName(st.getHallName());
+              stallDto.setBookingStatus("RESERVED");
               return stallDto;
             })
             .collect(Collectors.toList());
 
     dto.setStalls(stalls);
     return dto;
+  }
+
+  private List<ExternalStallSummary> fetchStallSummaries(List<Long> stallIds) {
+    if (stallIds == null || stallIds.isEmpty()) {
+      return List.of();
+    }
+    String joined = stallIds.stream()
+            .map(String::valueOf)
+            .collect(Collectors.joining(","));
+    String encoded = URLEncoder.encode(joined, StandardCharsets.UTF_8);
+    URI uri = URI.create(exhibitionServiceBaseUrl + "/api/layout/stalls/summary?ids=" + encoded);
+    ResponseEntity<ExternalStallSummary[]> response = restTemplate.exchange(
+            uri,
+            HttpMethod.GET,
+            HttpEntity.EMPTY,
+            ExternalStallSummary[].class);
+    ExternalStallSummary[] body = response.getBody();
+    if (body == null) {
+      return List.of();
+    }
+    return Arrays.asList(body);
   }
 }

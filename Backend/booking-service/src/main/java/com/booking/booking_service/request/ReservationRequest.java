@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 public class ReservationRequest {
 
   private Long userId;
+  private Long exhibitionId;
   private List<Long> stallIds;
 
 }

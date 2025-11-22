@@ -8,6 +8,7 @@ import java.util.List;
 public class ReservationResponse {
     private Long id;
     private Long userId;
+    private Long exhibitionId;
     private Long totalAmount;
     private Date createdAt;
     private List<ReservedStallResponse> stalls;

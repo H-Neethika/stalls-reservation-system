@@ -19,10 +19,7 @@ spring:
 
   sql:
     init:
-      mode: always
-      platform: postgres
-      data-locations:
-        - classpath:data.sql
+      mode: never
 
 eureka:
   instance:
