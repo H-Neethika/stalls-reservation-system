@@ -57,7 +57,7 @@ spring:
         - id: EXHIBITION-SERVICE-API
           uri: lb://EXHIBITION-SERVICE
           predicates:
-            - Path=/api/exhibition/**
+            - Path=/api/exhibition/**, /api/layout/**, /api/genres/**, /api/booking-statuses/**, /api/hall-prices/**
           filters:
             - StripPrefix=0
             - JwtRelay
