@@ -1,14 +1,13 @@
 package com.exhibition.exhibition_service.dto;
 
 import com.exhibition.exhibition_service.domain.EXHIBITION_STATE;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -25,4 +24,5 @@ public class ExhibitionDTO {
     private LocalDateTime bookingCloseDateTime;
     private int stallsPerPerson;
     private EXHIBITION_STATE exhibitionState;
+    private List<Long> hallIds;
 }
