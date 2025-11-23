@@ -23,9 +23,20 @@ public class EmailService {
     @Value("${NOTIFICATION_EMAIL}")
     private String notificationEmail;
 
-    public void sendEmail(EmailNotificationEvent event) throws MessagingException {
-        MimeMessage message = mailSender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, true);
+    @Async("emailExecutor")
+    public void sendEmail(
+            UUID notificationId,
+            String to,
+            String subject,
+            String body,
+            boolean isHTMLBody,
+            String attachmentFileName,
+            EmailAttachmentType attachmentType,
+            byte[] attachmentBytes
+    ) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true);
 
         helper.setFrom(notificationEmail);
         helper.setTo(event.to());

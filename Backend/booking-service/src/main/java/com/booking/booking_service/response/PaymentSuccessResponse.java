@@ -16,6 +16,7 @@ public class PaymentSuccessResponse {
   private Long userId;
   private String username;
   private String email;
+  private String fairName;
   private List<StallDto> stalls;
   private Date bookingDateTime;
 

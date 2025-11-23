@@ -29,6 +29,12 @@ spring:
           starttls:
             enable: true
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${NOTIFICATION_RESERVATION_GROUP:notification-reservation}
+      auto-offset-reset: earliest
+
 eureka:
   instance:
     prefer-ip-address: true
@@ -37,3 +43,8 @@ eureka:
     fetch-registry: true
     serviceUrl:
       defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8070/eureka}
+
+app:
+  kafka:
+    topics:
+      reservation-booked: ${RESERVATION_BOOKED_TOPIC:reservation.booked}
