@@ -19,7 +19,9 @@ import com.exhibition.exhibition_service.service.ExhibitionService;
 import com.exhibition.exhibition_service.service.LayoutService;
 import com.exhibition.exhibition_service.enums.ExhibitionState;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -58,6 +60,10 @@ public class ExhibitionServiceImpl implements ExhibitionService {
             throw new InvalidExhibitionDateException("Booking close date/time cannot be in the past");
         }
 
+        validateExhibitionOrdering(exhibition);
+    }
+
+    private void validateExhibitionOrdering(Exhibition exhibition) {
         // (1) endDateTime > startDateTime
         if (exhibition.getEndDateTime().isBefore(exhibition.getStartDateTime()) ||
                 exhibition.getEndDateTime().isEqual(exhibition.getStartDateTime())) {
@@ -128,6 +134,31 @@ public class ExhibitionServiceImpl implements ExhibitionService {
             layoutService.upsertHallPrices(exhibition, hallPrices);
         }
         return exhibitionMapper.toDto(exhibition);
+    }
+
+    /**
+     * Promote draft exhibitions to PUBLISHED when booking window has opened.
+     * Runs every 10 minutes.
+     */
+    @Scheduled(fixedDelayString = "600000")
+    @Transactional
+    public void autoPublishOpenedExhibitions() {
+        LocalDateTime now = LocalDateTime.now();
+        exhibitionRepository.findByExhibitionState(ExhibitionState.DRAFT).stream()
+                .filter(e -> e.getBookingOpenDateTime() != null && !e.getBookingOpenDateTime().isAfter(now))
+                .forEach(e -> {
+                    e.setExhibitionState(ExhibitionState.PUBLISHED);
+                    validateExhibitionOrdering(e);
+                    validateNoOverlapWithPublished(e, e.getId());
+                    exhibitionRepository.save(e);
+                });
+
+        exhibitionRepository.findByExhibitionState(ExhibitionState.PUBLISHED).stream()
+                .filter(e -> e.getBookingCloseDateTime() != null && !e.getBookingCloseDateTime().isAfter(now))
+                .forEach(e -> {
+                    e.setExhibitionState(ExhibitionState.CLOSED);
+                    exhibitionRepository.save(e);
+                });
     }
 
     @Override
