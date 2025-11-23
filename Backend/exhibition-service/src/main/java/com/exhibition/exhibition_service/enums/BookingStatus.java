@@ -5,6 +5,7 @@ package com.exhibition.exhibition_service.enums;
  */
 public enum BookingStatus {
     AVAILABLE,
+    PENDING,
     RESERVED,
     UNAVAILABLE
 }
