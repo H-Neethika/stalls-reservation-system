@@ -2,15 +2,19 @@ package com.exhibition.exhibition_service.service.impl;
 
 import com.exhibition.exhibition_service.dto.ExhibitionDTO;
 import com.exhibition.exhibition_service.dto.ExhibitionWithHallsResponse;
+import com.exhibition.exhibition_service.dto.ExhibitionHallPriceResponse;
 import com.exhibition.exhibition_service.dto.HallPriceDTO;
 import com.exhibition.exhibition_service.dto.HallRef;
+import com.exhibition.exhibition_service.exception.ExhibitionForbiddenException;
 import com.exhibition.exhibition_service.exception.InvalidExhibitionDateException;
 import com.exhibition.exhibition_service.exception.ExhibitionConflictException;
 import com.exhibition.exhibition_service.mapper.ExhibitionMapper;
 import com.exhibition.exhibition_service.model.Exhibition;
 import com.exhibition.exhibition_service.model.ExhibitionHall;
+import com.exhibition.exhibition_service.model.ExhibitionHallPrice;
 import com.exhibition.exhibition_service.repository.ExhibitionRepository;
 import com.exhibition.exhibition_service.repository.ExhibitionHallRepository;
+import com.exhibition.exhibition_service.repository.ExhibitionHallPriceRepository;
 import com.exhibition.exhibition_service.service.ExhibitionService;
 import com.exhibition.exhibition_service.service.LayoutService;
 import com.exhibition.exhibition_service.enums.EXHIBITION_STATE;
@@ -30,6 +34,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionHallRepository exhibitionHallRepository;
+    private final ExhibitionHallPriceRepository exhibitionHallPriceRepository;
     private final ExhibitionMapper exhibitionMapper;
     private final LayoutService layoutService;
 
@@ -133,31 +138,56 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 throw new com.exhibition.exhibition_service.exception.ExhibitionForbiddenException("Only the created  organizer can update this exhibition");
             }
 
+            if (exhibition.getOrganizerId() != null && !exhibition.getOrganizerId().equals(existing.getOrganizerId())) {
+                throw new ExhibitionForbiddenException("Organizer cannot be changed once created");
+            }
+
+            boolean isDraft = existing.getExhibitionState() == EXHIBITION_STATE.DRAFT;
+            boolean hasScheduleChanges = exhibition.getStartDateTime() != null
+                    || exhibition.getEndDateTime() != null
+                    || exhibition.getBookingOpenDateTime() != null
+                    || exhibition.getBookingCloseDateTime() != null
+                    || exhibition.getStallsPerPerson() != 0;
+            boolean hasPriceChanges = exhibition.getHallPrices() != null && !exhibition.getHallPrices().isEmpty();
+
+            if (!isDraft && (hasScheduleChanges || hasPriceChanges)) {
+                throw new ExhibitionForbiddenException("Schedule, capacity, and pricing can only be updated while exhibition is in DRAFT state");
+            }
+
             if (exhibition.getExhibitionName() != null && !exhibition.getExhibitionName().isBlank())
                 existing.setExhibitionName(exhibition.getExhibitionName());
 
-            if (exhibition.getStartDateTime() != null)
+            if (isDraft && exhibition.getStartDateTime() != null)
                 existing.setStartDateTime(exhibition.getStartDateTime());
 
-            if (exhibition.getEndDateTime() != null)
+            if (isDraft && exhibition.getEndDateTime() != null)
                 existing.setEndDateTime(exhibition.getEndDateTime());
 
-            if (exhibition.getBookingOpenDateTime() != null)
+            if (isDraft && exhibition.getBookingOpenDateTime() != null)
                 existing.setBookingOpenDateTime(exhibition.getBookingOpenDateTime());
 
-            if (exhibition.getBookingCloseDateTime() != null)
+            if (isDraft && exhibition.getBookingCloseDateTime() != null)
                 existing.setBookingCloseDateTime(exhibition.getBookingCloseDateTime());
 
-            if (exhibition.getStallsPerPerson() != 0)
+            if (isDraft && exhibition.getStallsPerPerson() != 0)
                 existing.setStallsPerPerson(exhibition.getStallsPerPerson());
 
             if (exhibition.getExhibitionState() != null)
                 existing.setExhibitionState(exhibition.getExhibitionState());
 
 
-            validateExhibitionDates(existing);
-            validateNoOverlapWithPublished(existing, existing.getId());
+            if (isDraft && (hasScheduleChanges || exhibition.getExhibitionState() != null)) {
+                validateExhibitionDates(existing);
+                validateNoOverlapWithPublished(existing, existing.getId());
+            }
             Exhibition updated = exhibitionRepository.save(existing);
+
+            // Upsert hall prices if provided
+            List<HallPriceDTO> hallPrices = exhibition.getHallPrices();
+            if (isDraft && hallPrices != null && !hallPrices.isEmpty()) {
+                layoutService.upsertHallPrices(updated, hallPrices);
+            }
+
             return exhibitionMapper.toDto(updated);
         }).orElseThrow(()->new RuntimeException("Exhibition not found with id "+id));
     }
@@ -222,9 +252,24 @@ public class ExhibitionServiceImpl implements ExhibitionService {
             HallRef ref = new HallRef();
             ref.setId(h.getHall().getId());
             ref.setHallName(h.getHall().getHallName());
+            List<ExhibitionHallPriceResponse> prices = exhibitionHallPriceRepository.findByExhibitionHall(h).stream()
+                    .map(this::toPriceResponse)
+                    .collect(Collectors.toList());
+            ref.setPrices(prices);
             return ref;
         }).collect(Collectors.toList());
         dto.setHalls(hallRefs);
+        return dto;
+    }
+
+    private ExhibitionHallPriceResponse toPriceResponse(ExhibitionHallPrice price) {
+        ExhibitionHallPriceResponse dto = new ExhibitionHallPriceResponse();
+        dto.setId(price.getId());
+        dto.setExhibitionHallId(price.getExhibitionHall().getId());
+        dto.setHallName(price.getExhibitionHall().getHall().getHallName());
+        dto.setStallTypeId(price.getStallType().getId());
+        dto.setStallType(price.getStallType().getType());
+        dto.setPrice(price.getPrice());
         return dto;
     }
 }
