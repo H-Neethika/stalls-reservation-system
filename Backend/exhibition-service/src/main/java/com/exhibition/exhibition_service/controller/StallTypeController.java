@@ -1,7 +1,7 @@
 package com.exhibition.exhibition_service.controller;
 
 import com.exhibition.exhibition_service.model.StallType;
-import com.exhibition.exhibition_service.service.LayoutService;
+import com.exhibition.exhibition_service.service.StallTypeService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,10 +14,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class StallTypeController {
 
-    private final LayoutService layoutService;
+    private final StallTypeService stallTypeService;
 
     @GetMapping
     public ResponseEntity<List<StallType>> getStallTypes() {
-        return ResponseEntity.ok(layoutService.getStallTypes());
+        return ResponseEntity.ok(stallTypeService.getAll());
     }
 }

@@ -39,16 +39,6 @@ public class LayoutService {
     private final ExhibitionStallRepository exhibitionStallRepository;
     private final ExhibitionHallPriceRepository exhibitionHallPriceRepository;
 
-    public Hall createHall(String hallName) {
-        Hall hall = new Hall();
-        hall.setHallName(hallName);
-        return hallRepository.save(hall);
-    }
-
-    public List<Hall> getHalls() {
-        return hallRepository.findAll();
-    }
-
     public List<HallSummaryResponse> getHallSummaries() {
         return hallRepository.findAll().stream()
                 .map(this::toHallSummary)
@@ -68,40 +58,19 @@ public class LayoutService {
         return dto;
     }
 
-    @Transactional(readOnly = true)
-    public OrganizerLayoutResponse getOrganizerLayout(Long organizerId) {
-        if (organizerId == null) {
-            throw new IllegalArgumentException("organizerId cannot be null");
-        }
-        OrganizerLayoutResponse response = new OrganizerLayoutResponse();
-        List<Exhibition> exhibitions = exhibitionRepository.findByOrganizerId(organizerId);
-        response.setExhibitions(exhibitions.stream()
-                .map(this::toExhibitionLayout)
-                .collect(Collectors.toList()));
-        return response;
-    }
-
-    public List<StallType> getStallTypes() {
-        return stallTypeRepository.findAll();
-    }
-
-    @Transactional
-    public ExhibitionHall createExhibitionHall(CreateExhibitionHallRequest request) {
-        Hall hall = hallRepository.findById(request.getHallId())
-                .orElseThrow(() -> new IllegalArgumentException("Hall not found: " + request.getHallId()));
-        Exhibition exhibition = exhibitionRepository.findById(request.getExhibitionId())
-                .orElseThrow(() -> new IllegalArgumentException("Exhibition not found: " + request.getExhibitionId()));
-
-        ExhibitionHall exhibitionHall = new ExhibitionHall();
-        exhibitionHall.setHall(hall);
-        exhibitionHall.setExhibition(exhibition);
-        return exhibitionHallRepository.save(exhibitionHall);
-    }
-
-    public List<ExhibitionHall> getExhibitionHalls(Long exhibitionId) {
-        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
-                .orElseThrow(() -> new IllegalArgumentException("Exhibition not found: " + exhibitionId));
-        return exhibitionHallRepository.findByExhibition(exhibition);
+    public List<HallLayoutResponse> getAllHallLayouts() {
+        return hallRepository.findAll().stream()
+                .map(h -> {
+                    HallLayoutResponse dto = new HallLayoutResponse();
+                    dto.setHallId(h.getId());
+                    dto.setHallName(h.getHallName());
+                    List<Stall> stalls = stallRepository.findByHall(h);
+                    dto.setStalls(stalls.stream()
+                            .map(this::toStallLayout)
+                            .collect(Collectors.toList()));
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -159,78 +128,6 @@ public class LayoutService {
             price.setPrice(hallPriceDTO.getPrice());
             exhibitionHallPriceRepository.save(price);
         }
-    }
-
-    @Transactional
-    public StallType createStallType(CreateStallTypeRequest request) {
-        StallType stallType = new StallType();
-        stallType.setType(request.getType());
-        return stallTypeRepository.save(stallType);
-    }
-
-    public List<ExhibitionHallPriceResponse> getStallTypes(Long exhibitionHallId) {
-        ExhibitionHall exhibitionHall = exhibitionHallRepository.findById(exhibitionHallId)
-                .orElseThrow(() -> new IllegalArgumentException("ExhibitionHall not found: " + exhibitionHallId));
-        return exhibitionHallPriceRepository.findByExhibitionHall(exhibitionHall)
-                .stream()
-                .map(this::toPriceResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Transactional
-    public Stall createStall(CreateStallRequest request) {
-        StallType stallType = stallTypeRepository.findById(request.getStallTypeId())
-                .orElseThrow(() -> new IllegalArgumentException("StallType not found: " + request.getStallTypeId()));
-        Hall hall = hallRepository.findById(request.getHallId())
-                .orElseThrow(() -> new IllegalArgumentException("Hall not found: " + request.getHallId()));
-
-        Stall stall = new Stall();
-        stall.setHall(hall);
-        stall.setStallType(stallType);
-        stall.setPath(request.getPath());
-        if (request.getPoints() != null) {
-            List<Point> pts = request.getPoints().stream()
-                    .map(this::toPoint)
-                    .collect(Collectors.toList());
-            stall.setPoints(pts);
-        }
-        return stallRepository.save(stall);
-    }
-
-    public List<Stall> getStallsByHall(Long hallId) {
-        Hall hall = hallRepository.findById(hallId)
-                .orElseThrow(() -> new IllegalArgumentException("Hall not found: " + hallId));
-        return stallRepository.findByHall(hall);
-    }
-
-    public HallDetailsResponse getHallDetails(Long hallId) {
-        Hall hall = hallRepository.findById(hallId)
-                .orElseThrow(() -> new IllegalArgumentException("Hall not found: " + hallId));
-        List<Stall> stalls = stallRepository.findByHall(hall);
-        HallDetailsResponse dto = new HallDetailsResponse();
-        dto.setHallId(hall.getId());
-        dto.setHallName(hall.getHallName());
-        dto.setStalls(stalls.stream().map(this::toDetails).collect(Collectors.toList()));
-        return dto;
-    }
-
-    @Transactional
-    public ExhibitionStall assignStallToExhibition(AssignStallRequest request) {
-        Stall stall = stallRepository.findById(request.getStallId())
-                .orElseThrow(() -> new IllegalArgumentException("Stall not found: " + request.getStallId()));
-        Exhibition exhibition = exhibitionRepository.findById(request.getExhibitionId())
-                .orElseThrow(() -> new IllegalArgumentException("Exhibition not found: " + request.getExhibitionId()));
-
-        ExhibitionStall exhibitionStall = new ExhibitionStall();
-        exhibitionStall.setStall(stall);
-        exhibitionStall.setExhibition(exhibition);
-        return exhibitionStallRepository.save(exhibitionStall);
-    }
-
-    public List<ExhibitionStall> getStallsForExhibition(Long exhibitionId) {
-        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
-                .orElseThrow(() -> new IllegalArgumentException("Exhibition not found: " + exhibitionId));
-        return exhibitionStallRepository.findByExhibition(exhibition);
     }
 
     @Transactional
@@ -294,64 +191,6 @@ public class LayoutService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional
-    public List<StallStatusResponse> reserveStalls(Long exhibitionId, UpdateStallStatusRequest request) {
-        return updateStatus(exhibitionId, request, BookingStatus.RESERVED);
-    }
-
-    @Transactional
-    public List<StallStatusResponse> releaseStalls(Long exhibitionId, UpdateStallStatusRequest request) {
-        return updateStatus(exhibitionId, request, BookingStatus.AVAILABLE);
-    }
-
-    public List<StallStatusResponse> getStatuses(Long exhibitionId, List<Long> stallIds) {
-        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
-                .orElseThrow(() -> new IllegalArgumentException("Exhibition not found: " + exhibitionId));
-        List<ExhibitionStall> stalls = exhibitionStallRepository.findByIdInAndExhibition(stallIds, exhibition);
-        return stalls.stream().map(this::toStatus).collect(Collectors.toList());
-    }
-
-    private List<StallStatusResponse> updateStatus(Long exhibitionId, UpdateStallStatusRequest request, BookingStatus status) {
-        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
-                .orElseThrow(() -> new IllegalArgumentException("Exhibition not found: " + exhibitionId));
-        if (request.getStallIds() == null || request.getStallIds().isEmpty()) {
-            throw new IllegalArgumentException("stallIds cannot be empty");
-        }
-        List<ExhibitionStall> stalls = exhibitionStallRepository.findByIdInAndExhibition(request.getStallIds(), exhibition);
-        if (stalls.size() != request.getStallIds().size()) {
-            throw new IllegalArgumentException("Some stalls not found for exhibition " + exhibitionId);
-        }
-        stalls.forEach(s -> s.setBookingStatus(status));
-        exhibitionStallRepository.saveAll(stalls);
-        return stalls.stream().map(this::toStatus).collect(Collectors.toList());
-    }
-
-    private Point toPoint(PointDto dto) {
-        Point point = new Point();
-        point.setX(dto.getX());
-        point.setY(dto.getY());
-        return point;
-    }
-
-    private StallDetailsResponse toDetails(Stall stall) {
-        StallDetailsResponse dto = new StallDetailsResponse();
-        dto.setId(stall.getId());
-        if (stall.getStallType() != null) {
-            dto.setStallTypeId(stall.getStallType().getId());
-            dto.setStallType(stall.getStallType().getType());
-        }
-        dto.setPath(stall.getPath());
-        if (stall.getPoints() != null) {
-            dto.setPoints(stall.getPoints().stream().map(p -> {
-                PointDto pd = new PointDto();
-                pd.setX(p.getX());
-                pd.setY(p.getY());
-                return pd;
-            }).collect(Collectors.toList()));
-        }
-        return dto;
-    }
-
     private HallSummaryResponse toHallSummary(Hall hall) {
         List<Stall> stalls = stallRepository.findByHall(hall);
         HallSummaryResponse dto = new HallSummaryResponse();
@@ -375,39 +214,6 @@ public class LayoutService {
             counts.get(type.getId()).setCount(counts.get(type.getId()).getCount() + 1);
         }
         dto.setStallTypes(new java.util.ArrayList<>(counts.values()));
-        return dto;
-    }
-
-    private ExhibitionLayoutResponse toExhibitionLayout(Exhibition exhibition) {
-        ExhibitionLayoutResponse dto = new ExhibitionLayoutResponse();
-        dto.setId(exhibition.getId());
-        dto.setExhibitionName(exhibition.getExhibitionName());
-        dto.setExhibitionState(exhibition.getExhibitionState());
-
-        Map<Long, BookingStatus> statusByStall = exhibitionStallRepository.findByExhibition(exhibition).stream()
-                .filter(es -> es.getStall() != null)
-                .collect(Collectors.toMap(es -> es.getStall().getId(), ExhibitionStall::getBookingStatus, (a, b) -> a));
-
-        List<ExhibitionHall> halls = exhibitionHallRepository.findByExhibition(exhibition);
-        dto.setHalls(halls.stream()
-                .map(h -> toHallLayout(h, statusByStall))
-                .collect(Collectors.toList()));
-        return dto;
-    }
-
-    private HallLayoutResponse toHallLayout(ExhibitionHall exhibitionHall, Map<Long, BookingStatus> statusByStall) {
-        HallLayoutResponse dto = new HallLayoutResponse();
-        Hall hall = exhibitionHall.getHall();
-        if (hall != null) {
-            dto.setHallId(hall.getId());
-            dto.setHallName(hall.getHallName());
-            List<Stall> stalls = stallRepository.findByHall(hall);
-            dto.setStalls(stalls.stream()
-                    .map(s -> toStallLayout(s))
-                    .collect(Collectors.toList()));
-        } else {
-            dto.setStalls(Collections.emptyList());
-        }
         return dto;
     }
 
