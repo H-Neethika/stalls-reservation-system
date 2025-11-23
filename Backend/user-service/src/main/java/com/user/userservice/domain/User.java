@@ -47,4 +47,7 @@ public class User {
 	@Enumerated(EnumType.STRING)
 	@Column(name = "auth_provider", nullable = false)
 	private AuthProvider authProvider = AuthProvider.LOCAL;
+
+	@Column(name = "refresh_token_id")
+	private String refreshTokenId;
 }

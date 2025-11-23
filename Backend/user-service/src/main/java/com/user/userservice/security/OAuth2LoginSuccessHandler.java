@@ -101,7 +101,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 		request.getSession().removeAttribute("oauth2_mode");
 
 		String accessToken = jwtService.generateAccessToken(user.get());
-		String refreshToken = jwtService.generateRefreshToken(user.get());
+		String refreshId = java.util.UUID.randomUUID().toString();
+		user.get().setRefreshTokenId(refreshId);
+		userRepository.save(user.get());
+		String refreshToken = jwtService.generateRefreshToken(user.get(), refreshId);
 		String redirectUrl = buildRedirectUrl(accessToken, refreshToken, user.get().getId());
 		response.sendRedirect(redirectUrl);
 	}
