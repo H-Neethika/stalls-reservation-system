@@ -1,6 +1,6 @@
 package com.exhibition.exhibition_service.enums;
 
-public enum EXHIBITION_STATE {
+public enum ExhibitionState {
 
     DRAFT,
     PUBLISHED,

@@ -1,6 +1,6 @@
 package com.exhibition.exhibition_service.dto;
 
-import com.exhibition.exhibition_service.enums.EXHIBITION_STATE;
+import com.exhibition.exhibition_service.enums.ExhibitionState;
 import java.util.List;
 import lombok.Data;
 
@@ -8,6 +8,6 @@ import lombok.Data;
 public class ExhibitionLayoutResponse {
     private Long id;
     private String exhibitionName;
-    private EXHIBITION_STATE exhibitionState;
+    private ExhibitionState exhibitionState;
     private List<HallLayoutResponse> halls;
 }

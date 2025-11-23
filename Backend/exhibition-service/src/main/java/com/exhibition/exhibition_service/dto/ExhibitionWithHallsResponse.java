@@ -1,6 +1,6 @@
 package com.exhibition.exhibition_service.dto;
 
-import com.exhibition.exhibition_service.enums.EXHIBITION_STATE;
+import com.exhibition.exhibition_service.enums.ExhibitionState;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Data;
@@ -15,6 +15,6 @@ public class ExhibitionWithHallsResponse {
     private LocalDateTime bookingOpenDateTime;
     private LocalDateTime bookingCloseDateTime;
     private int stallsPerPerson;
-    private EXHIBITION_STATE exhibitionState;
+    private ExhibitionState exhibitionState;
     private List<HallRef> halls;
 }

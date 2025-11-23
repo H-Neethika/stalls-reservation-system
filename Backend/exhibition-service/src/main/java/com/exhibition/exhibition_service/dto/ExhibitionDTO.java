@@ -1,6 +1,6 @@
 package com.exhibition.exhibition_service.dto;
 
-import com.exhibition.exhibition_service.enums.EXHIBITION_STATE;
+import com.exhibition.exhibition_service.enums.ExhibitionState;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,7 +23,7 @@ public class ExhibitionDTO {
     private LocalDateTime bookingOpenDateTime;
     private LocalDateTime bookingCloseDateTime;
     private int stallsPerPerson;
-    private EXHIBITION_STATE exhibitionState;
+    private ExhibitionState exhibitionState;
     private List<Long> hallIds;
     private List<HallPriceDTO> hallPrices;
 }

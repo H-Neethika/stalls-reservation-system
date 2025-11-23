@@ -3,7 +3,7 @@ package com.exhibition.exhibition_service.controller;
 
 import com.exhibition.exhibition_service.dto.ExhibitionDTO;
 import com.exhibition.exhibition_service.dto.ExhibitionWithHallsResponse;
-import com.exhibition.exhibition_service.enums.EXHIBITION_STATE;
+import com.exhibition.exhibition_service.enums.ExhibitionState;
 import com.exhibition.exhibition_service.service.ExhibitionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -61,7 +61,7 @@ public class ExhibitionController {
     }
 
     @GetMapping("/state/{state}")
-    public ResponseEntity<List<ExhibitionDTO>> getByState(@PathVariable EXHIBITION_STATE state) {
+    public ResponseEntity<List<ExhibitionDTO>> getByState(@PathVariable ExhibitionState state) {
         return ResponseEntity.ok(exhibitionService.getExhibitionsByState(state));
     }
 }

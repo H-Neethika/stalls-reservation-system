@@ -17,7 +17,7 @@ import com.exhibition.exhibition_service.repository.ExhibitionHallRepository;
 import com.exhibition.exhibition_service.repository.ExhibitionHallPriceRepository;
 import com.exhibition.exhibition_service.service.ExhibitionService;
 import com.exhibition.exhibition_service.service.LayoutService;
-import com.exhibition.exhibition_service.enums.EXHIBITION_STATE;
+import com.exhibition.exhibition_service.enums.ExhibitionState;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -25,7 +25,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
-import static com.exhibition.exhibition_service.enums.EXHIBITION_STATE.PUBLISHED;
+import static com.exhibition.exhibition_service.enums.ExhibitionState.PUBLISHED;
 
 @Service
 @RequiredArgsConstructor
@@ -142,7 +142,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
                 throw new ExhibitionForbiddenException("Organizer cannot be changed once created");
             }
 
-            boolean isDraft = existing.getExhibitionState() == EXHIBITION_STATE.DRAFT;
+            boolean isDraft = existing.getExhibitionState() == ExhibitionState.DRAFT;
             boolean hasScheduleChanges = exhibition.getStartDateTime() != null
                     || exhibition.getEndDateTime() != null
                     || exhibition.getBookingOpenDateTime() != null
@@ -218,7 +218,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     }
 
     @Override
-    public List<ExhibitionDTO> getExhibitionsByState(EXHIBITION_STATE state) {
+    public List<ExhibitionDTO> getExhibitionsByState(ExhibitionState state) {
         return exhibitionRepository.findByExhibitionState(state)
                 .stream()
                 .map(exhibitionMapper::toDto)
