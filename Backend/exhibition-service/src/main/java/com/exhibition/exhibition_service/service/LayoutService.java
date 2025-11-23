@@ -73,6 +73,41 @@ public class LayoutService {
                 .collect(Collectors.toList());
     }
 
+    public List<ExhibitionHallLayoutResponse> getExhibitionHallLayouts(Long exhibitionId) {
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+                .orElseThrow(() -> new IllegalArgumentException("Exhibition not found: " + exhibitionId));
+        List<ExhibitionStall> exhibitionStalls = exhibitionStallRepository.findByExhibition(exhibition);
+        Map<Long, List<ExhibitionStall>> stallsByHall = exhibitionStalls.stream()
+                .filter(es -> es.getStall() != null && es.getStall().getHall() != null)
+                .collect(Collectors.groupingBy(es -> es.getStall().getHall().getId()));
+
+        List<ExhibitionHall> halls = exhibitionHallRepository.findByExhibition(exhibition);
+        return halls.stream().map(h -> {
+            ExhibitionHallLayoutResponse dto = new ExhibitionHallLayoutResponse();
+            dto.setExhibitionHallId(h.getId());
+            if (h.getHall() != null) {
+                dto.setHallId(h.getHall().getId());
+                dto.setHallName(h.getHall().getHallName());
+            }
+            List<ExhibitionStall> hallStalls = stallsByHall.getOrDefault(
+                    h.getHall() != null ? h.getHall().getId() : null, List.of());
+            dto.setStalls(hallStalls.stream()
+                    .map(this::toStallSimpleLayout)
+                    .collect(Collectors.toList()));
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    private StallSimpleLayoutResponse toStallSimpleLayout(ExhibitionStall es) {
+        StallSimpleLayoutResponse dto = new StallSimpleLayoutResponse();
+        dto.setExhibitionStallId(es.getId());
+        dto.setStatus(es.getBookingStatus() != null ? es.getBookingStatus().name() : null);
+        if (es.getStall() != null) {
+            dto.setStallId(es.getStall().getId());
+        }
+        return dto;
+    }
+
     @Transactional
     public void attachHallsWithStalls(Exhibition exhibition, List<Long> hallIds) {
         if (exhibition == null || exhibition.getId() == null) {

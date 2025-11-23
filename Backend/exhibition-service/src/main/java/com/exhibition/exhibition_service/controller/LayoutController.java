@@ -26,4 +26,10 @@ public class LayoutController {
     public ResponseEntity<List<HallLayoutResponse>> getAllHalls() {
         return ResponseEntity.ok(layoutService.getAllHallLayouts());
     }
+
+    @GetMapping("/exhibitions/{exhibitionId}")
+    public ResponseEntity<List<com.exhibition.exhibition_service.dto.ExhibitionHallLayoutResponse>> getExhibitionHallsLayout(
+            @PathVariable Long exhibitionId) {
+        return ResponseEntity.ok(layoutService.getExhibitionHallLayouts(exhibitionId));
+    }
 }
