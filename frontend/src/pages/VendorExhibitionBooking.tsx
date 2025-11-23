@@ -1,0 +1,319 @@
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Collapse } from "antd";
+import { Loader2, ArrowLeft, Map, ShoppingCart } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { exhibitionService } from "@/services/exhibitionService";
+import { layoutService } from "@/services/layoutService";
+import StallMap from "./organizer/StallMap";
+
+interface Price {
+  hallId: number;
+  stallTypeId: number;
+  price: number;
+  stallType?: string;
+}
+
+interface HallWithPrices {
+  id: number | string;
+  hallName?: string;
+  prices?: Price[];
+}
+
+interface ExhibitionPayload {
+  id: string | number;
+  exhibitionName?: string;
+  startDateTime?: string;
+  endDateTime?: string;
+  bookingOpenDateTime?: string;
+  bookingCloseDateTime?: string;
+  stallsPerPerson?: number;
+  halls?: HallWithPrices[];
+}
+
+interface SelectedStall {
+  hallId: string;
+  stallId: string;
+  stallTypeId?: number;
+  stallType?: string;
+  price: number;
+}
+
+const MAX_SELECTION = 3;
+
+const VendorExhibitionBooking = () => {
+  const { exhibitionId } = useParams<{ exhibitionId: string }>();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const initialExhibition = (location.state as { exhibition?: ExhibitionPayload } | undefined)?.exhibition;
+
+  const [exhibition, setExhibition] = useState<ExhibitionPayload | null>(initialExhibition || null);
+  const [loading, setLoading] = useState(!initialExhibition);
+  const [hallLayouts, setHallLayouts] = useState<Record<string, any[]>>({});
+  const [loadingHallId, setLoadingHallId] = useState<string | null>(null);
+  const [selectedStalls, setSelectedStalls] = useState<SelectedStall[]>([]);
+
+  useEffect(() => {
+    const fetchExhibition = async () => {
+      if (initialExhibition || !exhibitionId) return;
+      try {
+        const list = await exhibitionService.getPublishedExhibitions();
+        const found = list.find((expo) => String(expo.id) === String(exhibitionId));
+        if (found) {
+          setExhibition(found as ExhibitionPayload);
+        } else {
+          toast({
+            title: "Exhibition not found",
+            description: "Please go back and select another exhibition.",
+            variant: "destructive",
+          });
+        }
+      } catch (error: any) {
+        toast({
+          title: "Failed to load exhibition",
+          description: error?.message || "Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchExhibition();
+  }, [exhibitionId, initialExhibition, toast]);
+
+  const priceLookup = useMemo(() => {
+    const map: Record<string, Record<number, number>> = {};
+    exhibition?.halls?.forEach((hall) => {
+      const hId = Number(hall.id);
+      hall.prices?.forEach((p) => {
+        map[String(hId)] = map[String(hId)] || {};
+        map[String(hId)][Number(p.stallTypeId)] = Number(p.price);
+      });
+    });
+    return map;
+  }, [exhibition]);
+
+  const handleLoadHallLayout = async (hallId: string | number) => {
+    if (hallLayouts[String(hallId)]) return;
+    try {
+      setLoadingHallId(String(hallId));
+      const data = await layoutService.getLayoutByHall(Number(hallId));
+      setHallLayouts((prev) => ({ ...prev, [String(hallId)]: data?.stalls || [] }));
+    } catch (error: any) {
+      toast({
+        title: "Failed to load hall map",
+        description: error?.message || "Try again later.",
+        variant: "destructive",
+      });
+      setHallLayouts((prev) => ({ ...prev, [String(hallId)]: [] }));
+    } finally {
+      setLoadingHallId(null);
+    }
+  };
+
+  const handleToggleStall = (hallId: string, stall: any) => {
+    const stallId = String(stall.id);
+    const isSelected = selectedStalls.some((s) => s.stallId === stallId);
+
+    if (isSelected) {
+      setSelectedStalls((prev) => prev.filter((s) => s.stallId !== stallId));
+      return;
+    }
+
+    if (selectedStalls.length >= MAX_SELECTION) {
+      toast({
+        title: "Selection limit reached",
+        description: `You can select up to ${MAX_SELECTION} stalls.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const typeId = Number(stall.stallTypeId) || undefined;
+    const price =
+      priceLookup[String(hallId)]?.[typeId || 0] ??
+      priceLookup[String(hallId)]?.[1] ??
+      0;
+
+    setSelectedStalls((prev) => [
+      ...prev,
+      {
+        hallId: String(hallId),
+        stallId,
+        stallTypeId: typeId,
+        stallType: stall.stallType || stall.size,
+        price,
+      },
+    ]);
+  };
+
+  const totalPrice = selectedStalls.reduce((sum, s) => sum + Number(s.price || 0), 0);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!exhibition) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+        Exhibition not found.
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      <div className="border-b bg-card/60 backdrop-blur">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">{exhibition.exhibitionName || "Exhibition"}</h1>
+              <p className="text-sm text-muted-foreground">
+                {exhibition.startDateTime && exhibition.endDateTime
+                  ? `${new Date(exhibition.startDateTime).toLocaleDateString()} - ${new Date(
+                      exhibition.endDateTime,
+                    ).toLocaleDateString()}`
+                  : "Dates TBA"}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8 grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-4">
+          <Collapse
+            accordion={false}
+            bordered={false}
+            items={
+              exhibition.halls?.map((hall) => ({
+                key: String(hall.id),
+                label: (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Map className="h-4 w-4 text-primary" />
+                      <span className="font-semibold">{hall.hallName || `Hall ${hall.id}`}</span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {hall.prices?.map((p) => (
+                        <Badge key={p.id} variant="secondary">
+                          {p.stallType || `Type ${p.stallTypeId}`}: LKR {Number(p.price).toLocaleString()}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ),
+                children: (
+                  <div className="rounded-lg border bg-card p-4">
+                    {loadingHallId === String(hall.id) ? (
+                      <div className="flex h-40 items-center justify-center text-muted-foreground">
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Loading hall map...
+                      </div>
+                    ) : hallLayouts[String(hall.id)] ? (
+                      hallLayouts[String(hall.id)].length > 0 ? (
+                        <StallMap
+                          stalls={hallLayouts[String(hall.id)]}
+                          readOnly={false}
+                          selectedIds={selectedStalls
+                            .filter((s) => s.hallId === String(hall.id))
+                            .map((s) => s.stallId)}
+                          onToggleSelect={(stallId, stall) => handleToggleStall(String(hall.id), stall)}
+                        />
+                      ) : (
+                        <div className="text-sm text-muted-foreground">No stalls available.</div>
+                      )
+                    ) : (
+                      <Button variant="outline" onClick={() => handleLoadHallLayout(String(hall.id))}>
+                        Load Hall Map
+                      </Button>
+                    )}
+                  </div>
+                ),
+              })) || []
+            }
+            onChange={(keys) => {
+              const activeKey = Array.isArray(keys) ? keys[keys.length - 1] : keys;
+              if (activeKey) {
+                handleLoadHallLayout(String(activeKey));
+              }
+            }}
+          />
+        </div>
+
+        <div className="lg:col-span-1">
+          <Card className="sticky top-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5" />
+                Stall Selection
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                Selected ({selectedStalls.length}/{MAX_SELECTION})
+              </div>
+              {selectedStalls.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No stalls selected.</p>
+              ) : (
+                <div className="space-y-2">
+                  {selectedStalls.map((stall) => (
+                    <div
+                      key={stall.stallId}
+                      className="flex items-center justify-between rounded border px-2 py-2 text-sm"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-medium">{stall.stallId}</span>
+                        <span className="text-xs text-muted-foreground">
+                          Hall {stall.hallId} · {stall.stallType || "Stall"}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold">LKR {Number(stall.price).toLocaleString()}</div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs"
+                          onClick={() =>
+                            setSelectedStalls((prev) => prev.filter((s) => s.stallId !== stall.stallId))
+                          }
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="border-t pt-3">
+                <div className="flex justify-between font-semibold">
+                  <span>Total</span>
+                  <span>LKR {totalPrice.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <Button className="w-full" disabled={selectedStalls.length === 0}>
+                Proceed to Pay
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default VendorExhibitionBooking;

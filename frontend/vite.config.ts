@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     envDir,
-    envPrefix: ["VITE_", "CLOUD_"],
+    envPrefix: ["VITE_", "CLOUD_", "BACKEND_", "FRONTEND_"],
     server: {
       host: "::",
       port: port,

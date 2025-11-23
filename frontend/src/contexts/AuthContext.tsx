@@ -8,6 +8,7 @@ import {
 import { User } from "@/types";
 import { apiService } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
+import { layoutService } from "@/services/layoutService";
 
 const extractErrorMessage = (input: unknown, fallback = "Request failed") => {
   if (!input) {
@@ -146,6 +147,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           title: "Success",
           description: "Signed in successfully!",
         });
+
+        if (authResponse.user.role?.toUpperCase() === "VENDOR") {
+          try {
+            const layouts = await layoutService.getAllHallLayouts();
+            localStorage.setItem("vendor_hall_layouts", JSON.stringify(layouts));
+          } catch (error) {
+            // Don't block login; optionally log
+            console.error("Failed to preload hall layouts", error);
+          }
+        }
       }
 
       return { error: null };

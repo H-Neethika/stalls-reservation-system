@@ -8,6 +8,7 @@ import Auth from "./pages/Auth";
 import OAuth2Callback from "./pages/OAuth2Callback";
 import HallsList from "./pages/HallsList";
 import HallBooking from "./pages/HallBooking";
+import VendorExhibitionBooking from "./pages/VendorExhibitionBooking";
 import MyBookings from "./pages/MyBookings";
 import OrganizerDashboard from "./pages/organizer/Dashboard";
 import OrganizerExhibitions from "./pages/organizer/Exhibitions";
@@ -68,6 +69,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="vendor">
                   <HallBooking />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/exhibitions/:exhibitionId/reserve"
+              element={
+                <ProtectedRoute requiredRole="vendor">
+                  <VendorExhibitionBooking />
                 </ProtectedRoute>
               }
             />

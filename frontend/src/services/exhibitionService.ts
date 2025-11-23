@@ -1,4 +1,5 @@
 import { CreateExhibitionRequest, Exhibition } from "@/types";
+import { authFetch } from "@/services/api";
 import { API_BASE_URL } from "@/services/api";
 
 type ApiError = Error & {
@@ -62,13 +63,12 @@ const parseErrorResponse = async (response: Response): Promise<ApiError> => {
 class ExhibitionService {
   private async parseJsonSafe<T>(response: Response): Promise<T> {
     const text = await response.text();
-    if (!text) {
-      return {} as T;
-    }
+    if (!text) return {} as T;
     try {
       return JSON.parse(text) as T;
     } catch {
-      throw new Error("Invalid JSON response from server");
+      // If backend returns plain text or another format, return empty object to avoid UI break
+      return {} as T;
     }
   }
   private getAuthHeaders() {
@@ -86,7 +86,7 @@ class ExhibitionService {
   async createExhibition(
     payload: CreateExhibitionRequest
   ): Promise<Exhibition> {
-    const response = await fetch(`${API_BASE_URL}/api/exhibition`, {
+    const response = await authFetch(`${API_BASE_URL}/api/exhibition`, {
       method: "POST",
       headers: this.getAuthHeaders(),
       body: JSON.stringify(payload),
@@ -102,8 +102,8 @@ class ExhibitionService {
   async getExhibitionsByOrganizer(
     organizerId: number
   ): Promise<Exhibition[]> {
-    const response = await fetch(
-      `${API_BASE_URL}/api/exhibition/user/${organizerId}`,
+    const response = await authFetch(
+      `${API_BASE_URL}/api/exhibition?organizerId=${organizerId}`,
       {
         method: "GET",
         headers: this.getAuthHeaders(),
@@ -117,8 +117,21 @@ class ExhibitionService {
     return this.parseJsonSafe<Exhibition[]>(response);
   }
 
+  async getPublishedExhibitions(): Promise<Exhibition[]> {
+    const response = await authFetch(`${API_BASE_URL}/api/exhibition/details/state/PUBLISHED`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw await parseErrorResponse(response);
+    }
+
+    return this.parseJsonSafe<Exhibition[]>(response);
+  }
+
   async getExhibition(id: string): Promise<Exhibition> {
-    const response = await fetch(`${API_BASE_URL}/api/exhibition/${id}`, {
+    const response = await authFetch(`${API_BASE_URL}/api/exhibition/${id}`, {
       method: "GET",
       headers: this.getAuthHeaders(),
     });
@@ -134,7 +147,7 @@ class ExhibitionService {
     id: string,
     payload: CreateExhibitionRequest
   ): Promise<Exhibition> {
-    const response = await fetch(`${API_BASE_URL}/api/exhibition/${id}`, {
+    const response = await authFetch(`${API_BASE_URL}/api/exhibition/${id}`, {
       method: "PUT",
       headers: this.getAuthHeaders(),
       body: JSON.stringify(payload),
@@ -168,7 +181,7 @@ class ExhibitionService {
   }
 
   async deleteExhibition(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/api/exhibition/${id}`, {
+    const response = await authFetch(`${API_BASE_URL}/api/exhibition/${id}`, {
       method: "DELETE",
       headers: this.getAuthHeaders(),
     });

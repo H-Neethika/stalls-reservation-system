@@ -18,7 +18,11 @@ import { Eye, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { exhibitionService } from "@/services/exhibitionService";
+import { hallService } from "@/services/hallService";
+import { stallTypeService } from "@/services/stallTypeService";
 import { CreateExhibitionRequest, Exhibition } from "@/types";
+import { Checkbox, Divider } from "antd";
+import type { CheckboxValueType } from "antd/es/checkbox/Group";
 
 type ApiError = Error & {
   code?: number;
@@ -89,6 +93,10 @@ const OrganizerExhibitions = () => {
   const [selectedExhibition, setSelectedExhibition] =
     useState<ExhibitionCard | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [halls, setHalls] = useState<{ id: number; label: string }[]>([]);
+  const [stallTypes, setStallTypes] = useState<{ id: number; label: string }[]>([]);
+  const [selectedHallIds, setSelectedHallIds] = useState<number[]>([]);
+  const [hallPrices, setHallPrices] = useState<Record<number, Record<number, number>>>({});
 
   const toCard = (expo: Exhibition): ExhibitionCard => ({
     ...expo,
@@ -120,13 +128,13 @@ const OrganizerExhibitions = () => {
         const backendMessage =
           extractErrorSection(err.responseBody) ||
           (typeof err.responseBody === "object" &&
-          err.responseBody !== null &&
-          "message" in err.responseBody &&
-          typeof (err.responseBody as { message?: string }).message === "string"
+            err.responseBody !== null &&
+            "message" in err.responseBody &&
+            typeof (err.responseBody as { message?: string }).message === "string"
             ? (err.responseBody as { message: string }).message
             : typeof err.responseBody === "string"
-            ? err.responseBody
-            : null);
+              ? err.responseBody
+              : null);
 
         toast({
           title: "Failed to load exhibitions",
@@ -144,6 +152,60 @@ const OrganizerExhibitions = () => {
     fetchExhibitions();
   }, [user?.id, toast]);
 
+  useEffect(() => {
+    const fetchLookups = async () => {
+      try {
+        const [apiHalls, apiStallTypes] = await Promise.all([
+          hallService.getHalls(),
+          stallTypeService.getStallTypes(),
+        ]);
+
+        const mappedHalls =
+          apiHalls
+            .filter((hall) => hall.id)
+            .map((hall) => ({
+              id: Number(hall.id),
+              label: hall.hallName || `Hall ${hall.id}`,
+            })) || [];
+
+        const mappedStallTypes =
+          apiStallTypes
+            .filter((type) => type.id !== undefined)
+            .map((type) => ({
+              id: Number(type.id),
+              label: type.type || type.name || type.typeName || `Type ${type.id}`,
+            })) || [];
+
+        if (mappedHalls.length) {
+          setHalls(mappedHalls);
+          setSelectedHallIds((prev) => (prev.length ? prev : [mappedHalls[0].id]));
+        } else {
+          throw new Error("No halls returned");
+        }
+
+        if (mappedStallTypes.length) {
+          setStallTypes(mappedStallTypes);
+        } else {
+          throw new Error("No stall types returned");
+        }
+      } catch (error) {
+        const fallbackHalls = [
+          { id: 1, label: "Hall 01 (sample)" },
+          { id: 2, label: "Hall 02 (sample)" },
+        ];
+        const fallbackStallTypes = [
+          { id: 1, label: "Type 1 (sample)" },
+          { id: 2, label: "Type 2 (sample)" },
+          { id: 3, label: "Type 3 (sample)" },
+        ];
+        setHalls(fallbackHalls);
+        setStallTypes(fallbackStallTypes);
+        setSelectedHallIds((prev) => (prev.length ? prev : [fallbackHalls[0].id]));
+      }
+    };
+    fetchLookups();
+  }, []);
+
   const openModal = () => {
     setEditingId(null);
     form.resetFields();
@@ -157,8 +219,8 @@ const OrganizerExhibitions = () => {
 
   const handleViewExhibition = async (id: string) => {
     try {
-      const data = await exhibitionService.getExhibition(id);
-      setSelectedExhibition(toCard(data));
+      const data = await exhibitionService.getExhibitionsByOrganizer(user.id);
+      setSelectedExhibition(data.map(toCard).find((expo) => expo.id === id) || null);
       setIsViewModalOpen(true);
     } catch (error) {
       const err = error as ApiError;
@@ -175,7 +237,11 @@ const OrganizerExhibitions = () => {
 
   const handleEditExhibition = async (id: string) => {
     try {
-      const data = await exhibitionService.getExhibition(id);
+      const list = await exhibitionService.getExhibitionsByOrganizer(Number(user?.id));
+      const data = list.find((expo) => String(expo.id) === String(id));
+      if (!data) {
+        throw new Error("Exhibition not found");
+      }
       setEditingId(id);
       form.setFieldsValue({
         exhibitionName: data.exhibitionName,
@@ -185,6 +251,62 @@ const OrganizerExhibitions = () => {
         bookingCloseDateTime: dayjs(data.bookingCloseDateTime),
         stallsPerPerson: data.stallsPerPerson,
       });
+      const hallIdsFromPrices =
+        data.hallPrices && data.hallPrices.length > 0
+          ? Array.from(new Set(data.hallPrices.map((p) => Number(p.hallId))))
+          : [];
+      const hallIdsFromHalls =
+        Array.isArray((data as any).halls) && (data as any).halls.length > 0
+          ? (data as any).halls.map((h: any) => Number(h.hallId ?? h.id ?? h))
+          : [];
+      const hallIds = hallIdsFromPrices.length ? hallIdsFromPrices : hallIdsFromHalls;
+      if (hallIds.length) {
+        setSelectedHallIds(hallIds);
+      }
+
+      const priceMap: Record<number, Record<number, number>> = {};
+      const resolveTypeId = (type: any) => {
+        if (type?.stallTypeId) return Number(type.stallTypeId);
+        if (type?.stallType) {
+          const found = stallTypes.find(
+            (t) => t.label.toUpperCase() === String(type.stallType).toUpperCase(),
+          );
+          if (found) return found.id;
+        }
+        return undefined;
+      };
+
+      if (data.hallPrices && data.hallPrices.length > 0) {
+        data.hallPrices.forEach((p) => {
+          const hId = Number(p.hallId);
+          if (!hId) return;
+          const typeId = resolveTypeId(p);
+          if (!typeId) return;
+          priceMap[hId] = priceMap[hId] || {};
+          priceMap[hId][typeId] = Number(p.price);
+        });
+      }
+
+      if (Array.isArray((data as any).halls)) {
+        (data as any).halls.forEach((hall: any) => {
+          const hId = Number(hall.hallId ?? hall.id);
+          if (!hId) return;
+          if (Array.isArray(hall.prices)) {
+            hall.prices.forEach((p: any) => {
+              const typeId = resolveTypeId(p);
+              if (!typeId) return;
+              priceMap[hId] = priceMap[hId] || {};
+              priceMap[hId][typeId] = Number(p.price);
+            });
+          }
+        });
+      }
+
+      if (Object.keys(priceMap).length) {
+        setHallPrices(priceMap);
+      } else if (hallIds.length) {
+        setHallPrices({ [hallIds[0]]: {} });
+      }
       setIsModalOpen(true);
     } catch (error) {
       const err = error as ApiError;
@@ -255,6 +377,14 @@ const OrganizerExhibitions = () => {
       bookingOpenDateTime: formatDate(values.bookingOpenDateTime),
       bookingCloseDateTime: formatDate(values.bookingCloseDateTime),
       stallsPerPerson: values.stallsPerPerson,
+      hallIds: selectedHallIds,
+      hallPrices: selectedHallIds.flatMap((hallId) =>
+        stallTypes.map((type) => ({
+          hallId,
+          stallTypeId: type.id,
+          price: Number(hallPrices[hallId]?.[type.id] ?? 0),
+        })),
+      ),
     };
 
     setIsSubmitting(true);
@@ -285,13 +415,13 @@ const OrganizerExhibitions = () => {
       const backendMessage =
         extractErrorSection(err.responseBody) ||
         (typeof err.responseBody === "object" &&
-        err.responseBody !== null &&
-        "message" in err.responseBody &&
-        typeof (err.responseBody as { message?: string }).message === "string"
+          err.responseBody !== null &&
+          "message" in err.responseBody &&
+          typeof (err.responseBody as { message?: string }).message === "string"
           ? (err.responseBody as { message: string }).message
           : typeof err.responseBody === "string"
-          ? err.responseBody
-          : null);
+            ? err.responseBody
+            : null);
 
       const description =
         backendMessage ||
@@ -339,7 +469,7 @@ const OrganizerExhibitions = () => {
           <Badge
             variant={
               stateVariant[
-                (value || record.status || "PLANNING").toString().toUpperCase()
+              (value || record.status || "PLANNING").toString().toUpperCase()
               ] || "outline"
             }
           >
@@ -431,6 +561,9 @@ const OrganizerExhibitions = () => {
         open={isModalOpen}
         onCancel={closeModal}
         footer={null}
+        width={960}
+        styles={{ body: { maxHeight: "none", overflowY: "visible" } }}
+        style={{ top: 24 }}
         destroyOnClose
       >
         <Form
@@ -439,76 +572,139 @@ const OrganizerExhibitions = () => {
           onFinish={handleSubmitExhibition}
           initialValues={{ stallsPerPerson: 1 }}
         >
-          <Form.Item
-            label="Exhibition Name"
-            name="exhibitionName"
-            rules={[{ required: true, message: "Enter the exhibition name" }]}
-          >
-            <Input placeholder="Enter exhibition title" />
-          </Form.Item>
-          <Form.Item
-            label="Start Date & Time"
-            name="startDateTime"
-            rules={[{ required: true, message: "Select a start date and time" }]}
-          >
-            <DatePicker showTime className="w-full" />
-          </Form.Item>
-          <Form.Item
-            label="End Date & Time"
-            name="endDateTime"
-            dependencies={["startDateTime"]}
-            rules={[
-              { required: true, message: "Select an end date and time" },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  const start = getFieldValue("startDateTime");
-                  if (!value || !start || value.isAfter(start)) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(
-                    new Error("End date must be after the start date"),
-                  );
-                },
-              }),
-            ]}
-          >
-            <DatePicker showTime className="w-full" />
-          </Form.Item>
-          <Form.Item
-            label="Booking Opens"
-            name="bookingOpenDateTime"
-            rules={[{ required: true, message: "Select when booking opens" }]}
-          >
-            <DatePicker showTime className="w-full" />
-          </Form.Item>
-          <Form.Item
-            label="Booking Closes"
-            name="bookingCloseDateTime"
-            dependencies={["bookingOpenDateTime"]}
-            rules={[
-              { required: true, message: "Select when booking closes" },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  const open = getFieldValue("bookingOpenDateTime");
-                  if (!value || !open || value.isAfter(open)) {
-                    return Promise.resolve();
-                  }
-                  return Promise.reject(
-                    new Error("Close date must be after the open date"),
-                  );
-                },
-              }),
-            ]}
-          >
-            <DatePicker showTime className="w-full" />
-          </Form.Item>
-          <Form.Item
-            label="Stalls Per Person"
-            name="stallsPerPerson"
-            rules={[{ required: true, message: "Enter stalls per person" }]}
-          >
-            <InputNumber min={1} className="w-full" />
-          </Form.Item>
+          <div className="grid md:grid-cols-2 gap-2">
+            <Form.Item
+              label="Exhibition Name"
+              name="exhibitionName"
+              rules={[{ required: true, message: "Enter the exhibition name" }]}
+            >
+              <Input placeholder="Enter exhibition title" />
+            </Form.Item>
+            <Form.Item
+              label="Stalls Per Person"
+              name="stallsPerPerson"
+              rules={[{ required: true, message: "Enter stalls per person" }]}
+            >
+              <InputNumber min={1} className="w-full" />
+            </Form.Item>
+            <Form.Item
+              label="Start Date & Time"
+              name="startDateTime"
+              rules={[{ required: true, message: "Select a start date and time" }]}
+            >
+              <DatePicker showTime className="w-full" />
+            </Form.Item>
+            <Form.Item
+              label="End Date & Time"
+              name="endDateTime"
+              dependencies={["startDateTime"]}
+              rules={[
+                { required: true, message: "Select an end date and time" },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    const start = getFieldValue("startDateTime");
+                    if (!value || !start || value.isAfter(start)) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(
+                      new Error("End date must be after the start date"),
+                    );
+                  },
+                }),
+              ]}
+            >
+              <DatePicker showTime className="w-full" />
+            </Form.Item>
+            <Form.Item
+              label="Booking Opens"
+              name="bookingOpenDateTime"
+              rules={[{ required: true, message: "Select when booking opens" }]}
+            >
+              <DatePicker showTime className="w-full" />
+            </Form.Item>
+            <Form.Item
+              label="Booking Closes"
+              name="bookingCloseDateTime"
+              dependencies={["bookingOpenDateTime"]}
+              rules={[
+                { required: true, message: "Select when booking closes" },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    const open = getFieldValue("bookingOpenDateTime");
+                    if (!value || !open || value.isAfter(open)) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(
+                      new Error("Close date must be after the open date"),
+                    );
+                  },
+                }),
+              ]}
+            >
+              <DatePicker showTime className="w-full" />
+            </Form.Item>
+          </div>
+          <Divider orientation="left" plain>
+            Halls & Pricing
+          </Divider>
+          <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+            <p className="text-sm text-muted-foreground">
+              Select one or more halls and set stall type prices for each hall. These sample halls are shown until the backend halls endpoint is wired.
+            </p>
+            <div className="grid gap-3">
+              <Checkbox.Group
+                value={selectedHallIds}
+                onChange={(values: CheckboxValueType[]) =>
+                  setSelectedHallIds(values.map((v) => Number(v)))
+                }
+                className="flex flex-col gap-3"
+              >
+                {halls.map((hall) => (
+                  <div
+                    key={hall.id}
+                    className="rounded-lg border bg-white p-3 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Checkbox value={hall.id}>{hall.label}</Checkbox>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        Set prices per stall type
+                      </span>
+                    </div>
+                    {selectedHallIds.includes(hall.id) && (
+                      <div className="mt-3 grid gap-3 md:grid-cols-3 sm:grid-cols-2">
+                        {stallTypes.map((type) => (
+                          <Form.Item
+                            key={`${hall.id}-${type.id}`}
+                            label={`${type.label} Price`}
+                            required
+                            className="mb-0"
+                          >
+                            <InputNumber
+                              min={0}
+                              className="w-full"
+                              value={hallPrices[hall.id]?.[type.id] ?? 0}
+                              onChange={(value) =>
+                                setHallPrices((prev) => ({
+                                  ...prev,
+                                  [hall.id]: {
+                                    ...(prev[hall.id] || {}),
+                                    [type.id]: Number(value || 0),
+                                  },
+                                }))
+                              }
+                              addonBefore="LKR"
+                            />
+                          </Form.Item>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </Checkbox.Group>
+            </div>
+          </div>
           <Form.Item className="mb-0">
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting
@@ -516,8 +712,8 @@ const OrganizerExhibitions = () => {
                   ? "Saving..."
                   : "Creating..."
                 : editingId
-                ? "Save Changes"
-                : "Create Exhibition"}
+                  ? "Save Changes"
+                  : "Create Exhibition"}
             </Button>
           </Form.Item>
         </Form>
@@ -534,15 +730,25 @@ const OrganizerExhibitions = () => {
         }
       >
         {selectedExhibition ? (
-          <div className="space-y-3 text-sm">
+          <div className="space-y-4 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Event Dates</span>
-              <span className="font-medium">{selectedExhibition.dateRange}</span>
+              <span className="font-medium">
+                {selectedExhibition.startDateTime
+                  ? dayjs(selectedExhibition.startDateTime).format("MMM DD, YYYY HH:mm")
+                  : selectedExhibition.dateRange}
+                {" — "}
+                {selectedExhibition.endDateTime
+                  ? dayjs(selectedExhibition.endDateTime).format("MMM DD, YYYY HH:mm")
+                  : null}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Booking Window</span>
               <span className="font-medium">
-                {selectedExhibition.bookingWindow}
+                {selectedExhibition.bookingOpenDateTime
+                  ? `${dayjs(selectedExhibition.bookingOpenDateTime).format("MMM DD, YYYY HH:mm")} — ${dayjs(selectedExhibition.bookingCloseDateTime).format("MMM DD, YYYY HH:mm")}`
+                  : selectedExhibition.bookingWindow}
               </span>
             </div>
             <div className="flex justify-between">
@@ -556,11 +762,11 @@ const OrganizerExhibitions = () => {
               <Badge
                 variant={
                   stateVariant[
-                    (selectedExhibition.exhibitionState ||
-                      selectedExhibition.status ||
-                      "PLANNING")!
-                      .toString()
-                      .toUpperCase()
+                  (selectedExhibition.exhibitionState ||
+                    selectedExhibition.status ||
+                    "PLANNING")!
+                    .toString()
+                    .toUpperCase()
                   ] || "outline"
                 }
               >
@@ -568,6 +774,20 @@ const OrganizerExhibitions = () => {
                   selectedExhibition.status ||
                   "Planning"}
               </Badge>
+            </div>
+            <div className="space-y-2">
+              <p className="text-muted-foreground">Halls</p>
+              <div className="flex flex-wrap gap-2">
+                {Array.isArray(selectedExhibition.halls) && selectedExhibition.halls.length > 0 ? (
+                  selectedExhibition.halls.map((hall: any) => (
+                    <Badge key={hall.id} variant="secondary">
+                      {hall.hallName || `Hall ${hall.id}`}
+                    </Badge>
+                  ))
+                ) : (
+                  <span className="text-sm text-muted-foreground">No halls linked.</span>
+                )}
+              </div>
             </div>
           </div>
         ) : (

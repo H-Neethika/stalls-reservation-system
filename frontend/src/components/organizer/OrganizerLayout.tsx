@@ -27,7 +27,7 @@ const sidebarItems = [
     path: "/organizer/exhibitions",
   },
   {
-    label: "Manage Halls",
+    label: "Halls",
     icon: Building2,
     path: "/organizer/halls",
   },
