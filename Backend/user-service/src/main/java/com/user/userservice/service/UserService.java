@@ -72,13 +72,8 @@ public class UserService {
 					request.email(), request.password());
 			UserPrincipal principal = (UserPrincipal) authenticationManager.authenticate(authenticationToken)
 					.getPrincipal();
-			User user = principal.getUser();
-			String accessToken = jwtService.generateAccessToken(user);
-			String refreshId = java.util.UUID.randomUUID().toString();
-			user.setRefreshTokenId(refreshId);
-			userRepository.save(user);
-			String refreshToken = jwtService.generateRefreshToken(user, refreshId);
-			return AuthResponse.of(accessToken, refreshToken, UserMapper.toResponse(user));
+			User user = principal.user();
+			return getAuthResponse(user);
 		} catch (BadCredentialsException ex) {
 			throw new InvalidCredentialsException("Invalid email or password");
 		}
@@ -114,14 +109,18 @@ public class UserService {
 			if (user.getRefreshTokenId() == null || !user.getRefreshTokenId().equals(jti)) {
 				throw new InvalidCredentialsException("Invalid refresh token");
 			}
-			String accessToken = jwtService.generateAccessToken(user);
-			String refreshId = java.util.UUID.randomUUID().toString();
-			user.setRefreshTokenId(refreshId);
-			userRepository.save(user);
-			String refreshToken = jwtService.generateRefreshToken(user, refreshId);
-			return AuthResponse.of(accessToken, refreshToken, UserMapper.toResponse(user));
+			return getAuthResponse(user);
 		} catch (org.springframework.security.oauth2.jwt.JwtException ex) {
 			throw new InvalidCredentialsException("Invalid refresh token");
 		}
+	}
+
+	private AuthResponse getAuthResponse(User user) {
+		String accessToken = jwtService.generateAccessToken(user);
+		String refreshId = java.util.UUID.randomUUID().toString();
+		user.setRefreshTokenId(refreshId);
+		userRepository.save(user);
+		String refreshToken = jwtService.generateRefreshToken(user, refreshId);
+		return AuthResponse.of(accessToken, refreshToken, UserMapper.toResponse(user));
 	}
 }

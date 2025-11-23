@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -25,10 +24,6 @@ public class JwtService {
 		this.jwtEncoder = jwtEncoder;
 	}
 
-	public String generateToken(User user) {
-		return generateAccessToken(user);
-	}
-
 	public String generateAccessToken(User user) {
 		return buildToken(user, properties.accessTokenTtl(), Map.of("scope", List.of("users.read")), "ACCESS");
 	}
@@ -36,10 +31,6 @@ public class JwtService {
 	public String generateRefreshToken(User user, String tokenId) {
 		return buildToken(user, properties.refreshTokenTtl(),
 				Map.of("scope", List.of("users.refresh"), "jti", tokenId), "REFRESH");
-	}
-
-	public String generateRefreshToken(User user) {
-		return generateRefreshToken(user, UUID.randomUUID().toString());
 	}
 
 	private String buildToken(User user, Duration ttl, Map<String, Object> additionalClaims, String tokenType) {

@@ -55,7 +55,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 		// Check OAuth2 mode from session
 		String mode = (String) request.getSession().getAttribute("oauth2_mode");
 		if (mode == null) {
-			mode = "signin"; // Default to signin if not specified
+			mode = "signin";
 		}
 
 		log.info("OAuth2 authentication for email: {}, mode: {}", email, mode);
@@ -110,12 +110,10 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 	}
 
 	private String buildRedirectUrl(String accessToken, String refreshToken, Long userId) {
-		StringBuilder builder = new StringBuilder(frontendSuccessUrl);
-		builder.append(frontendSuccessUrl.contains("?") ? "&" : "?");
-		builder.append("accessToken=").append(encode(accessToken));
-		builder.append("&refreshToken=").append(encode(refreshToken));
-		builder.append("&userId=").append(userId);
-		return builder.toString();
+        return frontendSuccessUrl + (frontendSuccessUrl.contains("?") ? "&" : "?") +
+                "accessToken=" + encode(accessToken) +
+                "&refreshToken=" + encode(refreshToken) +
+                "&userId=" + userId;
 	}
 
 	private String encode(String value) {
