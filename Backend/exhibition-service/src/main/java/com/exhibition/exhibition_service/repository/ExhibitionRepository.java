@@ -2,7 +2,7 @@ package com.exhibition.exhibition_service.repository;
 
 import com.exhibition.exhibition_service.model.Exhibition;
 import org.springframework.data.jpa.repository.JpaRepository;
-import com.exhibition.exhibition_service.domain.EXHIBITION_STATE;
+import com.exhibition.exhibition_service.enums.EXHIBITION_STATE;
 
 import java.util.List;
 import java.time.LocalDateTime;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 public interface ExhibitionRepository extends JpaRepository<Exhibition,Long> {
 
     List<Exhibition> findByExhibitionState(EXHIBITION_STATE state);
+    List<Exhibition> findByOrganizerId(Long organizerId);
 
     boolean existsByExhibitionStateAndStartDateTimeLessThanAndEndDateTimeGreaterThan(
             EXHIBITION_STATE state,

@@ -1,14 +1,19 @@
 package com.exhibition.exhibition_service.service.impl;
 
 import com.exhibition.exhibition_service.dto.ExhibitionDTO;
+import com.exhibition.exhibition_service.dto.ExhibitionWithHallsResponse;
 import com.exhibition.exhibition_service.dto.HallPriceDTO;
+import com.exhibition.exhibition_service.dto.HallRef;
 import com.exhibition.exhibition_service.exception.InvalidExhibitionDateException;
 import com.exhibition.exhibition_service.exception.ExhibitionConflictException;
 import com.exhibition.exhibition_service.mapper.ExhibitionMapper;
 import com.exhibition.exhibition_service.model.Exhibition;
+import com.exhibition.exhibition_service.model.ExhibitionHall;
 import com.exhibition.exhibition_service.repository.ExhibitionRepository;
+import com.exhibition.exhibition_service.repository.ExhibitionHallRepository;
 import com.exhibition.exhibition_service.service.ExhibitionService;
 import com.exhibition.exhibition_service.service.LayoutService;
+import com.exhibition.exhibition_service.enums.EXHIBITION_STATE;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -16,7 +21,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
-import static com.exhibition.exhibition_service.domain.EXHIBITION_STATE.PUBLISHED;
+import static com.exhibition.exhibition_service.enums.EXHIBITION_STATE.PUBLISHED;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +29,7 @@ import static com.exhibition.exhibition_service.domain.EXHIBITION_STATE.PUBLISHE
 public class ExhibitionServiceImpl implements ExhibitionService {
 
     private final ExhibitionRepository exhibitionRepository;
+    private final ExhibitionHallRepository exhibitionHallRepository;
     private final ExhibitionMapper exhibitionMapper;
     private final LayoutService layoutService;
 
@@ -182,10 +188,43 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     }
 
     @Override
-    public List<ExhibitionDTO> getExhibitionsByState(com.exhibition.exhibition_service.domain.EXHIBITION_STATE state) {
+    public List<ExhibitionDTO> getExhibitionsByState(EXHIBITION_STATE state) {
         return exhibitionRepository.findByExhibitionState(state)
                 .stream()
                 .map(exhibitionMapper::toDto)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<ExhibitionWithHallsResponse> getExhibitionsByOrganizer(Long organizerId) {
+        if (organizerId == null) {
+            throw new IllegalArgumentException("organizerId is required");
+        }
+        return exhibitionRepository.findByOrganizerId(organizerId)
+                .stream()
+                .map(this::toWithHalls)
+                .collect(Collectors.toList());
+    }
+
+    private ExhibitionWithHallsResponse toWithHalls(Exhibition exhibition) {
+        ExhibitionWithHallsResponse dto = new ExhibitionWithHallsResponse();
+        dto.setId(exhibition.getId());
+        dto.setOrganizerId(exhibition.getOrganizerId());
+        dto.setExhibitionName(exhibition.getExhibitionName());
+        dto.setStartDateTime(exhibition.getStartDateTime());
+        dto.setEndDateTime(exhibition.getEndDateTime());
+        dto.setBookingOpenDateTime(exhibition.getBookingOpenDateTime());
+        dto.setBookingCloseDateTime(exhibition.getBookingCloseDateTime());
+        dto.setStallsPerPerson(exhibition.getStallsPerPerson());
+        dto.setExhibitionState(exhibition.getExhibitionState());
+        List<ExhibitionHall> halls = exhibitionHallRepository.findByExhibition(exhibition);
+        List<HallRef> hallRefs = halls.stream().map(h -> {
+            HallRef ref = new HallRef();
+            ref.setId(h.getHall().getId());
+            ref.setHallName(h.getHall().getHallName());
+            return ref;
+        }).collect(Collectors.toList());
+        dto.setHalls(hallRefs);
+        return dto;
     }
 }

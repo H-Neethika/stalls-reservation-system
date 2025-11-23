@@ -1,6 +1,6 @@
 package com.exhibition.exhibition_service.model;
 
-import com.exhibition.exhibition_service.domain.EXHIBITION_STATE;
+import com.exhibition.exhibition_service.enums.EXHIBITION_STATE;
 import jakarta.persistence.*;
 import lombok.*;
 

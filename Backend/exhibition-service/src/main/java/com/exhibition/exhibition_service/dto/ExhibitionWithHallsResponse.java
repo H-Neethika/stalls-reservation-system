@@ -1,20 +1,12 @@
 package com.exhibition.exhibition_service.dto;
 
 import com.exhibition.exhibition_service.enums.EXHIBITION_STATE;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 import java.util.List;
+import lombok.Data;
 
 @Data
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
-public class ExhibitionDTO {
-
+public class ExhibitionWithHallsResponse {
     private Long id;
     private Long organizerId;
     private String exhibitionName;
@@ -24,6 +16,5 @@ public class ExhibitionDTO {
     private LocalDateTime bookingCloseDateTime;
     private int stallsPerPerson;
     private EXHIBITION_STATE exhibitionState;
-    private List<Long> hallIds;
-    private List<HallPriceDTO> hallPrices;
+    private List<HallRef> halls;
 }

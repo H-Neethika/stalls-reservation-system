@@ -1,14 +1,3 @@
--- Seed booking statuses (idempotent)
-INSERT INTO booking_status (id, status)
-SELECT 1, 'AVAILABLE' WHERE NOT EXISTS (SELECT 1 FROM booking_status WHERE id = 1);
-
-INSERT INTO booking_status (id, status)
-SELECT 2, 'RESERVED' WHERE NOT EXISTS (SELECT 1 FROM booking_status WHERE id = 2);
-
-INSERT INTO booking_status (id, status)
-SELECT 3, 'UNAVAILABLE' WHERE NOT EXISTS (SELECT 1 FROM booking_status WHERE id = 3);
-
-
 -- Stall types
 INSERT INTO stall_type (id, type)
 SELECT 1, 'SMALL' WHERE NOT EXISTS (SELECT 1 FROM stall_type WHERE id = 1);

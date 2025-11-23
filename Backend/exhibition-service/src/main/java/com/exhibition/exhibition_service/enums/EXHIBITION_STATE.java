@@ -1,4 +1,4 @@
-package com.exhibition.exhibition_service.domain;
+package com.exhibition.exhibition_service.enums;
 
 public enum EXHIBITION_STATE {
 

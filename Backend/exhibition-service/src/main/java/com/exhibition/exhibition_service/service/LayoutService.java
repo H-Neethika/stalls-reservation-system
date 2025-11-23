@@ -1,7 +1,7 @@
 package com.exhibition.exhibition_service.service;
 
 import com.exhibition.exhibition_service.dto.*;
-import com.exhibition.exhibition_service.model.BookingStatus;
+import com.exhibition.exhibition_service.enums.BookingStatus;
 import com.exhibition.exhibition_service.model.Exhibition;
 import com.exhibition.exhibition_service.model.ExhibitionHall;
 import com.exhibition.exhibition_service.model.ExhibitionHallPrice;
@@ -17,7 +17,6 @@ import com.exhibition.exhibition_service.repository.ExhibitionStallRepository;
 import com.exhibition.exhibition_service.repository.HallRepository;
 import com.exhibition.exhibition_service.repository.StallRepository;
 import com.exhibition.exhibition_service.repository.StallTypeRepository;
-import com.exhibition.exhibition_service.repository.BookingStatusRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +36,6 @@ public class LayoutService {
     private final StallRepository stallRepository;
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionStallRepository exhibitionStallRepository;
-    private final BookingStatusRepository bookingStatusRepository;
     private final ExhibitionHallPriceRepository exhibitionHallPriceRepository;
 
     public Hall createHall(String hallName) {
@@ -84,7 +82,7 @@ public class LayoutService {
         if (exhibition == null || exhibition.getId() == null) {
             throw new IllegalArgumentException("Exhibition must be persisted before attaching halls.");
         }
-        BookingStatus available = ensureStatus("AVAILABLE");
+        BookingStatus available = BookingStatus.AVAILABLE;
         for (Long hallId : hallIds) {
             Hall hall = hallRepository.findById(hallId)
                     .orElseThrow(() -> new IllegalArgumentException("Hall not found: " + hallId));
@@ -271,12 +269,12 @@ public class LayoutService {
 
     @Transactional
     public List<StallStatusResponse> reserveStalls(Long exhibitionId, UpdateStallStatusRequest request) {
-        return updateStatus(exhibitionId, request, "RESERVED");
+        return updateStatus(exhibitionId, request, BookingStatus.RESERVED);
     }
 
     @Transactional
     public List<StallStatusResponse> releaseStalls(Long exhibitionId, UpdateStallStatusRequest request) {
-        return updateStatus(exhibitionId, request, "AVAILABLE");
+        return updateStatus(exhibitionId, request, BookingStatus.AVAILABLE);
     }
 
     public List<StallStatusResponse> getStatuses(Long exhibitionId, List<Long> stallIds) {
@@ -286,7 +284,7 @@ public class LayoutService {
         return stalls.stream().map(this::toStatus).collect(Collectors.toList());
     }
 
-    private List<StallStatusResponse> updateStatus(Long exhibitionId, UpdateStallStatusRequest request, String status) {
+    private List<StallStatusResponse> updateStatus(Long exhibitionId, UpdateStallStatusRequest request, BookingStatus status) {
         Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
                 .orElseThrow(() -> new IllegalArgumentException("Exhibition not found: " + exhibitionId));
         if (request.getStallIds() == null || request.getStallIds().isEmpty()) {
@@ -296,19 +294,9 @@ public class LayoutService {
         if (stalls.size() != request.getStallIds().size()) {
             throw new IllegalArgumentException("Some stalls not found for exhibition " + exhibitionId);
         }
-        BookingStatus bookingStatus = ensureStatus(status);
-        stalls.forEach(s -> s.setBookingStatus(bookingStatus));
+        stalls.forEach(s -> s.setBookingStatus(status));
         exhibitionStallRepository.saveAll(stalls);
         return stalls.stream().map(this::toStatus).collect(Collectors.toList());
-    }
-
-    private BookingStatus ensureStatus(String status) {
-        return bookingStatusRepository.findByStatus(status)
-                .orElseGet(() -> {
-                    BookingStatus bs = new BookingStatus();
-                    bs.setStatus(status);
-                    return bookingStatusRepository.save(bs);
-                });
     }
 
     private Point toPoint(PointDto dto) {
@@ -374,14 +362,14 @@ public class LayoutService {
         // derive status from exhibition stall association if present
         exhibitionStallRepository.findByStallId_Id(stall.getId()).stream().findFirst()
                 .ifPresent(es -> response.setBookingStatus(
-                        es.getBookingStatus() != null ? es.getBookingStatus().getStatus() : null));
+                        es.getBookingStatus() != null ? es.getBookingStatus().name() : null));
         return response;
     }
 
     private StallStatusResponse toStatus(ExhibitionStall stall) {
         StallStatusResponse response = new StallStatusResponse();
         response.setId(stall.getId());
-        response.setBookingStatus(stall.getBookingStatus() != null ? stall.getBookingStatus().getStatus() : null);
+        response.setBookingStatus(stall.getBookingStatus() != null ? stall.getBookingStatus().name() : null);
         return response;
     }
 

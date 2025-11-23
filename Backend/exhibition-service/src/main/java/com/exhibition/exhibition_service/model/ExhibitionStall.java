@@ -1,6 +1,9 @@
 package com.exhibition.exhibition_service.model;
 
+import com.exhibition.exhibition_service.enums.BookingStatus;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -26,7 +29,7 @@ public class ExhibitionStall {
     @ManyToOne
     private Stall stall;
 
-    @ManyToOne
+    @Enumerated(EnumType.STRING)
     private BookingStatus bookingStatus;
 
     @ManyToMany
