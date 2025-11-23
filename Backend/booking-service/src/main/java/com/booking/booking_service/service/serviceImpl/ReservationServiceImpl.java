@@ -2,10 +2,16 @@ package com.booking.booking_service.service.serviceImpl;
 
 import com.booking.booking_service.dto.ExternalStallSummary;
 import com.booking.booking_service.model.Reservation;
+import com.booking.booking_service.repository.BookingStatusRepository;
+import com.booking.booking_service.repository.ExhibitionStallRepository;
 import com.booking.booking_service.repository.ReservationRepository;
 import com.booking.booking_service.request.ReservationRequest;
+import com.booking.booking_service.request.CreatePaymentRequest;
+import com.booking.booking_service.response.MessageResponse;
+import com.booking.booking_service.response.PaymentIntentResponse;
 import com.booking.booking_service.response.ReservationResponse;
 import com.booking.booking_service.response.ReservedStallResponse;
+import com.booking.booking_service.service.PaymentService;
 import com.booking.booking_service.service.ReservationService;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -22,7 +28,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ReservationServiceImpl implements ReservationService {
@@ -31,10 +37,12 @@ public class ReservationServiceImpl implements ReservationService {
   private ReservationRepository reservationRepository;
 
   @Autowired
-  private RestTemplate restTemplate;
+  private ExhibitionStallRepository exhibitionStallRepository;
+  @Autowired
+  private PaymentService paymentService;
+  @Autowired
+  private BookingStatusRepository bookingStatusRepository;
 
-  @Value("${EXHIBITION_SERVICE_BASE_URL:http://localhost:8082}")
-  private String exhibitionServiceBaseUrl;
 
 
   @Override
@@ -42,11 +50,14 @@ public class ReservationServiceImpl implements ReservationService {
     List<Long> stallIds = reservationRequest.getStallIds();
     List<ExternalStallSummary> summaries = fetchStallSummaries(stallIds);
 
-    Long totalAmount = summaries.stream()
-            .map(ExternalStallSummary::getPrice)
-            .filter(p -> p != null)
-            .reduce(0L, Long::sum);
 
+
+    Long totalAmount = 0L;
+    for (ExhibitionStall stall : stalls) {
+      totalAmount += stall.getPrice();
+      stall.setBookingStatus(bookingStatusRepository.findById(2L).get());
+      exhibitionStallRepository.save(stall);
+    }
     Reservation newReservation = new Reservation();
     newReservation.setUserId(reservationRequest.getUserId());
     newReservation.setExhibitionId(reservationRequest.getExhibitionId());
@@ -73,6 +84,14 @@ public class ReservationServiceImpl implements ReservationService {
             .map(this::mapToResponse)
             .collect(Collectors.toList());
   }
+
+  @Override
+  @Transactional
+  public PaymentIntentResponse updateReservation(CreatePaymentRequest request) {
+
+    return paymentService.createPaymentIntent(request).getBody();
+  }
+
 
   //Convert Entity to DTO
   private ReservationResponse mapToResponse(Reservation reservation) {

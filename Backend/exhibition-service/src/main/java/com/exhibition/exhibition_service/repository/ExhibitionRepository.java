@@ -1,12 +1,13 @@
 package com.exhibition.exhibition_service.repository;
 
-import com.exhibition.exhibition_service.model.Exhibition;
-import org.springframework.data.jpa.repository.JpaRepository;
-import com.exhibition.exhibition_service.enums.ExhibitionState;
-
-import java.util.List;
 import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import com.exhibition.exhibition_service.enums.ExhibitionState;
+import com.exhibition.exhibition_service.model.Exhibition;
 
 @Repository
 

@@ -1,11 +1,10 @@
 package com.exhibition.exhibition_service.service;
 
-import com.exhibition.exhibition_service.dto.ExhibitionDTO;
-import com.exhibition.exhibition_service.model.Exhibition;
-import com.exhibition.exhibition_service.enums.ExhibitionState;
-
 import java.time.LocalDateTime;
 import java.util.List;
+
+import com.exhibition.exhibition_service.dto.ExhibitionDTO;
+import com.exhibition.exhibition_service.enums.ExhibitionState;
 
 public interface ExhibitionService {
 
