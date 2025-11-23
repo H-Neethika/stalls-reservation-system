@@ -1,5 +1,5 @@
 server:
-  port: ${CLOUD_GATEWAY_PORT:5000}
+  port: ${CLOUD_GATEWAY_PORT:9000}
 
 spring:
   application:
@@ -9,7 +9,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${APP_JWT_ISSUER:http://localhost:9090}
+          issuer-uri: ${APP_JWT_ISSUER:http://localhost:9002}
 
   cloud:
     gateway:
@@ -125,11 +125,7 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     serviceUrl:
-      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8070/eureka}
-
-app:
-  jwt:
-    issuer: ${APP_JWT_ISSUER:http://localhost:9090}
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:9001/eureka}
 
 logging:
   level:
