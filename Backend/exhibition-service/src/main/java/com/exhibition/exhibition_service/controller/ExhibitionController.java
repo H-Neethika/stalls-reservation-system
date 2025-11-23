@@ -64,4 +64,10 @@ public class ExhibitionController {
     public ResponseEntity<List<ExhibitionDTO>> getByState(@PathVariable ExhibitionState state) {
         return ResponseEntity.ok(exhibitionService.getExhibitionsByState(state));
     }
+
+    @GetMapping("/details/state/{state}")
+    public ResponseEntity<List<com.exhibition.exhibition_service.dto.ExhibitionWithHallsResponse>> getByStateWithHalls(
+            @PathVariable ExhibitionState state) {
+        return ResponseEntity.ok(exhibitionService.getExhibitionsByStateWithHalls(state));
+    }
 }

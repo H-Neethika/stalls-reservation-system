@@ -257,6 +257,14 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     }
 
     @Override
+    public List<ExhibitionWithHallsResponse> getExhibitionsByStateWithHalls(ExhibitionState state) {
+        return exhibitionRepository.findByExhibitionState(state)
+                .stream()
+                .map(this::toWithHalls)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<ExhibitionWithHallsResponse> getExhibitionsByOrganizer(Long organizerId) {
         if (organizerId == null) {
             throw new IllegalArgumentException("organizerId is required");

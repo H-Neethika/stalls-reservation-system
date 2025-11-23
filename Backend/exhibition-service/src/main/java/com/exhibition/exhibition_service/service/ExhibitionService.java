@@ -16,5 +16,6 @@ public interface ExhibitionService {
     List<ExhibitionDTO> getAllExhibitions();
     List<ExhibitionDTO> getExhibitionsByState(ExhibitionState state);
     List<com.exhibition.exhibition_service.dto.ExhibitionWithHallsResponse> getExhibitionsByOrganizer(Long organizerId);
+    List<com.exhibition.exhibition_service.dto.ExhibitionWithHallsResponse> getExhibitionsByStateWithHalls(ExhibitionState state);
 
 }
