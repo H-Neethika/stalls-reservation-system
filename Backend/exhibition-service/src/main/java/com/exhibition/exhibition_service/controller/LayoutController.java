@@ -5,6 +5,7 @@ import com.exhibition.exhibition_service.dto.CreateExhibitionHallRequest;
 import com.exhibition.exhibition_service.dto.CreateStallRequest;
 import com.exhibition.exhibition_service.dto.CreateStallTypeRequest;
 import com.exhibition.exhibition_service.dto.ExhibitionHallPriceResponse;
+import com.exhibition.exhibition_service.dto.OrganizerLayoutResponse;
 import com.exhibition.exhibition_service.dto.StallStatusResponse;
 import com.exhibition.exhibition_service.dto.StallSummaryResponse;
 import com.exhibition.exhibition_service.dto.UpdateStallStatusRequest;
@@ -63,6 +64,11 @@ public class LayoutController {
     @GetMapping("/exhibitions/{exhibitionId}/halls")
     public ResponseEntity<List<ExhibitionHall>> getExhibitionHalls(@PathVariable Long exhibitionId) {
         return ResponseEntity.ok(layoutService.getExhibitionHalls(exhibitionId));
+    }
+
+    @GetMapping("/organizers/{organizerId}")
+    public ResponseEntity<OrganizerLayoutResponse> getLayoutByOrganizer(@PathVariable Long organizerId) {
+        return ResponseEntity.ok(layoutService.getOrganizerLayout(organizerId));
     }
 
     @PostMapping("/stall-types")

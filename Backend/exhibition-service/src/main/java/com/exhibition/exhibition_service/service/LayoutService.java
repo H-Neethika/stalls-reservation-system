@@ -18,6 +18,7 @@ import com.exhibition.exhibition_service.repository.HallRepository;
 import com.exhibition.exhibition_service.repository.StallRepository;
 import com.exhibition.exhibition_service.repository.StallTypeRepository;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -52,6 +53,19 @@ public class LayoutService {
         return hallRepository.findAll().stream()
                 .map(this::toHallSummary)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public OrganizerLayoutResponse getOrganizerLayout(Long organizerId) {
+        if (organizerId == null) {
+            throw new IllegalArgumentException("organizerId cannot be null");
+        }
+        OrganizerLayoutResponse response = new OrganizerLayoutResponse();
+        List<Exhibition> exhibitions = exhibitionRepository.findByOrganizerId(organizerId);
+        response.setExhibitions(exhibitions.stream()
+                .map(this::toExhibitionLayout)
+                .collect(Collectors.toList()));
+        return response;
     }
 
     public List<StallType> getStallTypes() {
@@ -348,6 +362,64 @@ public class LayoutService {
             counts.get(type.getId()).setCount(counts.get(type.getId()).getCount() + 1);
         }
         dto.setStallTypes(new java.util.ArrayList<>(counts.values()));
+        return dto;
+    }
+
+    private ExhibitionLayoutResponse toExhibitionLayout(Exhibition exhibition) {
+        ExhibitionLayoutResponse dto = new ExhibitionLayoutResponse();
+        dto.setId(exhibition.getId());
+        dto.setExhibitionName(exhibition.getExhibitionName());
+        dto.setExhibitionState(exhibition.getExhibitionState());
+
+        Map<Long, BookingStatus> statusByStall = exhibitionStallRepository.findByExhibition(exhibition).stream()
+                .filter(es -> es.getStall() != null)
+                .collect(Collectors.toMap(es -> es.getStall().getId(), ExhibitionStall::getBookingStatus, (a, b) -> a));
+
+        List<ExhibitionHall> halls = exhibitionHallRepository.findByExhibition(exhibition);
+        dto.setHalls(halls.stream()
+                .map(h -> toHallLayout(h, statusByStall))
+                .collect(Collectors.toList()));
+        return dto;
+    }
+
+    private HallLayoutResponse toHallLayout(ExhibitionHall exhibitionHall, Map<Long, BookingStatus> statusByStall) {
+        HallLayoutResponse dto = new HallLayoutResponse();
+        dto.setExhibitionHallId(exhibitionHall.getId());
+        Hall hall = exhibitionHall.getHall();
+        if (hall != null) {
+            dto.setHallId(hall.getId());
+            dto.setHallName(hall.getHallName());
+            List<Stall> stalls = stallRepository.findByHall(hall);
+            dto.setStalls(stalls.stream()
+                    .map(s -> toStallLayout(s, statusByStall.get(s.getId())))
+                    .collect(Collectors.toList()));
+        } else {
+            dto.setStalls(Collections.emptyList());
+        }
+        return dto;
+    }
+
+    private StallLayoutResponse toStallLayout(Stall stall, BookingStatus bookingStatus) {
+        StallLayoutResponse dto = new StallLayoutResponse();
+        dto.setId(stall.getId());
+        Optional.ofNullable(stall.getStallType()).ifPresent(type -> {
+            dto.setStallTypeId(type.getId());
+            dto.setStallType(type.getType());
+        });
+        dto.setBookingStatus(bookingStatus != null ? bookingStatus.name() : null);
+        dto.setPath(stall.getPath());
+        if (stall.getPoints() != null) {
+            dto.setPoints(stall.getPoints().stream()
+                    .map(this::toPointDto)
+                    .collect(Collectors.toList()));
+        }
+        return dto;
+    }
+
+    private PointDto toPointDto(Point point) {
+        PointDto dto = new PointDto();
+        dto.setX(point.getX());
+        dto.setY(point.getY());
         return dto;
     }
 
