@@ -10,4 +10,11 @@ public interface PaymentService {
     PaymentOrderResponse getLatestOrderByReservationId(Long reservationId);
 
     void handleStripeWebhook(String payload, String signatureHeader);
+
+    // Test method to simulate payment completion
+    void testCompletePayment(Long orderId);
+
+    // Method to get payment order by ID
+    PaymentOrderResponse getPaymentOrderById(Long orderId);
 }
+

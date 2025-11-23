@@ -30,7 +30,7 @@ public class EmailService {
     @Value("${NOTIFICATION_EMAIL}")
     private String notificationEmail;
 
-    @Async
+    @Async("emailExecutor")
     public void sendEmail(
             UUID notificationId,
             String to,

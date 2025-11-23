@@ -22,8 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.util.*;
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j
 public class NotificationService {
 
     @Autowired
@@ -38,8 +41,30 @@ public class NotificationService {
     @Value("${OFFICIAL_WEBSITE_LINK}")
     private String websiteLink;
 
-    @Value("${NOTIFICATION_QRCODE_SECRET}")
+    @Value("${NOTIFICATION_QRCODE_SECRET:YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=}")
     private String base64Secret;
+
+    @PostConstruct
+    private void validateSecrets() {
+        if (base64Secret == null || base64Secret.trim().isEmpty()) {
+            throw new IllegalStateException("NOTIFICATION_QRCODE_SECRET is required but not configured");
+        }
+
+        // Validate that it's a proper base64 string and correct AES key length
+        try {
+            byte[] keyBytes = java.util.Base64.getDecoder().decode(base64Secret);
+            if (keyBytes.length != 16 && keyBytes.length != 24 && keyBytes.length != 32) {
+                throw new IllegalStateException(String.format(
+                    "NOTIFICATION_QRCODE_SECRET decoded to %d bytes, but AES requires 16, 24, or 32 bytes. " +
+                    "Please use a properly sized base64 encoded key.", keyBytes.length));
+            }
+            log.info("QR code encryption secret validated successfully (AES-{} key)", keyBytes.length * 8);
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("NOTIFICATION_QRCODE_SECRET must be a valid base64 encoded string", e);
+        }
+    }
 
     private Optional<Notification> getReservationNotification(Long reservationId, Long userId) {
         return notificationRepository.findAllByUserId(userId)
@@ -79,10 +104,25 @@ public class NotificationService {
 
     private byte[] createEncryptedQRCode(String qrcodeDetails, int width, int height) {
         try {
+            // Validate inputs
+            if (qrcodeDetails == null || qrcodeDetails.trim().isEmpty()) {
+                throw new IllegalArgumentException("QR code details cannot be null or empty");
+            }
+            if (this.base64Secret == null || this.base64Secret.trim().isEmpty()) {
+                throw new IllegalStateException("QR code encryption secret is not configured");
+            }
+
+            log.debug("Creating encrypted QR code with details length: {}, secret configured: true",
+                    qrcodeDetails.length());
+
             String encrypted = AESEncryptor.encrypt(qrcodeDetails, this.base64Secret);
             return qrCodeService.generateQRCode(encrypted, width, height);
         } catch (Exception e) {
-            throw new QRCodeGenerationException("Failed to create encrypted QR code", e);
+            log.error("Failed to create encrypted QR code. Details length: {}, Secret null: {}, Error: {}",
+                    qrcodeDetails != null ? qrcodeDetails.length() : "null",
+                    this.base64Secret == null,
+                    e.getMessage(), e);
+            throw new QRCodeGenerationException("Failed to create encrypted QR code: " + e.getMessage(), e);
         }
     }
 

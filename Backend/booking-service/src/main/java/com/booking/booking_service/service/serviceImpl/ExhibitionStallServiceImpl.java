@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -49,6 +50,8 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
 
     @Autowired
     private UserService userService;
+
+    private static final Long BOOKED_STATUS_ID = 3L;
 
     @Override
     public ExhibitionStall createExhibitionStall(CreateExhibitionStallRequest request) {
@@ -178,22 +181,33 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
     @Override
     @Transactional
     public PaymentSuccessResponse updateStallBookingStatus(Long reservationId) {
-        Reservation reservation = reservationRepository.findById(reservationId).get();
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new RuntimeException("Reservation not found with id " + reservationId));
+
+        BookingStatus bookedStatus = bookingStatusRepository.findById(BOOKED_STATUS_ID)
+                .orElseThrow(() -> new RuntimeException("Booking status 'BOOKED' not configured"));
+
         List<ExhibitionStall> exhibitionStalls = reservation.getStall();
-        for(ExhibitionStall stall: exhibitionStalls){
-            stall.setBookingStatus(bookingStatusRepository.findById(3L).get());
+        boolean alreadyBooked = exhibitionStalls.stream()
+                .allMatch(stall -> bookedStatus.equals(stall.getBookingStatus()));
 
+        if (!alreadyBooked) {
+            for (ExhibitionStall stall : exhibitionStalls) {
+                stall.setBookingStatus(bookedStatus);
+            }
+            reservation.setStall(exhibitionStalls);
+            reservationRepository.save(reservation);
         }
-        reservation.setStall(exhibitionStalls);
-        reservationRepository.save(reservation);
 
-        UserResponse user = userService.getUserById(reservation.getUserId()).getBody();
+        UserResponse user = Optional.ofNullable(userService.getUserById(reservation.getUserId()).getBody())
+                .orElseThrow(() -> new RuntimeException("User not found with id " + reservation.getUserId()));
         PaymentSuccessResponse response = new PaymentSuccessResponse();
         response.setReservationId(reservation.getId());
         response.setUserId(user.getId());
         response.setUsername(user.getName());
         response.setEmail(user.getEmail());
         response.setBookingDateTime(reservation.getCreatedAt());
+        response.setFairName(resolveFairName(exhibitionStalls));
 
         List<ExhibitionStall> reservationStalls  = reservation.getStall();
         List<StallDto> stallDetails = new ArrayList<>();
@@ -207,5 +221,17 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
         response.setStalls(stallDetails);
 
         return response;
+    }
+
+    private String resolveFairName(List<ExhibitionStall> stalls) {
+        return stalls.stream()
+                .map(ExhibitionStall::getExhibitionHallId)
+                .filter(Objects::nonNull)
+                .map(ExhibitionHall::getHallId)
+                .filter(Objects::nonNull)
+                .map(hall -> hall.getHallName())
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse(null);
     }
 }

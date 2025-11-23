@@ -24,6 +24,12 @@ spring:
       data-locations:
         - classpath:data.sql
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${BOOKING_PAYMENT_SUCCESS_GROUP:booking-payment-success}
+      auto-offset-reset: earliest
+
 eureka:
   instance:
     prefer-ip-address: true
@@ -32,3 +38,12 @@ eureka:
     fetch-registry: true
     serviceUrl:
       defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8070/eureka}
+
+app:
+  kafka:
+    topics:
+      payment-success: ${PAYMENT_SUCCESS_TOPIC:payment.success}
+      reservation-booked: ${RESERVATION_BOOKED_TOPIC:reservation.booked}
+  notification:
+    default-event-link: ${DEFAULT_EVENT_LINK:https://example.com/events}
+    default-fair-name: ${DEFAULT_FAIR_NAME:Stall Reservation}
