@@ -70,4 +70,9 @@ public class ExhibitionController {
             @PathVariable ExhibitionState state) {
         return ResponseEntity.ok(exhibitionService.getExhibitionsByStateWithHalls(state));
     }
+
+    @GetMapping("/active/range")
+    public ResponseEntity<List<com.exhibition.exhibition_service.dto.ExhibitionBriefResponse>> getByDateRange() {
+        return ResponseEntity.ok(exhibitionService.getExhibitionsByDateRange(null, null));
+    }
 }

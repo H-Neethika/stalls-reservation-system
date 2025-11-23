@@ -3,6 +3,7 @@ package com.exhibition.exhibition_service.service.impl;
 import com.exhibition.exhibition_service.dto.ExhibitionDTO;
 import com.exhibition.exhibition_service.dto.ExhibitionWithHallsResponse;
 import com.exhibition.exhibition_service.dto.ExhibitionHallPriceResponse;
+import com.exhibition.exhibition_service.dto.ExhibitionBriefResponse;
 import com.exhibition.exhibition_service.dto.HallPriceDTO;
 import com.exhibition.exhibition_service.dto.HallRef;
 import com.exhibition.exhibition_service.exception.ExhibitionForbiddenException;
@@ -265,6 +266,19 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     }
 
     @Override
+    public List<ExhibitionBriefResponse> getExhibitionsByDateRange(LocalDateTime start, LocalDateTime end) {
+        LocalDateTime now = LocalDateTime.now();
+        return exhibitionRepository.findAll().stream()
+                .filter(e -> start == null || !e.getStartDateTime().isBefore(start))
+                .filter(e -> end == null || !e.getEndDateTime().isAfter(end))
+                .filter(e -> e.getExhibitionState() == ExhibitionState.DRAFT
+                        || e.getExhibitionState() == ExhibitionState.PUBLISHED
+                        || (e.getEndDateTime() != null && e.getEndDateTime().isAfter(now)))
+                .map(this::toBrief)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<ExhibitionWithHallsResponse> getExhibitionsByOrganizer(Long organizerId) {
         if (organizerId == null) {
             throw new IllegalArgumentException("organizerId is required");
@@ -298,6 +312,15 @@ public class ExhibitionServiceImpl implements ExhibitionService {
             return ref;
         }).collect(Collectors.toList());
         dto.setHalls(hallRefs);
+        return dto;
+    }
+
+    private ExhibitionBriefResponse toBrief(Exhibition exhibition) {
+        ExhibitionBriefResponse dto = new ExhibitionBriefResponse();
+        dto.setExhibitionId(exhibition.getId());
+        dto.setExhibitionName(exhibition.getExhibitionName());
+        dto.setStartDateTime(exhibition.getStartDateTime());
+        dto.setEndDateTime(exhibition.getEndDateTime());
         return dto;
     }
 

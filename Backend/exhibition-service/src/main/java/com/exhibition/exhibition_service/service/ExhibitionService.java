@@ -4,6 +4,7 @@ import com.exhibition.exhibition_service.dto.ExhibitionDTO;
 import com.exhibition.exhibition_service.model.Exhibition;
 import com.exhibition.exhibition_service.enums.ExhibitionState;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ExhibitionService {
@@ -17,5 +18,6 @@ public interface ExhibitionService {
     List<ExhibitionDTO> getExhibitionsByState(ExhibitionState state);
     List<com.exhibition.exhibition_service.dto.ExhibitionWithHallsResponse> getExhibitionsByOrganizer(Long organizerId);
     List<com.exhibition.exhibition_service.dto.ExhibitionWithHallsResponse> getExhibitionsByStateWithHalls(ExhibitionState state);
+    List<com.exhibition.exhibition_service.dto.ExhibitionBriefResponse> getExhibitionsByDateRange(LocalDateTime start, LocalDateTime end);
 
 }
