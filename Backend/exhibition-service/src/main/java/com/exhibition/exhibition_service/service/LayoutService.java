@@ -55,6 +55,19 @@ public class LayoutService {
                 .collect(Collectors.toList());
     }
 
+    public HallLayoutResponse getHallLayout(Long hallId) {
+        Hall hall = hallRepository.findById(hallId)
+                .orElseThrow(() -> new IllegalArgumentException("Hall not found: " + hallId));
+        HallLayoutResponse dto = new HallLayoutResponse();
+        dto.setHallId(hall.getId());
+        dto.setHallName(hall.getHallName());
+        List<Stall> stalls = stallRepository.findByHall(hall);
+        dto.setStalls(stalls.stream()
+                .map(this::toStallLayout)
+                .collect(Collectors.toList()));
+        return dto;
+    }
+
     @Transactional(readOnly = true)
     public OrganizerLayoutResponse getOrganizerLayout(Long organizerId) {
         if (organizerId == null) {
@@ -384,14 +397,13 @@ public class LayoutService {
 
     private HallLayoutResponse toHallLayout(ExhibitionHall exhibitionHall, Map<Long, BookingStatus> statusByStall) {
         HallLayoutResponse dto = new HallLayoutResponse();
-        dto.setExhibitionHallId(exhibitionHall.getId());
         Hall hall = exhibitionHall.getHall();
         if (hall != null) {
             dto.setHallId(hall.getId());
             dto.setHallName(hall.getHallName());
             List<Stall> stalls = stallRepository.findByHall(hall);
             dto.setStalls(stalls.stream()
-                    .map(s -> toStallLayout(s, statusByStall.get(s.getId())))
+                    .map(s -> toStallLayout(s))
                     .collect(Collectors.toList()));
         } else {
             dto.setStalls(Collections.emptyList());
@@ -399,14 +411,13 @@ public class LayoutService {
         return dto;
     }
 
-    private StallLayoutResponse toStallLayout(Stall stall, BookingStatus bookingStatus) {
+    private StallLayoutResponse toStallLayout(Stall stall) {
         StallLayoutResponse dto = new StallLayoutResponse();
         dto.setId(stall.getId());
         Optional.ofNullable(stall.getStallType()).ifPresent(type -> {
             dto.setStallTypeId(type.getId());
             dto.setStallType(type.getType());
         });
-        dto.setBookingStatus(bookingStatus != null ? bookingStatus.name() : null);
         dto.setPath(stall.getPath());
         if (stall.getPoints() != null) {
             dto.setPoints(stall.getPoints().stream()

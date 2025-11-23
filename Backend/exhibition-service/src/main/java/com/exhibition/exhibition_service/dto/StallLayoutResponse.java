@@ -8,7 +8,6 @@ public class StallLayoutResponse {
     private Long id;
     private Long stallTypeId;
     private String stallType;
-    private String bookingStatus;
     private String path;
     private List<PointDto> points;
 }

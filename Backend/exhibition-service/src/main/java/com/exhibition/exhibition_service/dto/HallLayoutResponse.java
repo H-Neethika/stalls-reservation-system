@@ -5,7 +5,6 @@ import lombok.Data;
 
 @Data
 public class HallLayoutResponse {
-    private Long exhibitionHallId;
     private Long hallId;
     private String hallName;
     private List<StallLayoutResponse> stalls;

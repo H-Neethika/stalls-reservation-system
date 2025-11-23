@@ -5,6 +5,7 @@ import com.exhibition.exhibition_service.dto.CreateExhibitionHallRequest;
 import com.exhibition.exhibition_service.dto.CreateStallRequest;
 import com.exhibition.exhibition_service.dto.CreateStallTypeRequest;
 import com.exhibition.exhibition_service.dto.ExhibitionHallPriceResponse;
+import com.exhibition.exhibition_service.dto.HallLayoutResponse;
 import com.exhibition.exhibition_service.dto.OrganizerLayoutResponse;
 import com.exhibition.exhibition_service.dto.StallStatusResponse;
 import com.exhibition.exhibition_service.dto.StallSummaryResponse;
@@ -50,8 +51,8 @@ public class LayoutController {
     }
 
     @GetMapping("/halls/{hallId}")
-    public ResponseEntity<com.exhibition.exhibition_service.dto.HallDetailsResponse> getHall(@PathVariable Long hallId) {
-        return ResponseEntity.ok(layoutService.getHallDetails(hallId));
+    public ResponseEntity<HallLayoutResponse> getHall(@PathVariable Long hallId) {
+        return ResponseEntity.ok(layoutService.getHallLayout(hallId));
     }
 
     @PostMapping("/exhibitions/{exhibitionId}/halls")
