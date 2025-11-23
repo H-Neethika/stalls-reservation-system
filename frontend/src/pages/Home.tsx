@@ -83,7 +83,7 @@ const Home = () => {
               }
               className="text-lg px-8"
             >
-              {userRole === "organizer" ? "Go to Dashboard" : "Browse Halls"}
+              {userRole === "organizer" ? "Go to Dashboard" : "Browse Exhibitions"}
             </Button>
           )}
         </div>
@@ -162,7 +162,7 @@ const Home = () => {
               onClick={() => navigate(user ? "/halls" : "/auth")}
               className="text-lg px-12"
             >
-              {user ? "Browse Available Halls" : "Register Now"}
+              {user ? "Browse Available Exhibitions" : "Register Now"}
             </Button>
           </CardContent>
         </Card>

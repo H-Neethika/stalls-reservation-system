@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "@/services/api";
+import { authFetch } from "@/services/api";
 
 type ApiError = Error & {
   status?: number;
@@ -76,7 +77,7 @@ class HallService {
   }
 
   async createHall(payload: CreateHallRequest) {
-    const response = await fetch(`${API_BASE_URL}/api/hall`, {
+    const response = await authFetch(`${API_BASE_URL}/api/hall`, {
       method: "POST",
       headers: this.getAuthHeaders(),
       body: JSON.stringify(payload),
@@ -90,7 +91,7 @@ class HallService {
   }
 
   async getHalls(): Promise<HallResponse[]> {
-    const response = await fetch(`${API_BASE_URL}/api/hall`, {
+    const response = await authFetch(`${API_BASE_URL}/api/halls`, {
       method: "GET",
       headers: this.getAuthHeaders(),
     });

@@ -1,366 +1,101 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { mockApi, Hall } from "@/lib/mockData";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Loader2, Grid3x3, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Building2, Loader2, Map, ArrowLeft } from "lucide-react";
 import { OrganizerLayout } from "@/components/organizer/OrganizerLayout";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
 import { hallService } from "@/services/hallService";
-import { Table, Space } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import { useToast } from "@/hooks/use-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import StallMap from "./StallMap";
+import { layoutService } from "@/services/layoutService";
 
-interface HallWithCount extends Hall {
-  stall_count: number;
-}
-
-interface CreatedHallResponse {
+interface HallResponse {
   id?: string;
   hallName?: string;
+  totalStalls?: number;
+  stallTypes?: { stallTypeId: number; stallType: string; count: number }[];
   rows?: number;
   columns?: number;
   description?: string;
-  created_at?: string;
 }
 
 const ManageHalls = () => {
-  const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [halls, setHalls] = useState<HallWithCount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCreateHallOpen, setIsCreateHallOpen] = useState(false);
-  const [creatingHall, setCreatingHall] = useState(false);
-  const [hallForm, setHallForm] = useState({
-    name: "",
-    rows: 8,
-    columns: 8,
-  });
+  const [halls, setHalls] = useState<HallResponse[]>([]);
+  const [activeHall, setActiveHall] = useState<HallResponse | null>(null);
+  const [showMap, setShowMap] = useState(false);
+  const [hallLayouts, setHallLayouts] = useState<Record<string, any[]>>({});
+  const [layoutLoading, setLayoutLoading] = useState(false);
 
   useEffect(() => {
-    fetchHalls();
-  }, []);
-
-  const fetchHalls = async () => {
-    try {
-      const apiHalls = await hallService.getHalls();
-      const normalized: HallWithCount[] = apiHalls.map((hall) => ({
-        id: hall.id?.toString() ?? `hall-${Date.now()}-${Math.random()}`,
-        name: hall.hallName ?? "Untitled Hall",
-        description: hall.description ?? "",
-        rows: hall.rows ?? 0,
-        columns: hall.columns ?? 0,
-        created_by: user?.id || "organizer",
-        created_at: hall.createdAt || hall.created_at || new Date().toISOString(),
-        stall_count:
-          typeof hall.totalStalls === "number"
-            ? hall.totalStalls
-            : hall.rows && hall.columns
-            ? hall.rows * hall.columns
-            : 0,
-      }));
-
-      setHalls(normalized);
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Failed to load halls.";
-      toast({
-        title: "Error loading halls",
-        description: `${message} (showing local sample data)`,
-        variant: "destructive",
-      });
-
-      // Fallback to mock data so UI still works
-      const hallsData = await mockApi.getHalls();
-      const allStalls = await mockApi.getStalls();
-      const hallsWithCounts: HallWithCount[] = hallsData.map((hall) => {
-        const stallCount = allStalls.filter((s) => s.hall_id === hall.id).length;
-        return {
+    const loadHalls = async () => {
+      try {
+        const data = await hallService.getHalls();
+        const normalized = (Array.isArray(data) ? data : []).map((hall) => ({
           ...hall,
-          stall_count: stallCount,
-        };
-      });
+          hallName: hall.hallName || hall.description || `Hall ${hall.id ?? ""}`.trim(),
+          stallTypes: hall.stallTypes || [],
+          totalStalls:
+            hall.totalStalls ??
+            (hall.rows && hall.columns ? hall.rows * hall.columns : undefined),
+        }));
+        setHalls(normalized);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Failed to load halls.";
+        toast({
+          title: "Error loading halls",
+          description: message,
+          variant: "destructive",
+        });
+        setHalls([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      setHalls(hallsWithCounts);
-    } finally {
-      setLoading(false);
-    }
-  };
+    loadHalls();
+  }, [toast]);
 
-  const resetHallForm = () =>
-    setHallForm({
-      name: "",
-      rows: 8,
-      columns: 8,
-    });
-
-  const handleCreateHall = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!hallForm.name.trim()) {
-      toast({
-        title: "Validation error",
-        description: "Hall name is required.",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (hallForm.rows < 1 || hallForm.columns < 1) {
-      toast({
-        title: "Validation error",
-        description: "Rows and columns must be at least 1.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setCreatingHall(true);
+  const loadHallLayout = async (hallId: string | number) => {
     try {
-      const createdHall: CreatedHallResponse = await hallService.createHall({
-        hallName: hallForm.name.trim(),
-        rows: Number(hallForm.rows),
-        columns: Number(hallForm.columns),
-      });
-
-      setHalls((prev) => [
-        ...prev,
-        {
-          id: createdHall?.id || `hall-${Date.now()}`,
-          name: createdHall?.hallName || hallForm.name.trim(),
-          description: createdHall?.description || "",
-          rows: createdHall?.rows ?? hallForm.rows,
-          columns: createdHall?.columns ?? hallForm.columns,
-          created_by: user?.id || "organizer",
-          created_at: createdHall?.created_at || new Date().toISOString(),
-          stall_count: 0,
-        },
-      ]);
-
-      toast({
-        title: "Hall created",
-        description: `${hallForm.name.trim()} is now available.`,
-      });
-      resetHallForm();
-      setIsCreateHallOpen(false);
+      setLayoutLoading(true);
+      const data = await layoutService.getLayoutByHall(Number(hallId));
+      if (data?.stalls) {
+        setHallLayouts((prev) => ({ ...prev, [String(hallId)]: data.stalls }));
+      } else {
+        setHallLayouts((prev) => ({ ...prev, [String(hallId)]: [] }));
+      }
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to create hall.";
+      const message = error instanceof Error ? error.message : "Failed to load hall layout.";
       toast({
-        title: "Error",
+        title: "Layout load failed",
         description: message,
         variant: "destructive",
       });
+      setHallLayouts((prev) => ({ ...prev, [String(hallId)]: [] }));
     } finally {
-      setCreatingHall(false);
+      setLayoutLoading(false);
     }
   };
 
-  const columns: ColumnsType<HallWithCount & { key: string }> = useMemo(
-    () => [
-      {
-        title: "Hall",
-        dataIndex: "name",
-        key: "hall",
-        render: (value) => <span className="font-semibold">{value}</span>,
-      },
-      {
-        title: "Layout (Rows x Columns)",
-        dataIndex: "layout",
-        key: "layout",
-        render: (_, record) => `${record.rows} × ${record.columns}`,
-      },
-      {
-        title: "Total Stalls",
-        dataIndex: "stall_count",
-        key: "stalls",
-      },
-      {
-        title: "Created",
-        dataIndex: "created_at",
-        key: "created_at",
-        render: (value) =>
-          value ? new Date(value).toLocaleDateString() : "—",
-      },
-      {
-        title: "Actions",
-        key: "actions",
-        render: (_, record) => (
-          <Space size="small">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/organizer/stalls?hallId=${record.id}`)}
-            >
-              View
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                toast({
-                  title: "Edit hall",
-                  description: "Hall editing is coming soon.",
-                })
-              }
-            >
-              Edit
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() =>
-                toast({
-                  title: "Delete hall",
-                  description: "Hall deletion is coming soon.",
-                })
-              }
-            >
-              Delete
-            </Button>
-          </Space>
-        ),
-      },
-    ],
-    [navigate, toast],
-  );
+  const openHallMap = (hall: HallResponse) => {
+    setActiveHall(hall);
+    setShowMap(true);
+    if (hall.id && !hallLayouts[String(hall.id)]) {
+      loadHallLayout(hall.id);
+    }
+  };
 
-  const tableData = useMemo(
-    () => halls.map((hall) => ({ ...hall, key: hall.id })),
-    [halls],
-  );
-
-  const content = (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-3xl font-bold">Manage Halls</h2>
-          <p className="text-muted-foreground">
-            Review existing hall layouts or create new ones.
-          </p>
-        </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Dialog open={isCreateHallOpen} onOpenChange={setIsCreateHallOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Hall
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create a new hall</DialogTitle>
-                <DialogDescription>
-                  Define the hall layout that will contain your stalls.
-                </DialogDescription>
-              </DialogHeader>
-              <form className="space-y-4" onSubmit={handleCreateHall}>
-                <div className="space-y-2">
-                  <Label htmlFor="hall-name">Hall Name</Label>
-                  <Input
-                    id="hall-name"
-                    value={hallForm.name}
-                    onChange={(e) =>
-                      setHallForm((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                    placeholder="E.g. Hall W"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="hall-rows">Rows</Label>
-                    <Input
-                      id="hall-rows"
-                      type="number"
-                      min={1}
-                      value={hallForm.rows}
-                      onChange={(e) =>
-                        setHallForm((prev) => ({
-                          ...prev,
-                          rows: Number(e.target.value),
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="hall-columns">Columns</Label>
-                    <Input
-                      id="hall-columns"
-                      type="number"
-                      min={1}
-                      value={hallForm.columns}
-                      onChange={(e) =>
-                        setHallForm((prev) => ({
-                          ...prev,
-                          columns: Number(e.target.value),
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setIsCreateHallOpen(false)}
-                    disabled={creatingHall}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={creatingHall}>
-                    {creatingHall ? "Creating..." : "Create Hall"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-          <Button
-            variant="secondary"
-            onClick={() => navigate("/organizer/stalls/create")}
-          >
-            Create Stall
-          </Button>
-        </div>
-      </div>
-
-      {halls.length === 0 ? (
-        <Card className="text-center py-12">
-          <CardContent>
-            <Grid3x3 className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground mb-4">No halls created yet.</p>
-            <Button onClick={() => setIsCreateHallOpen(true)}>
-              Create Your First Hall
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardContent className="p-0">
-            <Table
-              columns={columns}
-              dataSource={tableData}
-              pagination={{ pageSize: 6 }}
-              rowKey="key"
-            />
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
+  const closeHallMap = () => {
+    setActiveHall(null);
+    setShowMap(false);
+  };
 
   if (loading) {
     return (
-      <OrganizerLayout title="Manage Halls">
+      <OrganizerLayout title="Halls">
         <div className="flex h-[50vh] items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
@@ -368,7 +103,143 @@ const ManageHalls = () => {
     );
   }
 
-  return <OrganizerLayout title="Manage Halls">{content}</OrganizerLayout>;
+  const headerBlock = (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        {showMap && (
+          <Button variant="ghost" size="icon" onClick={closeHallMap} aria-label="Back to halls">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        )}
+        <div>
+          <h2 className="text-3xl font-bold">{showMap ? activeHall?.hallName || "Hall map" : "Halls"}</h2>
+          <p className="text-muted-foreground">
+            {showMap
+              ? "Interactive hall map. Click a stall to toggle its state (demo)."
+              : user?.organizationName
+                ? `${user.organizationName}'s halls`
+                : "Your halls at a glance."}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const hallCards = (
+    <>
+      {halls.length === 0 ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2].map((num) => (
+            <Card
+              key={`dummy-hall-${num}`}
+              className="cursor-pointer transition hover:-translate-y-1 hover:shadow-lg"
+              onClick={() => openHallMap({ hallName: `Hall ${String(num).padStart(2, "0")}` })}
+            >
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">Hall</p>
+                  <CardTitle>{`Hall ${String(num).padStart(2, "0")}`}</CardTitle>
+                </div>
+                <Building2 className="h-6 w-6 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>Name: Sample Hall</p>
+                  <p>ID: N/A</p>
+                  <p>Layout: 10 rows x 10 columns</p>
+                  <p className="line-clamp-2">
+                    This is a placeholder hall card. Your halls will appear here once created.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {halls.map((hall, index) => (
+            <Card
+              key={hall.id ?? `hall-${index}`}
+              className="cursor-pointer transition hover:-translate-y-1 hover:shadow-lg"
+              onClick={() => openHallMap(hall)}
+            >
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <p className="text-xs uppercase text-muted-foreground">Hall</p>
+                  <CardTitle>{`Hall ${String(index + 1).padStart(2, "0")}`}</CardTitle>
+                </div>
+                <Building2 className="h-6 w-6 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-sm text-muted-foreground space-y-2">
+                  {hall.hallName && <p className="font-semibold text-foreground">{hall.hallName}</p>}
+                  <p>ID: {hall.id ?? "N/A"}</p>
+                  {typeof hall.totalStalls === "number" && (
+                    <p>
+                      Total Stalls: <span className="font-medium text-foreground">{hall.totalStalls}</span>
+                    </p>
+                  )}
+                  {hall.stallTypes && hall.stallTypes.length > 0 ? (
+                    <div className="space-y-1">
+                      <p className="text-xs uppercase text-muted-foreground">By Stall Type</p>
+                      <div className="flex flex-wrap gap-2">
+                        {hall.stallTypes.map((type) => (
+                          <span
+                            key={`${hall.id}-${type.stallTypeId}`}
+                            className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary"
+                          >
+                            {type.stallType}: {type.count}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p>Stall type breakdown: N/A</p>
+                  )}
+                  {hall.description && <p className="line-clamp-2">{hall.description}</p>}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </>
+  );
+
+  return (
+    <OrganizerLayout title="Halls">
+      <div className="space-y-6">
+        {headerBlock}
+        {showMap ? (
+          <div className="rounded-lg border bg-card p-4 shadow-sm">
+            <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+              <Map className="h-4 w-4" />
+              Viewing map for {activeHall?.hallName || "Hall"}
+            </div>
+            {layoutLoading && (
+              <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Loading layout...
+              </div>
+            )}
+            {!layoutLoading && (
+              <>
+                {activeHall?.id && hallLayouts[String(activeHall.id)] ? (
+                  <StallMap stalls={hallLayouts[String(activeHall.id)]} readOnly />
+                ) : (
+                  <div className="text-sm text-muted-foreground">
+                    No layout data available for this hall.
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          hallCards
+        )}
+      </div>
+    </OrganizerLayout>
+  );
 };
 
 export default ManageHalls;

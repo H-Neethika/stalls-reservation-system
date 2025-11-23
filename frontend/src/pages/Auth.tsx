@@ -45,7 +45,7 @@ const Auth = () => {
 
   useEffect(() => {
     if (user && userRole) {
-      navigate(userRole === "ORGANIZER" ? "/organizer/dashboard" : "/halls");
+      navigate(userRole === "ORGANIZER" ? "/organizer/dashboard" : "/");
     }
   }, [user, userRole, navigate]);
 

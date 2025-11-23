@@ -66,6 +66,12 @@ export interface CreateExhibitionRequest {
   bookingOpenDateTime: string;
   bookingCloseDateTime: string;
   stallsPerPerson: number;
+  hallIds: number[];
+  hallPrices: {
+    hallId: number;
+    stallTypeId: number;
+    price: number;
+  }[];
 }
 
 export interface Exhibition {
@@ -82,5 +88,13 @@ export interface Exhibition {
   venue?: string;
   halls?: number;
   stalls?: number;
+  description?: string;
+}
+
+export interface StallType {
+  id: number;
+  name?: string;
+  typeName?: string;
+  type?: string;
   description?: string;
 }
