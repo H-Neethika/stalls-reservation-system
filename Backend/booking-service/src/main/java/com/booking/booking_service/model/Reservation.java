@@ -1,11 +1,10 @@
 package com.booking.booking_service.model;
 
-
+import com.booking.booking_service.enums.ReservationStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -34,5 +33,6 @@ public class Reservation {
 
     private Long totalAmount;
 
-
+    @Enumerated(EnumType.STRING)
+    private ReservationStatus status;
 }
