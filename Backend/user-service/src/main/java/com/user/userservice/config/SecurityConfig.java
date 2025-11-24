@@ -20,16 +20,15 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
-import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
-import com.user.userservice.security.CustomOidcUserService;
 import com.user.userservice.security.CustomOAuth2UserService;
+import com.user.userservice.security.CustomOidcUserService;
 import com.user.userservice.security.CustomUserDetailsService;
 import com.user.userservice.security.OAuth2LoginSuccessHandler;
 
@@ -56,9 +55,16 @@ public class SecurityConfig {
 	@Bean
 	@Order(1)
 	public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
-		OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
-		http.getConfigurer(OAuth2AuthorizationServerConfigurer.class)
-				.oidc(Customizer.withDefaults());
+		var authorizationServer = new OAuth2AuthorizationServerConfigurer();
+		authorizationServer.oidc(Customizer.withDefaults());
+
+		var endpointsMatcher = authorizationServer.getEndpointsMatcher();
+
+		http.securityMatcher(endpointsMatcher)
+				.authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
+				.csrf(csrf -> csrf.ignoringRequestMatchers(endpointsMatcher))
+				.with(authorizationServer, Customizer.withDefaults());
+
 		http.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 		return http.build();
 	}
@@ -81,8 +87,7 @@ public class SecurityConfig {
 								"/webjars/**")
 						.permitAll()
 						.requestMatchers(HttpMethod.OPTIONS, "/api/users/**").permitAll()
-						.requestMatchers(HttpMethod.GET, "/api/users/{id}").permitAll()
-						.requestMatchers(HttpMethod.POST, "/api/users/register", "/api/users/login").permitAll()
+						.requestMatchers(HttpMethod.POST, "/api/users/register", "/api/users/login", "/api/users/refresh").permitAll()
 						.anyRequest().authenticated())
 				.oauth2ResourceServer(
 						oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
@@ -148,8 +153,7 @@ public class SecurityConfig {
 
 	@Bean
 	public DaoAuthenticationProvider authenticationProvider(PasswordEncoder passwordEncoder) {
-		DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-		provider.setUserDetailsService(userDetailsService);
+		DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
 		provider.setPasswordEncoder(passwordEncoder);
 		return provider;
 	}

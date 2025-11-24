@@ -2,8 +2,8 @@ package com.exhibition.exhibition_service.controller;
 
 
 import com.exhibition.exhibition_service.dto.ExhibitionDTO;
-import com.exhibition.exhibition_service.domain.EXHIBITION_STATE;
-import com.exhibition.exhibition_service.model.Exhibition;
+import com.exhibition.exhibition_service.dto.ExhibitionWithHallsResponse;
+import com.exhibition.exhibition_service.enums.ExhibitionState;
 import com.exhibition.exhibition_service.service.ExhibitionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,8 +23,6 @@ public class ExhibitionController {
     public ResponseEntity<String> createExhibition(@RequestBody ExhibitionDTO exhibition){
 
         ExhibitionDTO createdExhibition=  exhibitionService.createExhibition(exhibition);
-
-
 
         return ResponseEntity.ok("Exhibition has been created");
     }
@@ -55,17 +53,26 @@ public class ExhibitionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ExhibitionDTO>> getAllExhibitions(){
+    public ResponseEntity<List<?>> getAllExhibitions(@RequestParam(value = "organizerId", required = false) Long organizerId){
+        if (organizerId != null) {
+            return ResponseEntity.ok(exhibitionService.getExhibitionsByOrganizer(organizerId));
+        }
         return ResponseEntity.ok(exhibitionService.getAllExhibitions());
     }
 
     @GetMapping("/state/{state}")
-    public ResponseEntity<List<ExhibitionDTO>> getByState(@PathVariable EXHIBITION_STATE state) {
+    public ResponseEntity<List<ExhibitionDTO>> getByState(@PathVariable ExhibitionState state) {
         return ResponseEntity.ok(exhibitionService.getExhibitionsByState(state));
     }
 
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<List<ExhibitionDTO>> getByUser(@PathVariable Long userId) {
-        return ResponseEntity.ok(exhibitionService.getExhibitionsByUserId(userId));
+    @GetMapping("/details/state/{state}")
+    public ResponseEntity<List<com.exhibition.exhibition_service.dto.ExhibitionWithHallsResponse>> getByStateWithHalls(
+            @PathVariable ExhibitionState state) {
+        return ResponseEntity.ok(exhibitionService.getExhibitionsByStateWithHalls(state));
+    }
+
+    @GetMapping("/active/range")
+    public ResponseEntity<List<com.exhibition.exhibition_service.dto.ExhibitionBriefResponse>> getByDateRange() {
+        return ResponseEntity.ok(exhibitionService.getExhibitionsByDateRange(null, null));
     }
 }

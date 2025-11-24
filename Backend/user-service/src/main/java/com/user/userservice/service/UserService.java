@@ -15,6 +15,7 @@ import com.user.userservice.domain.User;
 import com.user.userservice.dto.AuthResponse;
 import com.user.userservice.dto.LoginRequest;
 import com.user.userservice.dto.RegisterUserRequest;
+import com.user.userservice.dto.RefreshTokenRequest;
 import com.user.userservice.dto.UserResponse;
 import com.user.userservice.exception.InvalidCredentialsException;
 import com.user.userservice.exception.UserAlreadyExistsException;
@@ -31,15 +32,18 @@ public class UserService {
 	private final PasswordEncoder passwordEncoder;
 	private final JwtService jwtService;
 	private final AuthenticationManager authenticationManager;
+	private final org.springframework.security.oauth2.jwt.JwtDecoder jwtDecoder;
 
 	public UserService(UserRepository userRepository,
 			PasswordEncoder passwordEncoder,
 			JwtService jwtService,
-			AuthenticationManager authenticationManager) {
+			AuthenticationManager authenticationManager,
+			org.springframework.security.oauth2.jwt.JwtDecoder jwtDecoder) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtService = jwtService;
 		this.authenticationManager = authenticationManager;
+		this.jwtDecoder = jwtDecoder;
 	}
 
 	@Transactional
@@ -61,17 +65,15 @@ public class UserService {
 		return UserMapper.toResponse(savedUser);
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
 	public AuthResponse login(LoginRequest request) {
 		try {
 			UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
 					request.email(), request.password());
 			UserPrincipal principal = (UserPrincipal) authenticationManager.authenticate(authenticationToken)
 					.getPrincipal();
-			User user = principal.getUser();
-			String accessToken = jwtService.generateAccessToken(user);
-			String refreshToken = jwtService.generateRefreshToken(user);
-			return AuthResponse.of(accessToken, refreshToken, UserMapper.toResponse(user));
+			User user = principal.user();
+			return getAuthResponse(user);
 		} catch (BadCredentialsException ex) {
 			throw new InvalidCredentialsException("Invalid email or password");
 		}
@@ -90,5 +92,35 @@ public class UserService {
 				.stream()
 				.map(UserMapper::toResponse)
 				.toList();
+	}
+
+	@Transactional
+	public AuthResponse refresh(RefreshTokenRequest request) {
+		try {
+			var jwt = jwtDecoder.decode(request.refreshToken());
+			String tokenType = jwt.getClaimAsString("tokenType");
+			if (!"REFRESH".equals(tokenType)) {
+				throw new InvalidCredentialsException("Invalid refresh token");
+			}
+			String jti = jwt.getClaimAsString("jti");
+			String email = jwt.getSubject();
+			User user = userRepository.findByEmail(email)
+					.orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
+			if (user.getRefreshTokenId() == null || !user.getRefreshTokenId().equals(jti)) {
+				throw new InvalidCredentialsException("Invalid refresh token");
+			}
+			return getAuthResponse(user);
+		} catch (org.springframework.security.oauth2.jwt.JwtException ex) {
+			throw new InvalidCredentialsException("Invalid refresh token");
+		}
+	}
+
+	private AuthResponse getAuthResponse(User user) {
+		String accessToken = jwtService.generateAccessToken(user);
+		String refreshId = java.util.UUID.randomUUID().toString();
+		user.setRefreshTokenId(refreshId);
+		userRepository.save(user);
+		String refreshToken = jwtService.generateRefreshToken(user, refreshId);
+		return AuthResponse.of(accessToken, refreshToken, UserMapper.toResponse(user));
 	}
 }

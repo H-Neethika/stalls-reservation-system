@@ -19,6 +19,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.user.userservice.domain.Role;
 import com.user.userservice.dto.AuthResponse;
 import com.user.userservice.dto.LoginRequest;
+import com.user.userservice.dto.RefreshTokenRequest;
 import com.user.userservice.dto.RegisterUserRequest;
 import com.user.userservice.dto.UserResponse;
 import com.user.userservice.service.UserService;
@@ -46,6 +47,11 @@ public class UserController {
 	@PostMapping("/login")
 	public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
 		return ResponseEntity.ok(userService.login(request));
+	}
+
+	@PostMapping("/refresh")
+	public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+		return ResponseEntity.ok(userService.refresh(request));
 	}
 
 	@GetMapping("/{id}")
