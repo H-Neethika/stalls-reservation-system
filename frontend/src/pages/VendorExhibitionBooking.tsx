@@ -290,7 +290,7 @@ const VendorExhibitionBooking = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <div className="border-b bg-card/60 backdrop-blur">
+      <div className="border-b bg-card/60 backdrop-blur sticky top-0 z-30">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -312,7 +312,7 @@ const VendorExhibitionBooking = () => {
 
       <div className="container mx-auto px-4 py-8 grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          <Card className="border-dashed">
+          <Card className="border-dashed sticky top-24 z-20">
             <CardContent className="flex flex-wrap gap-4 items-center py-4 text-sm text-muted-foreground">
               <span className="font-semibold text-foreground">Status</span>
               <div className="flex items-center gap-2">
@@ -394,7 +394,7 @@ const VendorExhibitionBooking = () => {
         </div>
 
         <div className="lg:col-span-1">
-          <Card className="sticky top-4">
+          <Card className="sticky top-28">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5" />
