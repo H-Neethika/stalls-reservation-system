@@ -15,11 +15,15 @@ import com.booking.booking_service.service.PaymentService;
 import com.booking.booking_service.service.ReservationService;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class ReservationServiceImpl implements ReservationService {
@@ -44,6 +48,39 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     List<ExternalStallSummaryResponse> summaries = fetchStallSummaries(stallIds);
+    if (summaries.size() != stallIds.size()) {
+      Set<Long> returned = summaries.stream()
+          .map(ExternalStallSummaryResponse::getId)
+          .collect(Collectors.toSet());
+      List<Long> missing = stallIds.stream()
+          .filter(id -> !returned.contains(id))
+          .toList();
+      throw new ResponseStatusException(
+          HttpStatus.BAD_REQUEST,
+          "Unknown stall ids: " + missing
+      );
+    }
+
+    // Block double-booking: ensure all requested stalls are available
+    List<Long> unavailable = summaries.stream()
+        .filter(s -> s.getBookingStatus() != null && !"AVAILABLE".equalsIgnoreCase(s.getBookingStatus()))
+        .map(ExternalStallSummaryResponse::getId)
+        .toList();
+    List<Long> available = summaries.stream()
+        .filter(s -> s.getBookingStatus() == null || "AVAILABLE".equalsIgnoreCase(s.getBookingStatus()))
+        .map(ExternalStallSummaryResponse::getId)
+        .toList();
+    if (!unavailable.isEmpty()) {
+        String reasonJson = String.format(
+            "{\"detail\":\"Some requested stalls are not available\",\"errors\":{\"unavailable\":%s,\"available\":%s}}",
+            unavailable,
+            available
+        );
+        throw new ResponseStatusException(
+            HttpStatus.CONFLICT,
+            reasonJson
+        );
+    }
 
     Long totalAmount = summaries.stream()
         .map(ExternalStallSummaryResponse::getPrice)
@@ -58,19 +95,21 @@ public class ReservationServiceImpl implements ReservationService {
     newReservation.setCreatedAt(new Date());
     newReservation.setStatus(ReservationStatus.PENDING_PAYMENT);
 
-    Reservation saved = reservationRepository.save(newReservation);
-
-    // mark stalls as PENDING to avoid double booking
+    // mark stalls as PENDING to avoid race with other bookings
     UpdateStallStatusRequest statusRequest = new UpdateStallStatusRequest();
     statusRequest.setStallIds(stallIds);
     statusRequest.setBookingStatus("PENDING");
     try {
       exhibitionServiceClient.updateBookingStatus(statusRequest);
     } catch (Exception ex) {
-      // do not fail reservation creation if downstream status update fails
+      throw new ResponseStatusException(
+          HttpStatus.SERVICE_UNAVAILABLE,
+          "Failed to lock stalls in exhibition-service",
+          ex
+      );
     }
 
-    return saved;
+    return reservationRepository.save(newReservation);
   }
 
   @Override
