@@ -19,6 +19,7 @@ import com.exhibition.exhibition_service.repository.StallRepository;
 import com.exhibition.exhibition_service.repository.StallTypeRepository;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -226,6 +227,36 @@ public class LayoutService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public List<StallStatusResponse> updateStallStatuses(UpdateStallStatusRequest request) {
+        if (request == null || request.getStallIds() == null || request.getStallIds().isEmpty()) {
+            return List.of();
+        }
+        BookingStatus status = null;
+        if (request.getBookingStatus() != null) {
+            try {
+                status = BookingStatus.valueOf(request.getBookingStatus());
+            } catch (IllegalArgumentException ignored) {
+                // fall through, leave status null
+            }
+        }
+        if (status == null) {
+            throw new IllegalArgumentException("bookingStatus must be one of: " + java.util.Arrays.toString(BookingStatus.values()));
+        }
+
+        Map<Long, StallStatusResponse> updated = new HashMap<>();
+        BookingStatus finalStatus = status;
+        for (Long stallId : request.getStallIds()) {
+            exhibitionStallRepository.findByStallId_Id(stallId)
+                    .forEach(es -> {
+                        es.setBookingStatus(finalStatus);
+                        exhibitionStallRepository.save(es);
+                        updated.put(es.getId(), toStatus(es));
+                    });
+        }
+        return new java.util.ArrayList<>(updated.values());
+    }
+
     private HallSummaryResponse toHallSummary(Hall hall) {
         List<Stall> stalls = stallRepository.findByHall(hall);
         HallSummaryResponse dto = new HallSummaryResponse();
@@ -285,8 +316,11 @@ public class LayoutService {
         Optional.ofNullable(stall.getHall()).ifPresent(h -> response.setHallName(h.getHallName()));
         // derive status from exhibition stall association if present
         exhibitionStallRepository.findByStallId_Id(stall.getId()).stream().findFirst()
-                .ifPresent(es -> response.setBookingStatus(
-                        es.getBookingStatus() != null ? es.getBookingStatus().name() : null));
+                .ifPresent(es -> {
+                    response.setBookingStatus(
+                            es.getBookingStatus() != null ? es.getBookingStatus().name() : null);
+                    response.setStallName(es.getStallName());
+                });
         return response;
     }
 

@@ -9,4 +9,5 @@ public class StallSummaryResponse {
     private String stallType;
     private String hallName;
     private String bookingStatus;
+    private String stallName;
 }
