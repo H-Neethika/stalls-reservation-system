@@ -9,6 +9,14 @@ import { useToast } from "@/hooks/use-toast";
 import { exhibitionService } from "@/services/exhibitionService";
 import { layoutService } from "@/services/layoutService";
 import StallMap from "./organizer/StallMap";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Price {
   hallId: number;
@@ -40,6 +48,7 @@ interface SelectedStall {
   stallTypeId?: number;
   stallType?: string;
   price: number;
+  exhibitionStallId?: number;
 }
 
 const MAX_SELECTION = 3;
@@ -57,6 +66,11 @@ const VendorExhibitionBooking = () => {
   const [hallLayouts, setHallLayouts] = useState<Record<string, any[]>>({});
   const [loadingHallId, setLoadingHallId] = useState<string | null>(null);
   const [selectedStalls, setSelectedStalls] = useState<SelectedStall[]>([]);
+  const [availabilityMap, setAvailabilityMap] = useState<
+    Record<string, Record<string, { status?: string; exhibitionStallId?: number }>>
+  >({});
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [bookingLoading, setBookingLoading] = useState(false);
 
   useEffect(() => {
     const fetchExhibition = async () => {
@@ -86,6 +100,60 @@ const VendorExhibitionBooking = () => {
     fetchExhibition();
   }, [exhibitionId, initialExhibition, toast]);
 
+  useEffect(() => {
+    const fetchAvailability = async () => {
+      if (!exhibitionId) return;
+
+      try {
+        const data = await layoutService.getExhibitionLayouts(Number(exhibitionId));
+        // console.log("Availability Data:", data);
+
+        const map: Record<string, Record<string, { status?: string; exhibitionStallId?: number }>> = {};
+
+        (data || []).forEach((hall) => {
+          if (!hall.hallId) return;
+
+          const hallKey = String(hall.hallId);
+          map[hallKey] = map[hallKey] || {};
+
+          hall.stalls?.forEach((stall) => {
+            map[hallKey][String(stall.stallId)] = {
+              status: stall.status,
+              exhibitionStallId: stall.exhibitionStallId,
+            };
+          });
+        });
+
+        setAvailabilityMap(map);
+
+      } catch (error: any) {
+        toast({
+          title: "Failed to load availability",
+          description: error?.message || "Stall availability could not be loaded.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchAvailability();
+  }, [exhibitionId, toast]);
+
+  const mergedLayouts = useMemo(() => {
+    const result: Record<string, any[]> = {};
+    Object.entries(hallLayouts).forEach(([hallId, stalls]) => {
+      const availability = availabilityMap[hallId] || {};
+      result[hallId] = stalls.map((stall: any) => ({
+        ...stall,
+        bookingStatus: availability[String(stall.id)]?.status || stall.bookingStatus,
+        exhibitionStallId: availability[String(stall.id)]?.exhibitionStallId ?? stall.exhibitionStallId,
+      }));
+    });
+    // console.log("Hall Layouts:", hallLayouts);
+    // console.log("Availability Map:", availabilityMap);
+    // console.log("Merged Layouts:", result);
+    return result;
+  }, [hallLayouts, availabilityMap]);
+
   const priceLookup = useMemo(() => {
     const map: Record<string, Record<number, number>> = {};
     exhibition?.halls?.forEach((hall) => {
@@ -103,7 +171,8 @@ const VendorExhibitionBooking = () => {
     try {
       setLoadingHallId(String(hallId));
       const data = await layoutService.getLayoutByHall(Number(hallId));
-      setHallLayouts((prev) => ({ ...prev, [String(hallId)]: data?.stalls || [] }));
+      const baseStalls = data?.stalls || [];
+      setHallLayouts((prev) => ({ ...prev, [String(hallId)]: baseStalls }));
     } catch (error: any) {
       toast({
         title: "Failed to load hall map",
@@ -119,6 +188,20 @@ const VendorExhibitionBooking = () => {
   const handleToggleStall = (hallId: string, stall: any) => {
     const stallId = String(stall.id);
     const isSelected = selectedStalls.some((s) => s.stallId === stallId);
+    const currentStatus =
+      availabilityMap[hallId]?.[stallId]?.status ||
+      stall.bookingStatus ||
+      stall.status ||
+      "AVAILABLE";
+    const normalizedStatus = String(currentStatus).toUpperCase();
+    if (normalizedStatus !== "AVAILABLE") {
+      toast({
+        title: "Stall unavailable",
+        description: "This stall cannot be selected.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (isSelected) {
       setSelectedStalls((prev) => prev.filter((s) => s.stallId !== stallId));
@@ -148,11 +231,37 @@ const VendorExhibitionBooking = () => {
         stallTypeId: typeId,
         stallType: stall.stallType || stall.size,
         price,
+        exhibitionStallId: availabilityMap[hallId]?.[stallId]?.exhibitionStallId,
       },
     ]);
   };
 
   const totalPrice = selectedStalls.reduce((sum, s) => sum + Number(s.price || 0), 0);
+
+  const handleProceed = () => {
+    if (selectedStalls.length === 0) return;
+    setShowConfirm(true);
+  };
+
+  const handleConfirmBooking = async () => {
+    setBookingLoading(true);
+    try {
+      // TODO: integrate booking API when available
+      toast({
+        title: "Booking confirmed",
+        description: "Proceeding to payment flow.",
+      });
+      setShowConfirm(false);
+    } catch (error: any) {
+      toast({
+        title: "Booking failed",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setBookingLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -183,8 +292,8 @@ const VendorExhibitionBooking = () => {
               <p className="text-sm text-muted-foreground">
                 {exhibition.startDateTime && exhibition.endDateTime
                   ? `${new Date(exhibition.startDateTime).toLocaleDateString()} - ${new Date(
-                      exhibition.endDateTime,
-                    ).toLocaleDateString()}`
+                    exhibition.endDateTime,
+                  ).toLocaleDateString()}`
                   : "Dates TBA"}
               </p>
             </div>
@@ -194,6 +303,28 @@ const VendorExhibitionBooking = () => {
 
       <div className="container mx-auto px-4 py-8 grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
+          <Card className="border-dashed">
+            <CardContent className="flex flex-wrap gap-4 items-center py-4 text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">Status</span>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-3 w-3 rounded-full bg-white border" />
+                <span>Available</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-3 w-3 rounded-full bg-[#ea9c0cff]" />
+                <span>Pending</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-3 w-3 rounded-full bg-[#e00707ff]" />
+                <span>Reserved</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-3 w-3 rounded-full bg-[#046528ff]" />
+                <span>Selected</span>
+              </div>
+            </CardContent>
+          </Card>
+
           <Collapse
             accordion={false}
             bordered={false}
@@ -222,10 +353,10 @@ const VendorExhibitionBooking = () => {
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Loading hall map...
                       </div>
-                    ) : hallLayouts[String(hall.id)] ? (
-                      hallLayouts[String(hall.id)].length > 0 ? (
+                    ) : mergedLayouts[String(hall.id)] ? (
+                      mergedLayouts[String(hall.id)].length > 0 ? (
                         <StallMap
-                          stalls={hallLayouts[String(hall.id)]}
+                          stalls={mergedLayouts[String(hall.id)]}
                           readOnly={false}
                           selectedIds={selectedStalls
                             .filter((s) => s.hallId === String(hall.id))
@@ -305,13 +436,58 @@ const VendorExhibitionBooking = () => {
                 </div>
               </div>
 
-              <Button className="w-full" disabled={selectedStalls.length === 0}>
+              <Button className="w-full" disabled={selectedStalls.length === 0} onClick={handleProceed}>
                 Proceed to Pay
               </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Booking</DialogTitle>
+            <DialogDescription>Review your selected stalls before proceeding to payment.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <div className="space-y-2">
+              {selectedStalls.map((stall) => (
+                <div key={stall.stallId} className="flex justify-between rounded border px-3 py-2">
+                  <div>
+                    <div className="font-semibold">{stall.stallId}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Hall {stall.hallId} · {stall.stallType || "Stall"}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold">LKR {Number(stall.price).toLocaleString()}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between font-semibold border-t pt-3">
+              <span>Total</span>
+              <span>LKR {totalPrice.toLocaleString()}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirm(false)} disabled={bookingLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmBooking} disabled={bookingLoading}>
+              {bookingLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                "Confirm Booking"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

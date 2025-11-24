@@ -4,7 +4,7 @@ import { User, AuthResponse, LoginRequest, RegisterRequest } from "@/types";
 export const API_BASE_URL =
   import.meta.env.BACKEND_BASE_URL ||
   import.meta.env.VITE_BACKEND_BASE_URL ||
-  `http://localhost:${import.meta.env.CLOUD_GATEWAY_PORT}`;
+  `http://localhost:${import.meta.env.CLOUD_GATEWAY_PORT || "6001"}`;
 
 const getStoredAccessToken = () => localStorage.getItem("accessToken");
 const getStoredRefreshToken = () => localStorage.getItem("refreshToken");

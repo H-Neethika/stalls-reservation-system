@@ -110,6 +110,30 @@ class LayoutService {
 
     return response.json();
   }
+
+  async getExhibitionLayouts(exhibitionId: number): Promise<{
+    halls?: Array<{
+      hallId: number;
+      exhibitionHallId?: number;
+      hallName?: string;
+      stalls?: Array<{
+        stallId: number | string;
+        exhibitionStallId?: number;
+        status?: string;
+      }>;
+    }>;
+  }> {
+    const response = await authFetch(`${API_BASE_URL}/api/layout/exhibitions/${exhibitionId}`, {
+      method: "GET",
+      headers: this.getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw await parseErrorResponse(response);
+    }
+
+    return response.json();
+  }
 }
 
 export const layoutService = new LayoutService();
