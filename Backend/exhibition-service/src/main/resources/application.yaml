@@ -5,6 +5,12 @@ spring:
   application:
     name: EXHIBITION-SERVICE
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${EXHIBITION_STALL_STATUS_GROUP:exhibition-stall-status}
+      auto-offset-reset: earliest
+
   datasource:
     driver-class-name: org.postgresql.Driver
     url: ${EXHIBITION_DB_URL}
@@ -35,3 +41,9 @@ eureka:
     fetch-registry: true
     serviceUrl:
       defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:9001/eureka}
+
+app:
+  kafka:
+    topics:
+      payment-success: ${PAYMENT_SUCCESS_TOPIC:payment.success}
+      stall-status-update: ${STALL_STATUS_UPDATE_TOPIC:stall.status.update}

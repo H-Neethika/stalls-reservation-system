@@ -2,6 +2,7 @@ package com.booking.booking_service.messaging.listener;
 
 import com.booking.booking_service.messaging.event.PaymentSucceededEvent;
 import com.booking.booking_service.messaging.producer.ReservationBookedEventProducer;
+import com.booking.booking_service.messaging.producer.StallStatusUpdateProducer;
 import com.booking.booking_service.dto.response.PaymentSuccessResponse;
 import com.booking.booking_service.model.Reservation;
 import com.booking.booking_service.enums.ReservationStatus;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -24,9 +26,11 @@ public class PaymentSuccessListener {
     private final ExhibitionServiceClient exhibitionServiceClient;
     private final ReservationRepository reservationRepository;
     private final ReservationBookedEventProducer reservationBookedEventProducer;
+    private final StallStatusUpdateProducer stallStatusUpdateProducer;
 
     @KafkaListener(topics = "${app.kafka.topics.payment-success:payment.success}",
             containerFactory = "paymentSuccessKafkaListenerContainerFactory")
+    @Transactional
     public void handlePaymentSuccess(@Payload PaymentSucceededEvent event) {
         if (event == null) {
             log.warn("Received null payment success event");
@@ -42,16 +46,21 @@ public class PaymentSuccessListener {
                     .orElseThrow(() -> new IllegalArgumentException("Reservation not found: " + event.getReservationId()));
             reservation.setStatus(ReservationStatus.CONFIRMED);
             reservationRepository.save(reservation);
+            // snapshot stall ids inside transaction to avoid LazyInitialization outside the session
+            java.util.List<Long> stallIds = new java.util.ArrayList<>(reservation.getStallIds());
 
             // Mark stalls as RESERVED in exhibition-service
             UpdateStallStatusRequest statusRequest = new UpdateStallStatusRequest();
-            statusRequest.setStallIds(reservation.getStallIds());
+            statusRequest.setStallIds(stallIds);
             statusRequest.setBookingStatus("RESERVED");
             try {
                 exhibitionServiceClient.updateBookingStatus(statusRequest);
             } catch (Exception ex) {
                 log.warn("Failed to update stall statuses for reservationId={}: {}", reservation.getId(), ex.getMessage());
             }
+
+            // Also publish to Kafka so exhibition-service can update directly
+            stallStatusUpdateProducer.publishReservedStatus(reservation.getId(), stallIds);
 
             PaymentSuccessResponse response = exhibitionStallService.updateStallBookingStatus(event.getReservationId());
             reservationBookedEventProducer.publishReservationBooked(response);

@@ -2,6 +2,7 @@ package com.booking.booking_service.messaging.config;
 
 import com.booking.booking_service.messaging.event.PaymentSucceededEvent;
 import com.booking.booking_service.messaging.event.PaymentFailedEvent;
+import com.booking.booking_service.messaging.event.StallStatusUpdateEvent;
 import com.booking.booking_service.messaging.event.ReservationBookedEvent;
 import java.util.HashMap;
 import java.util.Map;
@@ -98,5 +99,18 @@ public class KafkaConfig {
     @Bean
     public KafkaTemplate<String, ReservationBookedEvent> reservationBookedKafkaTemplate() {
         return new KafkaTemplate<>(reservationBookedProducerFactory());
+    }
+
+    @Bean
+    public ProducerFactory<String, StallStatusUpdateEvent> stallStatusUpdateProducerFactory() {
+        Map<String, Object> props = new HashMap<>(kafkaProperties.buildProducerProperties());
+        JsonSerializer<StallStatusUpdateEvent> serializer = new JsonSerializer<>();
+        serializer.setAddTypeInfo(false);
+        return new DefaultKafkaProducerFactory<>(props, new StringSerializer(), serializer);
+    }
+
+    @Bean
+    public KafkaTemplate<String, StallStatusUpdateEvent> stallStatusUpdateKafkaTemplate() {
+        return new KafkaTemplate<>(stallStatusUpdateProducerFactory());
     }
 }

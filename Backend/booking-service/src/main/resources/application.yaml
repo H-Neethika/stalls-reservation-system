@@ -46,6 +46,7 @@ app:
     topics:
       payment-success: ${PAYMENT_SUCCESS_TOPIC:payment.success}
       reservation-booked: ${RESERVATION_BOOKED_TOPIC:reservation.booked}
+      stall-status-update: ${STALL_STATUS_UPDATE_TOPIC:stall.status.update}
   notification:
     default-event-link: ${DEFAULT_EVENT_LINK:https://example.com/events}
     default-fair-name: ${DEFAULT_FAIR_NAME:Stall Reservation}
