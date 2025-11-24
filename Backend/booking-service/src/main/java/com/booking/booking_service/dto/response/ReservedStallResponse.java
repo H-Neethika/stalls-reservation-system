@@ -8,5 +8,6 @@ public class ReservedStallResponse {
     private Long price;
     private String stallType;
     private String hallName;
+    private String stallName;
     private String bookingStatus;
 }

@@ -35,6 +35,14 @@ public class ReservationController {
     return new ResponseEntity<>(reservation, HttpStatus.CREATED);
   }
 
+  @GetMapping("/my")
+  public ResponseEntity<List<ReservationResponse>> getReservationsForCurrentUser(
+      JwtAuthenticationToken authentication) {
+    Long userId = extractUserId(authentication);
+    List<ReservationResponse> reservations = reservationService.getReservationsForUser(userId);
+    return new ResponseEntity<>(reservations, HttpStatus.OK);
+  }
+
   @GetMapping("/{id}")
   public ResponseEntity<ReservationResponse> getReservationById(@PathVariable Long id) throws Exception {
     ReservationResponse reservation = reservationService.getReservationById(id);

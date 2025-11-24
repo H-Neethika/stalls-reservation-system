@@ -258,7 +258,9 @@ public class LayoutService {
             if (finalStatus == BookingStatus.PENDING || finalStatus == BookingStatus.RESERVED) {
                 for (ExhibitionStall es : matches) {
                     BookingStatus current = es.getBookingStatus();
-                    if (current != null && current != BookingStatus.AVAILABLE) {
+                    boolean isUpgradeFromPending =
+                            finalStatus == BookingStatus.RESERVED && current == BookingStatus.PENDING;
+                    if (current != null && current != BookingStatus.AVAILABLE && !isUpgradeFromPending) {
                         conflicted.add(es.getStall() != null ? es.getStall().getId() : es.getId());
                     }
                 }

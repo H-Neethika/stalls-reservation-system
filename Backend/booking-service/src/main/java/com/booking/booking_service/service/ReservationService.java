@@ -17,6 +17,8 @@ public interface ReservationService {
 
   List<ReservationResponse> getAllReservation();
 
+  List<ReservationResponse> getReservationsForUser(Long userId);
+
   PaymentIntentResponse updateReservation(CreatePaymentRequest request);
 
 

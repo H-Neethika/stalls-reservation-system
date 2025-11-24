@@ -130,6 +130,17 @@ public class ReservationServiceImpl implements ReservationService {
   }
 
   @Override
+  public List<ReservationResponse> getReservationsForUser(Long userId) {
+    if (userId == null) {
+      return List.of();
+    }
+    return reservationRepository.findByUserIdOrderByCreatedAtDesc(userId)
+        .stream()
+        .map(this::mapToResponse)
+        .collect(Collectors.toList());
+  }
+
+  @Override
   @Transactional
   public PaymentIntentResponse updateReservation(CreatePaymentRequest request) {
     Reservation reservation = reservationRepository.findById(request.getReservationId())
@@ -171,6 +182,7 @@ public class ReservationServiceImpl implements ReservationService {
               stallDto.setPrice(st.getPrice());
               stallDto.setStallType(st.getStallType());
               stallDto.setHallName(st.getHallName());
+              stallDto.setStallName(st.getStallName());
               stallDto.setBookingStatus(st.getBookingStatus() != null
                   ? st.getBookingStatus()
                   : "RESERVED");
