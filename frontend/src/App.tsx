@@ -17,6 +17,7 @@ import ManageHalls from "./pages/organizer/ManageHalls";
 import ManageStalls from "./pages/organizer/ManageStalls";
 import HallDesigner from "./pages/organizer/HallDesigner";
 import AllReservations from "./pages/organizer/AllReservations";
+import PaymentSuccess from "./pages/PaymentSuccess";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -88,6 +89,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route path="/payment/success" element={<PaymentSuccess />} />
 
             {/* Organizer Routes */}
             <Route

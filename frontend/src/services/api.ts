@@ -116,17 +116,43 @@ class ApiService {
 
   // Authentication
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    const response = await this.request<AuthResponse>("/api/users/login", {
+    const url = `${API_BASE_URL}/api/users/login`;
+    const response = await fetch(url, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(credentials),
     });
 
-    // Store tokens in localStorage
-    localStorage.setItem("accessToken", response.accessToken);
-    localStorage.setItem("refreshToken", response.refreshToken);
-    localStorage.setItem("user", JSON.stringify(response.user));
+    if (!response.ok) {
+      let message = "Login failed";
+      try {
+        const text = await response.text();
+        if (text) {
+          try {
+            const parsed = JSON.parse(text);
+            if (typeof parsed === "object" && parsed && typeof parsed.message === "string") {
+              message = parsed.message;
+            } else if (typeof text === "string") {
+              message = text;
+            }
+          } catch {
+            message = text;
+          }
+        }
+      } catch {
+        // ignore
+      }
+      throw new Error(message);
+    }
 
-    return response;
+    const data = (await response.json()) as AuthResponse;
+
+    // Store tokens in localStorage
+    localStorage.setItem("accessToken", data.accessToken);
+    localStorage.setItem("refreshToken", data.refreshToken);
+    localStorage.setItem("user", JSON.stringify(data.user));
+
+    return data;
   }
 
   async register(userData: RegisterRequest): Promise<User> {

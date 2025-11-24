@@ -97,6 +97,9 @@ const OrganizerExhibitions = () => {
   const [stallTypes, setStallTypes] = useState<{ id: number; label: string }[]>([]);
   const [selectedHallIds, setSelectedHallIds] = useState<number[]>([]);
   const [hallPrices, setHallPrices] = useState<Record<number, Record<number, number>>>({});
+  const startDateValue = Form.useWatch("startDateTime", form);
+  const endDateValue = Form.useWatch("endDateTime", form);
+  const bookingOpenValue = Form.useWatch("bookingOpenDateTime", form);
 
   const toCard = (expo: Exhibition): ExhibitionCard => ({
     ...expo,
@@ -636,7 +639,19 @@ const OrganizerExhibitions = () => {
               name="bookingOpenDateTime"
               rules={[{ required: true, message: "Select when booking opens" }]}
             >
-              <DatePicker showTime className="w-full" />
+              <DatePicker
+                showTime
+                className="w-full"
+                disabled={!startDateValue || !endDateValue}
+                disabledDate={(current) => {
+                  if (!startDateValue) return true;
+                  const today = dayjs().startOf("day");
+                  return (
+                    (current && current < today) ||
+                    (current && current > dayjs(startDateValue).endOf("day"))
+                  );
+                }}
+              />
             </Form.Item>
             <Form.Item
               label="Booking Closes"
@@ -657,7 +672,18 @@ const OrganizerExhibitions = () => {
                 }),
               ]}
             >
-              <DatePicker showTime className="w-full" />
+              <DatePicker
+                showTime
+                className="w-full"
+                disabled={!startDateValue || !endDateValue || !bookingOpenValue}
+                disabledDate={(current) => {
+                  if (!bookingOpenValue || !startDateValue) return true;
+                  return (
+                    (current && current < dayjs(bookingOpenValue).startOf("day")) ||
+                    (current && current > dayjs(startDateValue).endOf("day"))
+                  );
+                }}
+              />
             </Form.Item>
           </div>
           <Divider orientation="left" plain>

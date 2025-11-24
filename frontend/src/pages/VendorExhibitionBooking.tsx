@@ -8,6 +8,7 @@ import { Loader2, ArrowLeft, Map, ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { exhibitionService } from "@/services/exhibitionService";
 import { layoutService } from "@/services/layoutService";
+import { reservationService } from "@/services/reservationService";
 import StallMap from "./organizer/StallMap";
 import {
   Dialog,
@@ -71,6 +72,7 @@ const VendorExhibitionBooking = () => {
   >({});
   const [showConfirm, setShowConfirm] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchExhibition = async () => {
@@ -150,21 +152,9 @@ const VendorExhibitionBooking = () => {
     });
     // console.log("Hall Layouts:", hallLayouts);
     // console.log("Availability Map:", availabilityMap);
-    // console.log("Merged Layouts:", result);
+    console.log("Merged Layouts:", result);
     return result;
   }, [hallLayouts, availabilityMap]);
-
-  const priceLookup = useMemo(() => {
-    const map: Record<string, Record<number, number>> = {};
-    exhibition?.halls?.forEach((hall) => {
-      const hId = Number(hall.id);
-      hall.prices?.forEach((p) => {
-        map[String(hId)] = map[String(hId)] || {};
-        map[String(hId)][Number(p.stallTypeId)] = Number(p.price);
-      });
-    });
-    return map;
-  }, [exhibition]);
 
   const handleLoadHallLayout = async (hallId: string | number) => {
     if (hallLayouts[String(hallId)]) return;
@@ -218,10 +208,14 @@ const VendorExhibitionBooking = () => {
     }
 
     const typeId = Number(stall.stallTypeId) || undefined;
-    const price =
-      priceLookup[String(hallId)]?.[typeId || 0] ??
-      priceLookup[String(hallId)]?.[1] ??
-      0;
+    const hallPrices =
+      exhibition?.halls?.find((h) => String(h.id) === String(hallId))?.prices || [];
+    const normalizedType = String(stall.stallType || stall.size || "").toUpperCase();
+    const priceEntry =
+      hallPrices.find((p) => Number(p.stallTypeId) === typeId) ||
+      hallPrices.find((p) => String(p.stallType || "").toUpperCase() === normalizedType) ||
+      hallPrices[0];
+    const price = priceEntry ? Number(priceEntry.price) : 0;
 
     setSelectedStalls((prev) => [
       ...prev,
@@ -246,12 +240,27 @@ const VendorExhibitionBooking = () => {
   const handleConfirmBooking = async () => {
     setBookingLoading(true);
     try {
-      // TODO: integrate booking API when available
-      toast({
-        title: "Booking confirmed",
-        description: "Proceeding to payment flow.",
+      const stallIds = selectedStalls.map((s) => Number(s.stallId));
+      const reservationData = await reservationService.createReservation({
+        exhibitionId: Number(exhibition?.id),
+        stallIds,
       });
+      const reservationId = reservationData?.reservationId ?? reservationData?.id ?? reservationData;
+
+      const paymentData = await reservationService.createPayment({
+        reservationId,
+        currency: "LKR",
+      });
+
+      const link =
+        paymentData?.paymentUrl || paymentData?.url || paymentData?.link || paymentData?.redirectUrl;
+      if (!link) {
+        throw new Error("Payment link not returned");
+      }
+
+      setPaymentUrl(link);
       setShowConfirm(false);
+      window.location.href = link;
     } catch (error: any) {
       toast({
         title: "Booking failed",

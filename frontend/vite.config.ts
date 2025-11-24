@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, envDir, "");
 
   // Get port from FRONTEND_PORT environment variable, fallback to 3000
-  const port = parseInt(env.FRONTEND_PORT || "3000");
+  const port = parseInt(env.FRONTEND_PORT || "3030");
 
   return {
     envDir,
