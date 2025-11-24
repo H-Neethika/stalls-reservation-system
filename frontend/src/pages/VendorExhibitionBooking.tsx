@@ -73,6 +73,7 @@ const VendorExhibitionBooking = () => {
   >({});
   const [showConfirm, setShowConfirm] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [paymentRedirecting, setPaymentRedirecting] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [realtimeDisconnect, setRealtimeDisconnect] = useState<(() => void) | null>(null);
 
@@ -303,6 +304,7 @@ const VendorExhibitionBooking = () => {
         throw new Error("Payment link not returned");
       }
 
+      setPaymentRedirecting(true);
       setPaymentUrl(link);
       setShowConfirm(false);
       window.location.href = link;
@@ -314,6 +316,7 @@ const VendorExhibitionBooking = () => {
       });
     } finally {
       setBookingLoading(false);
+      setPaymentRedirecting(false);
     }
   };
 
@@ -345,6 +348,14 @@ const VendorExhibitionBooking = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
+      {paymentRedirecting && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="flex items-center gap-3 rounded-lg bg-card px-4 py-3 shadow-lg">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-sm font-medium text-foreground">Redirecting to payment...</span>
+          </div>
+        </div>
+      )}
       <div className="border-b bg-card/60 backdrop-blur sticky top-0 z-30">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
