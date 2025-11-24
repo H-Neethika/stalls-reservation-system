@@ -317,15 +317,15 @@ const VendorExhibitionBooking = () => {
     }
   };
 
-  useEffect(() => {
-    if (showConfirm) {
-      lockSelectedStalls("PENDING");
-    } else if (!bookingLoading && !paymentUrl) {
-      // only unlock if user closed the dialog without proceeding
-      lockSelectedStalls("AVAILABLE");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showConfirm]);
+  // useEffect(() => {
+  //   if (showConfirm) {
+  //     lockSelectedStalls("PENDING");
+  //   } else if (!bookingLoading && !paymentUrl) {
+  //     // only unlock if user closed the dialog without proceeding
+  //     lockSelectedStalls("AVAILABLE");
+  //   }
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [showConfirm]);
 
   if (loading) {
     return (
