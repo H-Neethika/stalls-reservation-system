@@ -57,7 +57,8 @@ public class ReservationBookedListener {
         StallSummary stall = firstStall(event.getStalls());
         if (stall != null) {
             request.setStallName(stall.getStallName());
-            request.setStallSize(stall.getStallSize());
+            request.setStallType(stall.getStallType());
+            request.setHallName(stall.getHallName());
         }
         return request;
     }

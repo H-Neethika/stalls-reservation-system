@@ -24,7 +24,8 @@ public class NotificationMapper {
             reservationNotificationRequest.setBookingTime(emailDetails.getBookingTime());
             reservationNotificationRequest.setFairName(emailDetails.getFairName());
             reservationNotificationRequest.setStallName(emailDetails.getStallName());
-            reservationNotificationRequest.setStallSize(emailDetails.getStallSize());
+            reservationNotificationRequest.setStallType(emailDetails.getStallType());
+            reservationNotificationRequest.setHallName(emailDetails.getHallName());
         }
 
         return reservationNotificationRequest;
@@ -58,7 +59,8 @@ public class NotificationMapper {
                 reservationNotificationRequest.getReservationId(),
                 reservationNotificationRequest.getFairName(),
                 reservationNotificationRequest.getStallName(),
-                reservationNotificationRequest.getStallSize(),
+                reservationNotificationRequest.getStallType(),
+                reservationNotificationRequest.getHallName(),
                 reservationNotificationRequest.getBookingTime(),
                 reservationNotificationRequest.getEventTime(),
                 reservationNotificationRequest.getEventLink()
@@ -94,7 +96,8 @@ public class NotificationMapper {
                     emailDetails.getReservationId(),
                     emailDetails.getFairName(),
                     emailDetails.getStallName(),
-                    emailDetails.getStallSize(),
+                    emailDetails.getStallType(),
+                    emailDetails.getHallName(),
                     emailDetails.getBookingTime(),
                     emailDetails.getEventTime(),
                     emailDetails.getEventLink()
@@ -118,7 +121,8 @@ public class NotificationMapper {
                 notificationRequest.getReservationId(),
                 notificationRequest.getFairName(),
                 notificationRequest.getStallName(),
-                notificationRequest.getStallSize(),
+                notificationRequest.getStallType(),
+                notificationRequest.getHallName(),
                 notificationRequest.getBookingTime(),
                 notificationRequest.getEventTime(),
                 notificationRequest.getEventLink()
@@ -140,7 +144,8 @@ public class NotificationMapper {
         reservationNotificationResponse.setReservationId(notificationRequest.getReservationId());
         reservationNotificationResponse.setFairName(notificationRequest.getFairName());
         reservationNotificationResponse.setStallName(notificationRequest.getStallName());
-        reservationNotificationResponse.setStallSize(notificationRequest.getStallSize());
+        reservationNotificationResponse.setStallType(notificationRequest.getStallType());
+        reservationNotificationResponse.setHallName(notificationRequest.getHallName());
         reservationNotificationResponse.setUserName(notificationRequest.getUserName());
         reservationNotificationResponse.setEventLink(notificationRequest.getEventLink().toString());
         return reservationNotificationResponse;
