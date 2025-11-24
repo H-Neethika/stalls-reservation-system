@@ -39,7 +39,10 @@ public class StallStatusUpdateListener {
             UpdateStallStatusRequest request = new UpdateStallStatusRequest();
             request.setStallIds(stallIds);
             request.setBookingStatus(bookingStatus);
-            layoutService.updateStallStatuses(request);
+            layoutService.updateStallStatuses(request)
+                    .forEach(status -> {
+                        // broadcast happens inside layoutService, but leave hook for future
+                    });
         } catch (Exception ex) {
             log.error("Failed to apply stall status update for reservationId={} stalls={}",
                     event.getReservationId(), stallIds, ex);

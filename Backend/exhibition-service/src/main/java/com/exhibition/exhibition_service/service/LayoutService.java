@@ -17,6 +17,8 @@ import com.exhibition.exhibition_service.repository.ExhibitionStallRepository;
 import com.exhibition.exhibition_service.repository.HallRepository;
 import com.exhibition.exhibition_service.repository.StallRepository;
 import com.exhibition.exhibition_service.repository.StallTypeRepository;
+import com.exhibition.exhibition_service.messaging.event.StallStatusChangedEvent;
+import com.exhibition.exhibition_service.messaging.producer.StallStatusEventProducer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,6 +41,7 @@ public class LayoutService {
     private final ExhibitionRepository exhibitionRepository;
     private final ExhibitionStallRepository exhibitionStallRepository;
     private final ExhibitionHallPriceRepository exhibitionHallPriceRepository;
+    private final StallStatusEventProducer stallStatusEventProducer;
 
     public List<HallSummaryResponse> getHallSummaries() {
         return hallRepository.findAll().stream()
@@ -244,17 +247,51 @@ public class LayoutService {
             throw new IllegalArgumentException("bookingStatus must be one of: " + java.util.Arrays.toString(BookingStatus.values()));
         }
 
-        Map<Long, StallStatusResponse> updated = new HashMap<>();
         BookingStatus finalStatus = status;
+
+        // First pass: detect conflicts to avoid partial updates
+        List<Long> conflicted = new ArrayList<>();
+        List<ExhibitionStall> targets = new ArrayList<>();
         for (Long stallId : request.getStallIds()) {
-            exhibitionStallRepository.findByStallId_Id(stallId)
-                    .forEach(es -> {
-                        es.setBookingStatus(finalStatus);
-                        exhibitionStallRepository.save(es);
-                        updated.put(es.getId(), toStatus(es));
-                    });
+            List<ExhibitionStall> matches = exhibitionStallRepository.findByStallId_Id(stallId);
+            targets.addAll(matches);
+            if (finalStatus == BookingStatus.PENDING || finalStatus == BookingStatus.RESERVED) {
+                for (ExhibitionStall es : matches) {
+                    BookingStatus current = es.getBookingStatus();
+                    if (current != null && current != BookingStatus.AVAILABLE) {
+                        conflicted.add(es.getStall() != null ? es.getStall().getId() : es.getId());
+                    }
+                }
+            }
+        }
+
+        if (!conflicted.isEmpty()) {
+            throw new IllegalStateException("Stalls are not available: " + conflicted);
+        }
+
+        Map<Long, StallStatusResponse> updated = new HashMap<>();
+        for (ExhibitionStall es : targets) {
+            es.setBookingStatus(finalStatus);
+            exhibitionStallRepository.save(es);
+            updated.put(es.getId(), toStatus(es));
+            publishStatusEvent(es);
         }
         return new java.util.ArrayList<>(updated.values());
+    }
+
+    private void publishStatusEvent(ExhibitionStall es) {
+        if (es == null || es.getStall() == null || es.getStall().getHall() == null || es.getExhibition() == null) {
+            return;
+        }
+        StallStatusChangedEvent event = StallStatusChangedEvent.builder()
+                .exhibitionId(es.getExhibition().getId())
+                .hallId(es.getStall().getHall().getId())
+                .stallId(es.getStall().getId())
+                .exhibitionStallId(es.getId())
+                .status(es.getBookingStatus() != null ? es.getBookingStatus().name() : null)
+                .reservationId(null)
+                .build();
+        stallStatusEventProducer.publish(event);
     }
 
     private HallSummaryResponse toHallSummary(Hall hall) {

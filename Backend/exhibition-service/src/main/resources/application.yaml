@@ -47,3 +47,4 @@ app:
     topics:
       payment-success: ${PAYMENT_SUCCESS_TOPIC:payment.success}
       stall-status-update: ${STALL_STATUS_UPDATE_TOPIC:stall.status.update}
+      stall-status-events: ${STALL_STATUS_EVENTS_TOPIC:stall.status.events}
