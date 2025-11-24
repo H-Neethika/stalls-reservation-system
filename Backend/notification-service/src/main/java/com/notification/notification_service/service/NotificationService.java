@@ -29,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
@@ -139,6 +140,7 @@ public class NotificationService {
     private byte[] getQRCodeBytes(ReservationNotificationRequest notificationRequest) {
         Map<String, Object> qrcodeDetails = new HashMap<>();
         qrcodeDetails.put("reservationId", notificationRequest.getReservationId());
+        qrcodeDetails.put("stallType", notificationRequest.getStallType());
         qrcodeDetails.put("stallName", notificationRequest.getStallName());
         qrcodeDetails.put("fairName", notificationRequest.getFairName());
 
@@ -327,7 +329,8 @@ public class NotificationService {
                             <div class="details">
                                 <p><b>Reservation ID:</b> %s</p>
                                 <p><b>Stall Name:</b> %s</p>
-                                <p><b>Stall Size:</b> %s</p>
+                                <p><b>Stall Type:</b> %s</p>
+                                <p><b>Hall:</b> %s</p>
                                 <p><b>Booking Time:</b> %s</p>
                                 <p><b>Event Date & Time:</b> %s</p>
                             </div>
@@ -352,7 +355,8 @@ public class NotificationService {
                 notificationRequest.getFairName(),
                 notificationRequest.getReservationId(),
                 notificationRequest.getStallName(),
-                notificationRequest.getStallSize(),
+                notificationRequest.getStallType(),
+                notificationRequest.getHallName(),
                 notificationRequest.getBookingTime(),
                 notificationRequest.getEventTime(),
                 notificationRequest.getEventLink(),
