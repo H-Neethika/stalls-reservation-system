@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { exhibitionService } from "@/services/exhibitionService";
 import { layoutService } from "@/services/layoutService";
 import { reservationService } from "@/services/reservationService";
+import { connectRealtime } from "@/services/realtimeService";
 import StallMap from "./organizer/StallMap";
 import {
   Dialog,
@@ -73,6 +74,7 @@ const VendorExhibitionBooking = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const [realtimeDisconnect, setRealtimeDisconnect] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     const fetchExhibition = async () => {
@@ -139,6 +141,31 @@ const VendorExhibitionBooking = () => {
 
     fetchAvailability();
   }, [exhibitionId, toast]);
+
+  useEffect(() => {
+    if (!exhibitionId) return;
+    const sub = connectRealtime(exhibitionId, (msg) => {
+      const { hallId, stallId, status } = msg || {};
+      if (!hallId || !stallId || !status) return;
+      setAvailabilityMap((prev) => {
+        const next = { ...prev };
+        const hallKey = String(hallId);
+        const stallKey = String(stallId);
+        next[hallKey] = next[hallKey] || {};
+        next[hallKey][stallKey] = {
+          ...(next[hallKey][stallKey] || {}),
+          status: status.toUpperCase(),
+          exhibitionStallId: msg.exhibitionStallId ?? next[hallKey][stallKey]?.exhibitionStallId,
+        };
+        return next;
+      });
+    });
+    setRealtimeDisconnect(() => sub.disconnect);
+    return () => {
+      sub.disconnect();
+      setRealtimeDisconnect(null);
+    };
+  }, [exhibitionId]);
 
   const mergedLayouts = useMemo(() => {
     const result: Record<string, any[]> = {};
@@ -237,6 +264,24 @@ const VendorExhibitionBooking = () => {
     setShowConfirm(true);
   };
 
+  const lockSelectedStalls = async (status: "PENDING" | "AVAILABLE") => {
+    const stallIds = selectedStalls.map((s) => Number(s.stallId));
+    if (stallIds.length === 0) return;
+    try {
+      await reservationService.updateStallStatus({
+        stallIds,
+        bookingStatus: status,
+      });
+    } catch (error: any) {
+      console.error("Failed to update stall lock status", error);
+      toast({
+        title: "Stall lock failed",
+        description: error?.message || `Could not set stalls to ${status}.`,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleConfirmBooking = async () => {
     setBookingLoading(true);
     try {
@@ -271,6 +316,16 @@ const VendorExhibitionBooking = () => {
       setBookingLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (showConfirm) {
+      lockSelectedStalls("PENDING");
+    } else if (!bookingLoading && !paymentUrl) {
+      // only unlock if user closed the dialog without proceeding
+      lockSelectedStalls("AVAILABLE");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showConfirm]);
 
   if (loading) {
     return (

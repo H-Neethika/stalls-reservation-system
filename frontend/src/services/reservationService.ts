@@ -65,6 +65,19 @@ class ReservationService {
     }
     return response.json();
   }
+
+  async updateStallStatus(payload: { stallIds: number[]; bookingStatus: string }) {
+    const response = await authFetch(`${API_BASE_URL}/api/booking-status/update`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw await parseErrorResponse(response);
+    }
+    return response.json();
+  }
 }
 
 export const reservationService = new ReservationService();
