@@ -1,71 +1,76 @@
 package com.booking.booking_service.service.serviceImpl;
 
-import com.booking.booking_service.dto.ExternalStallSummary;
+import com.booking.booking_service.dto.response.ExternalStallSummaryResponse;
 import com.booking.booking_service.model.Reservation;
-import com.booking.booking_service.repository.BookingStatusRepository;
-import com.booking.booking_service.repository.ExhibitionStallRepository;
+import com.booking.booking_service.enums.ReservationStatus;
 import com.booking.booking_service.repository.ReservationRepository;
-import com.booking.booking_service.request.ReservationRequest;
-import com.booking.booking_service.request.CreatePaymentRequest;
-import com.booking.booking_service.response.MessageResponse;
-import com.booking.booking_service.response.PaymentIntentResponse;
-import com.booking.booking_service.response.ReservationResponse;
-import com.booking.booking_service.response.ReservedStallResponse;
+import com.booking.booking_service.dto.request.CreatePaymentRequest;
+import com.booking.booking_service.dto.request.ReservationRequest;
+import com.booking.booking_service.dto.response.PaymentIntentResponse;
+import com.booking.booking_service.dto.response.ReservationResponse;
+import com.booking.booking_service.dto.response.ReservedStallResponse;
+import com.booking.booking_service.dto.request.UpdateStallStatusRequest;
+import com.booking.booking_service.service.ExhibitionServiceClient;
 import com.booking.booking_service.service.PaymentService;
 import com.booking.booking_service.service.ReservationService;
-import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ReservationServiceImpl implements ReservationService {
 
-  @Autowired
-  private ReservationRepository reservationRepository;
+  private final ReservationRepository reservationRepository;
+  private final PaymentService paymentService;
+  private final ExhibitionServiceClient exhibitionServiceClient;
 
-  @Autowired
-  private ExhibitionStallRepository exhibitionStallRepository;
-  @Autowired
-  private PaymentService paymentService;
-  @Autowired
-  private BookingStatusRepository bookingStatusRepository;
-
-
+  public ReservationServiceImpl(ReservationRepository reservationRepository,
+                                PaymentService paymentService,
+                                ExhibitionServiceClient exhibitionServiceClient) {
+    this.reservationRepository = reservationRepository;
+    this.paymentService = paymentService;
+    this.exhibitionServiceClient = exhibitionServiceClient;
+  }
 
   @Override
-  public Reservation createReservation(ReservationRequest reservationRequest) {
+  public Reservation createReservation(ReservationRequest reservationRequest, Long userId) {
     List<Long> stallIds = reservationRequest.getStallIds();
-    List<ExternalStallSummary> summaries = fetchStallSummaries(stallIds);
-
-
-
-    Long totalAmount = 0L;
-    for (ExhibitionStall stall : stalls) {
-      totalAmount += stall.getPrice();
-      stall.setBookingStatus(bookingStatusRepository.findById(2L).get());
-      exhibitionStallRepository.save(stall);
+    if (stallIds == null || stallIds.isEmpty()) {
+      throw new IllegalArgumentException("At least one stall must be selected");
     }
+
+    List<ExternalStallSummaryResponse> summaries = fetchStallSummaries(stallIds);
+
+    Long totalAmount = summaries.stream()
+        .map(ExternalStallSummaryResponse::getPrice)
+        .filter(p -> p != null)
+        .reduce(0L, Long::sum);
+
     Reservation newReservation = new Reservation();
-    newReservation.setUserId(reservationRequest.getUserId());
+    newReservation.setUserId(userId);
     newReservation.setExhibitionId(reservationRequest.getExhibitionId());
     newReservation.setStallIds(stallIds);
     newReservation.setTotalAmount(totalAmount);
     newReservation.setCreatedAt(new Date());
+    newReservation.setStatus(ReservationStatus.PENDING_PAYMENT);
 
-    return reservationRepository.save(newReservation);
+    Reservation saved = reservationRepository.save(newReservation);
+
+    // mark stalls as PENDING to avoid double booking
+    UpdateStallStatusRequest statusRequest = new UpdateStallStatusRequest();
+    statusRequest.setStallIds(stallIds);
+    statusRequest.setBookingStatus("PENDING");
+    try {
+      exhibitionServiceClient.updateBookingStatus(statusRequest);
+    } catch (Exception ex) {
+      // do not fail reservation creation if downstream status update fails
+    }
+
+    return saved;
   }
 
   @Override
@@ -88,8 +93,23 @@ public class ReservationServiceImpl implements ReservationService {
   @Override
   @Transactional
   public PaymentIntentResponse updateReservation(CreatePaymentRequest request) {
+    Reservation reservation = reservationRepository.findById(request.getReservationId())
+        .orElseThrow(() -> new IllegalArgumentException(
+            "Reservation not found with id " + request.getReservationId()));
 
-    return paymentService.createPaymentIntent(request).getBody();
+    CreatePaymentRequest normalizedRequest = new CreatePaymentRequest(
+        reservation.getId(),
+        reservation.getTotalAmount() != null
+            ? BigDecimal.valueOf(reservation.getTotalAmount())
+            : BigDecimal.ZERO,
+        request.getCurrency()
+    );
+
+    PaymentIntentResponse response = paymentService.createPaymentIntent(normalizedRequest);
+    if (response == null) {
+      throw new IllegalStateException("Failed to create payment intent");
+    }
+    return response;
   }
 
 
@@ -101,8 +121,9 @@ public class ReservationServiceImpl implements ReservationService {
     dto.setExhibitionId(reservation.getExhibitionId());
     dto.setTotalAmount(reservation.getTotalAmount());
     dto.setCreatedAt(reservation.getCreatedAt());
+    dto.setStatus(reservation.getStatus() != null ? reservation.getStatus().name() : null);
 
-    List<ExternalStallSummary> summaries = fetchStallSummaries(reservation.getStallIds());
+    List<ExternalStallSummaryResponse> summaries = fetchStallSummaries(reservation.getStallIds());
 
     List<ReservedStallResponse> stalls = summaries.stream()
             .map(st -> {
@@ -111,7 +132,9 @@ public class ReservationServiceImpl implements ReservationService {
               stallDto.setPrice(st.getPrice());
               stallDto.setStallType(st.getStallType());
               stallDto.setHallName(st.getHallName());
-              stallDto.setBookingStatus("RESERVED");
+              stallDto.setBookingStatus(st.getBookingStatus() != null
+                  ? st.getBookingStatus()
+                  : "RESERVED");
               return stallDto;
             })
             .collect(Collectors.toList());
@@ -120,24 +143,11 @@ public class ReservationServiceImpl implements ReservationService {
     return dto;
   }
 
-  private List<ExternalStallSummary> fetchStallSummaries(List<Long> stallIds) {
+  private List<ExternalStallSummaryResponse> fetchStallSummaries(List<Long> stallIds) {
     if (stallIds == null || stallIds.isEmpty()) {
       return List.of();
     }
-    String joined = stallIds.stream()
-            .map(String::valueOf)
-            .collect(Collectors.joining(","));
-    String encoded = URLEncoder.encode(joined, StandardCharsets.UTF_8);
-    URI uri = URI.create(exhibitionServiceBaseUrl + "/api/layout/stalls/summary?ids=" + encoded);
-    ResponseEntity<ExternalStallSummary[]> response = restTemplate.exchange(
-            uri,
-            HttpMethod.GET,
-            HttpEntity.EMPTY,
-            ExternalStallSummary[].class);
-    ExternalStallSummary[] body = response.getBody();
-    if (body == null) {
-      return List.of();
-    }
-    return Arrays.asList(body);
+    List<ExternalStallSummaryResponse> response = exhibitionServiceClient.getStallSummaries(stallIds);
+    return response != null ? response : List.of();
   }
 }

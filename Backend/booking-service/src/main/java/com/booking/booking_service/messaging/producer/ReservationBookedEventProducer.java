@@ -1,8 +1,8 @@
 package com.booking.booking_service.messaging.producer;
 
 import com.booking.booking_service.messaging.event.ReservationBookedEvent;
-import com.booking.booking_service.response.PaymentSuccessResponse;
-import com.booking.booking_service.dto.StallDto;
+import com.booking.booking_service.dto.response.PaymentSuccessResponse;
+import com.booking.booking_service.dto.response.ReservedStallDto;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -78,10 +78,11 @@ public class ReservationBookedEventProducer {
         });
     }
 
-    private ReservationBookedEvent.StallSummary mapToSummary(StallDto stallDto) {
+    private ReservationBookedEvent.StallSummary mapToSummary(ReservedStallDto reservedStallDto) {
         return ReservationBookedEvent.StallSummary.builder()
-                .stallName(stallDto.getStallName())
-                .stallSize(stallDto.getStallSize())
+                .stallName(reservedStallDto.getStallName())
+                .stallType(reservedStallDto.getStallType())
+                .hallName(reservedStallDto.getHallName())
                 .build();
     }
 }

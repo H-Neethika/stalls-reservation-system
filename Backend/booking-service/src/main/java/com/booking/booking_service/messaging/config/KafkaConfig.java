@@ -1,6 +1,7 @@
 package com.booking.booking_service.messaging.config;
 
 import com.booking.booking_service.messaging.event.PaymentSucceededEvent;
+import com.booking.booking_service.messaging.event.PaymentFailedEvent;
 import com.booking.booking_service.messaging.event.ReservationBookedEvent;
 import java.util.HashMap;
 import java.util.Map;
@@ -54,6 +55,34 @@ public class KafkaConfig {
         backOff.setMultiplier(2.0);
         backOff.setMaxInterval(30_000L);
         backOff.setMaxElapsedTime(300_000L); // 5 minutes max elapsed time
+        factory.setCommonErrorHandler(new DefaultErrorHandler(backOff));
+        return factory;
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, PaymentFailedEvent> paymentFailedKafkaListenerContainerFactory() {
+        Map<String, Object> props = new HashMap<>(kafkaProperties.buildConsumerProperties());
+        JsonDeserializer<PaymentFailedEvent> jsonDeserializer = new JsonDeserializer<>(PaymentFailedEvent.class);
+        jsonDeserializer.addTrustedPackages("*");
+        jsonDeserializer.setUseTypeMapperForKey(false);
+        jsonDeserializer.setRemoveTypeHeaders(false);
+
+        DefaultKafkaConsumerFactory<String, PaymentFailedEvent> consumerFactory =
+                new DefaultKafkaConsumerFactory<>(
+                        props,
+                        new StringDeserializer(),
+                        jsonDeserializer
+                );
+
+        ConcurrentKafkaListenerContainerFactory<String, PaymentFailedEvent> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory);
+
+        ExponentialBackOff backOff = new ExponentialBackOff();
+        backOff.setInitialInterval(1_000L);
+        backOff.setMultiplier(2.0);
+        backOff.setMaxInterval(30_000L);
+        backOff.setMaxElapsedTime(300_000L);
         factory.setCommonErrorHandler(new DefaultErrorHandler(backOff));
         return factory;
     }

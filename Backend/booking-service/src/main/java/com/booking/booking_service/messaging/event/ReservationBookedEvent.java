@@ -29,6 +29,7 @@ public class ReservationBookedEvent {
     @AllArgsConstructor
     public static class StallSummary {
         private String stallName;
-        private String stallSize;
+        private String stallType;
+        private String hallName;
     }
 }
