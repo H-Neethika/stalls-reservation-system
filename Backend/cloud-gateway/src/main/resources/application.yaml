@@ -101,6 +101,14 @@ spring:
           filters:
             - StripPrefix=1
 
+        # ---------- REALTIME SERVICE ----------
+        - id: REALTIME-SERVICE-WS
+          uri: lb:ws://REALTIME-SERVICE
+          predicates:
+            - Path=/ws-stalls/**
+          filters:
+            - StripPrefix=0
+
 
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
