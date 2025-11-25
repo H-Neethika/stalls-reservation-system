@@ -41,6 +41,9 @@ public class SecurityConfig {
                         // OAuth2 endpoints - public
                         .pathMatchers("/oauth2/**", "/login/oauth2/**").permitAll()
 
+                        // WebSocket handshake + SockJS info endpoints - allow without JWT
+                        .pathMatchers("/ws-stalls/**").permitAll()
+
                         // Swagger/OpenAPI endpoints - public
                         .pathMatchers(
                                 "/swagger-ui/**",

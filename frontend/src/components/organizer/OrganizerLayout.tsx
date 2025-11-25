@@ -9,7 +9,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   LayoutDashboard,
-  PanelsTopLeft,
+  FileSpreadsheet,
   Settings,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -32,9 +32,9 @@ const sidebarItems = [
     path: "/organizer/halls",
   },
   {
-    label: "Manage Stalls",
-    icon: PanelsTopLeft,
-    path: "/organizer/stalls",
+    label: "Reservations",
+    icon: FileSpreadsheet,
+    path: "/organizer/exhibition-reservations",
   },
   {
     label: "Settings",
