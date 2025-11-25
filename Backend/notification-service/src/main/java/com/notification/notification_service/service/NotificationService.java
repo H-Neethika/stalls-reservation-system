@@ -225,8 +225,14 @@ public class NotificationService {
 
     @Transactional
     public void sendReservationConfirmationEmail(ReservationNotificationRequest notificationRequest) {
+        log.info("Preparing reservation confirmation email: reservationId={}, userId={}, email={}",
+                notificationRequest.getReservationId(), notificationRequest.getUserId(), notificationRequest.getEmail());
+        if (notificationRequest.getEmail() == null || notificationRequest.getEmail().isBlank()) {
+            log.error("Missing recipient email for reservationId={} userId={}. Skipping email send.",
+                    notificationRequest.getReservationId(), notificationRequest.getUserId());
+            return;
+        }
         byte[] qrCodeBytes = getQRCodeBytes(notificationRequest);
-
         String htmlBody = getReservationConfirmationHTMLBody(
                 notificationRequest,
                 URI.create(this.websiteLink)
