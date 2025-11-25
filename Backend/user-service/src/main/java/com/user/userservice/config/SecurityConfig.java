@@ -87,6 +87,7 @@ public class SecurityConfig {
 								"/webjars/**")
 						.permitAll()
 						.requestMatchers(HttpMethod.OPTIONS, "/api/users/**").permitAll()
+						.requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()
 						.requestMatchers(HttpMethod.POST, "/api/users/register", "/api/users/login", "/api/users/refresh").permitAll()
 						.anyRequest().authenticated())
 				.oauth2ResourceServer(

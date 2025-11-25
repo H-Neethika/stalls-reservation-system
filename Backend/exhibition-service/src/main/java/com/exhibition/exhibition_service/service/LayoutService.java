@@ -258,6 +258,10 @@ public class LayoutService {
             if (finalStatus == BookingStatus.PENDING || finalStatus == BookingStatus.RESERVED) {
                 for (ExhibitionStall es : matches) {
                     BookingStatus current = es.getBookingStatus();
+                    // Allow idempotent updates when the stall already has the desired status
+                    if (current == finalStatus) {
+                        continue;
+                    }
                     boolean isUpgradeFromPending =
                             finalStatus == BookingStatus.RESERVED && current == BookingStatus.PENDING;
                     if (current != null && current != BookingStatus.AVAILABLE && !isUpgradeFromPending) {
