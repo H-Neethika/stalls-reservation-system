@@ -35,11 +35,16 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
             "Reservation not found with id " + reservationId));
 
     // Fetch user details for notification payload
-    UserResponse user = null;
+    UserResponse user;
     try {
       user = userService.getUserById(reservation.getUserId());
     } catch (Exception ex) {
-      log.warn("Unable to fetch user {} for reservation {}: {}", reservation.getUserId(), reservationId, ex.getMessage());
+      log.error("Unable to fetch user {} for reservation {}: {}", reservation.getUserId(), reservationId, ex.getMessage());
+      throw new IllegalStateException("User details required for reservation notification", ex);
+    }
+    if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
+      log.error("User {} for reservation {} has no email; cannot send notification", reservation.getUserId(), reservationId);
+      throw new IllegalStateException("User email required for reservation notification");
     }
 
     // Fetch stall summaries to include in the success response
@@ -60,10 +65,8 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
     PaymentSuccessResponse response = new PaymentSuccessResponse();
     response.setReservationId(reservationId);
     response.setUserId(reservation.getUserId());
-    if (user != null) {
-      response.setUsername(user.getName());
-      response.setEmail(user.getEmail());
-    }
+    response.setUsername(user.getName());
+    response.setEmail(user.getEmail());
     response.setStalls(reservedStallDtos);
     response.setBookingDateTime(new Date());
 
