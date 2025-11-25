@@ -18,8 +18,10 @@ let client: Client | null = null;
 export function connectRealtime(exhibitionId: string | number, onMessage: StallStatusHandler) {
   if (!exhibitionId) return { disconnect: () => {} };
 
-  const endpoint =
-    import.meta.env.VITE_REALTIME_WS_URL?.toString() || "http://localhost:9010/ws-stalls";
+  const baseUrl =
+    import.meta.env.BACKEND_BASE_URL?.toString()  ||
+    `http://localhost:${import.meta.env.CLOUD_GATEWAY_PORT || 9000}`;
+  const endpoint = `${baseUrl.replace(/\/$/, "")}/ws-stalls`;
 
   const socket = new SockJS(endpoint);
   client = Stomp.over(socket);
