@@ -1,7 +1,75 @@
 // API service for backend integration
 import { User, AuthResponse, LoginRequest, RegisterRequest } from "@/types";
 
-const API_BASE_URL = "http://localhost:5000";
+export const API_BASE_URL =
+  import.meta.env.BACKEND_BASE_URL ||
+  import.meta.env.VITE_BACKEND_BASE_URL ||
+  `http://localhost:${import.meta.env.CLOUD_GATEWAY_PORT || "6001"}`;
+
+const getStoredAccessToken = () => localStorage.getItem("accessToken");
+const getStoredRefreshToken = () => localStorage.getItem("refreshToken");
+
+const refreshAccessToken = async (): Promise<AuthResponse> => {
+  const refreshToken = getStoredRefreshToken();
+  if (!refreshToken) {
+    throw new Error("No refresh token available. Please sign in again.");
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/users/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Session expired. Please sign in again.");
+  }
+
+  const data = (await response.json()) as AuthResponse;
+  if (data.accessToken) {
+    localStorage.setItem("accessToken", data.accessToken);
+  }
+  if (data.refreshToken) {
+    localStorage.setItem("refreshToken", data.refreshToken);
+  }
+  if (data.user) {
+    localStorage.setItem("user", JSON.stringify(data.user));
+  }
+  return data;
+};
+
+export const authFetch = async (
+  input: string,
+  options: RequestInit = {},
+  triedRefresh = false,
+): Promise<Response> => {
+  const headers = new Headers(options.headers as HeadersInit);
+  const accessToken = getStoredAccessToken();
+  if (accessToken && !headers.get("Authorization")) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
+  const response = await fetch(input, { ...options, headers });
+
+  if (response.status === 401 && !triedRefresh) {
+    try {
+      await refreshAccessToken();
+      const retryHeaders = new Headers(options.headers as HeadersInit);
+      const newToken = getStoredAccessToken();
+      if (newToken) {
+        retryHeaders.set("Authorization", `Bearer ${newToken}`);
+      }
+      if (!retryHeaders.get("Content-Type") && headers.get("Content-Type")) {
+        retryHeaders.set("Content-Type", headers.get("Content-Type") as string);
+      }
+      return fetch(input, { ...options, headers: retryHeaders });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  return response;
+};
 
 class ApiService {
   private getAuthToken(): string | null {
@@ -26,7 +94,7 @@ class ApiService {
     };
 
     try {
-      const response = await fetch(url, config);
+      const response = await authFetch(url, config);
 
       if (!response.ok) {
         const errorData = await response.text();
@@ -48,17 +116,43 @@ class ApiService {
 
   // Authentication
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    const response = await this.request<AuthResponse>("/api/users/login", {
+    const url = `${API_BASE_URL}/api/users/login`;
+    const response = await fetch(url, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(credentials),
     });
 
-    // Store tokens in localStorage
-    localStorage.setItem("accessToken", response.accessToken);
-    localStorage.setItem("refreshToken", response.refreshToken);
-    localStorage.setItem("user", JSON.stringify(response.user));
+    if (!response.ok) {
+      let message = "Login failed";
+      try {
+        const text = await response.text();
+        if (text) {
+          try {
+            const parsed = JSON.parse(text);
+            if (typeof parsed === "object" && parsed && typeof parsed.message === "string") {
+              message = parsed.message;
+            } else if (typeof text === "string") {
+              message = text;
+            }
+          } catch {
+            message = text;
+          }
+        }
+      } catch {
+        // ignore
+      }
+      throw new Error(message);
+    }
 
-    return response;
+    const data = (await response.json()) as AuthResponse;
+
+    // Store tokens in localStorage
+    localStorage.setItem("accessToken", data.accessToken);
+    localStorage.setItem("refreshToken", data.refreshToken);
+    localStorage.setItem("user", JSON.stringify(data.user));
+
+    return data;
   }
 
   async register(userData: RegisterRequest): Promise<User> {

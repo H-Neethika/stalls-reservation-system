@@ -1,18 +1,13 @@
 package com.booking.booking_service.service;
 
-import com.booking.booking_service.request.CreatePaymentRequest;
-import com.booking.booking_service.response.PaymentIntentResponse;
+import com.booking.booking_service.dto.request.CreatePaymentRequest;
+import com.booking.booking_service.dto.response.PaymentIntentResponse;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-
-@FeignClient(name = "PAYMENT-SERVICE", url = "http://localhost:8083/")
+@FeignClient(name = "PAYMENT-SERVICE", path = "/api/payment")
 public interface PaymentService {
-
-  @PostMapping("/api/payment/intent")
-  public ResponseEntity<PaymentIntentResponse> createPaymentIntent(
-      @RequestBody CreatePaymentRequest request);
-
+    @PostMapping("/intent")
+    PaymentIntentResponse createPaymentIntent(@RequestBody CreatePaymentRequest request);
 }

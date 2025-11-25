@@ -1,194 +1,100 @@
-# Stalls Reservation System - Microservices Architecture
+# Stalls Reservation System 🚀
 
+End-to-end stalls reservation platform with a Spring-based microservices backend and a React/Vite frontend. Vendors can browse exhibitions, reserve stalls, pay online, and receive QR-code confirmations, while organizers manage exhibitions, stalls, and payments from an internal portal.
 
-# 🚀 System Overview
+## 🧭 Architecture Overview
+- 🛡️ Cloud Gateway: routes client traffic (Spring Cloud Gateway).
+- 🧭 Eureka Server: service discovery for all services.
+- 👤 User Service: authentication, registration, JWT issuance.
+- 🗂️ Booking Service: stall catalog, availability, reservations, and lifecycle.
+- 🗓️ Exhibition Service: exhibition details and coordination with bookings/notifications.
+- 💳 Payment Service: Stripe payments and callbacks.
+- ✉️ Notification Service: emails, QR generation, and attachments.
+- ⚡ Realtime Service: WebSocket updates for stall status.
+- 🎨 Frontend: React + Vite UI for vendors and organizers.
 
-This system allows **publishers & vendors** to register, log in, view
-available stalls, pay online, and receive reservation confirmation with
-QR code.\
-Organizers get an **employee-only portal** to manage exhibitions.
+## 📂 Project Structure
+```
+stalls-reservation-system/
+|-- Backend/
+|   |-- booking-service/
+|   |-- cloud-gateway/
+|   |-- eureka-server/
+|   |-- exhibition-service/
+|   |-- notification-service/
+|   |-- payment-service/
+|   |-- realtime-service/
+|   `-- user-service/
+|-- frontend/
+|   |-- public/
+|   `-- src/
+|       |-- components/
+|       |-- contexts/
+|       |-- hooks/
+|       |-- lib/
+|       |-- pages/
+|       |-- services/
+|       |-- types/
+|       `-- utils/
+|-- .env                 # Root env file shared by services and Vite
+|-- .env.example         # Template env file (copy to .env)
+`-- README.md
+```
 
-------------------------------------------------------------------------
-# 📁 Project Structure
+## ✨ Features (at a glance)
+- ✅ Vendor flow: search exhibitions, view stall map, reserve and pay, receive QR confirmation.
+- ✅ Organizer flow: manage exhibitions, halls/stalls, reservations, payment verification, realtime stall status.
+- ✅ Security: JWT, OAuth2, gateway routing, service discovery.
+- ✅ Tooling: Java 17 + Spring Boot ecosystem, React + Vite + TypeScript, Tailwind + ShadCN UI.
 
-    stalls-reservation-system/
-    │
-    ├── Backend/
-    │   ├── booking-service/          # Manages stalls, sizes, map, availability
-    │   ├── cloud-gateway/            # API Gateway for routing (Spring Cloud Gateway)
-    │   ├── eureka-server/            # Service discovery (Netflix Eureka)
-    │   ├── exhibition-service/       # Handles exhibition details and call notification service
-    │   ├── notification-service/     # Emails + QR code generation
-    │   ├── payment-service/          # Payment integration for stall booking
-    │   └── user-service/             # User management, auth, JWT
-    │
-    ├── frontend/
-    │   ├── public/
-    │   ├── src/
-    │   │   ├── components/
-    │   │   ├── contexts/
-    │   │   ├── hooks/
-    │   │   ├── lib/
-    │   │   ├── pages/
-    │   │   ├── services/            
-    │   │   ├── types/
-    │   │   └── utils/
-    │   │
-    │   ├── App.tsx
-    │   ├── main.tsx
-    │   ├── index.css
-    │   └── index.html
-    │
-    └── README.md
+## 🧰 Prerequisites
+- ☕ Java 17+, Maven
+- 🟢 Node.js 18+ (or Bun) for the frontend
+- 🐳 Docker + Docker Compose (for Kafka/ZooKeeper)
+- 💳 Stripe CLI (for local webhook forwarding)
 
-    ------------------------------------------------------------------------
+## 🔑 Environment Variables
+Copy `.env.example` to `.env` and replace placeholders with your values. Full variable list and local defaults: [.env.example](./.env.example).
 
-# 🧩 Microservices Breakdown
+## 🐳 Start Kafka via Docker (optional but recommended)
+From repo root:
+```
+docker compose -f Backend/docker-compose.kafka.yml up -d
+```
+This starts ZooKeeper and Kafka using ports and version from `.env`.
 
-## 🔐 **User Service**
+## 🏃 Running Locally
+1) Start Eureka Server  
+```
+cd Backend/eureka-server
+mvn spring-boot:run
+```
+2) Start Cloud Gateway  
+```
+cd Backend/cloud-gateway
+mvn spring-boot:run
+```
+3) Start remaining services (new terminal per service)  
+```
+cd Backend/<service-name>
+mvn spring-boot:run
+```
+4) Start the frontend  
+```
+cd frontend
+npm install
+npm run dev
+```
 
--   User registration & login
--   JWT authentication
--   Business validation (max 3 bookings)
+## 💳 Stripe (local)
+- Set `STRIPE_SECRET_KEY`, `STRIPE_API_PUBLISHABLE`, and `STRIPE_WEBHOOK_SECRET` in `.env`.
+- Run the Stripe webhook forwarder (replace the key with yours):
+```
+stripe listen --forward-to http://localhost:9000/api/payment/webhook --api-key <your_stripe_secret_key>
+```
+- Payment service webhook endpoint: `POST /api/payment/webhook` (routed through the gateway on port `${CLOUD_GATEWAY_PORT}`).
 
-## 📦 **Booking Service**
-
--   Stall listing (small, medium, large)
--   Stall map with availability
--   Update stall status
--   Reserve stalls
--   Manage booking state
--   Communicate with payment + exhibition service
-
-## 🏢 **Exhibition Service**
--   Manage Exhibition details
--   Communicate with booking and notification service
-
-## 💳 **Payment Service**
-
--   Secure payments
--   Payment confirmation callback
--   Finalizes reservations after success
-
-## ✉️ **Notification Service**
-
--   Sends reservation email
--   Generates **QR code** (entry pass)
--   Sends downloadable attachments
-
-## 🛣️ **Cloud Gateway**
-
--   Routes all frontend requests to microservices\
--   Central entry point
-
-## 🔍 **Eureka Server**
-
--   Service registry & auto-discovery
-
-------------------------------------------------------------------------
-
-# 🧠 Frontend
-
-### Built with:
-
--   React + Vite
--   TypeScript
--   ShadCN UI / Tailwind
--   Axios for API calls
-
-### User Portal Features:
-
--   Registration & Login
--   Stall selection UI with map
--   Visual availability (green/gray)
--   Reservation confirmation popup
--   Payment redirection
--   Email + QR handling
--   Add literary genres
--   Profile & reservation history
-
-### Employee Portal Features:
-
--   View all stalls
--   View all reservations
--   Payment verification
-
-------------------------------------------------------------------------
-
-# 💳 Payment Flow
-
-1.  User selects stalls
-2.  Booking service creates **pending reservation**
-3.  Payment service processes payment
-4.  On success:
-    -   Booking confirmed
-    -   QR generated
-    -   Email sent
-5.  Frontend redirects to success page
-
-------------------------------------------------------------------------
-
-# 📧 Email + QR Flow
-
--   Notification service generates a unique QR code linked to booking
-    ID
--   Email includes:
-    -   Stall details
-    -   QR code (inline + attachment)
--   User enters exhibition using QR scan
-
-------------------------------------------------------------------------
-
-# 🛠️ Technologies Used
-
-### **Backend**
-
--   Spring Boot
--   Spring Cloud
--   Spring Security + JWT
--   Spring Data JPA
--   Netflix Eureka
--   Cloud Gateway
--   PostgreSQL
-
-### **Frontend**
-
--   React + Vite
--   TypeScript
--   Tailwind
--   Axios
-
-------------------------------------------------------------------------
-
-# ▶️ How to Run (Local)
-
-### 1️⃣ Start Eureka Server
-
-    cd Backend/eureka-server
-    mvn spring-boot:run
-
-### 2️⃣ Start Cloud Gateway
-
-    cd Backend/cloud-gateway
-    mvn spring-boot:run
-
-### 3️⃣ Start All Services
-
-Repeat:
-
-    cd Backend/<service-name>
-    mvn spring-boot:run
-
-### 4️⃣ Start Frontend
-
-    cd frontend
-    npm install
-    npm run dev
-
-------------------------------------------------------------------------
-
-# 📎 Repository
-
-GitHub: **https://github.com/H-Neethika/stalls-reservation-system**
-
-
+## 🎨 Frontend Stack and Features
+- React, Vite, TypeScript, Tailwind, ShadCN UI, Axios.
+- Vendor portal: registration/login, stall selection with availability map, reservation confirmation, payments, QR/email handling, profile/history.
+- Organizer portal: manage exhibitions, halls/stalls, view reservations, verify payments, realtime stall updates.

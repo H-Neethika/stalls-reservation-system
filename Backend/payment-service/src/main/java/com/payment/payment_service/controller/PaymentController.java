@@ -43,4 +43,18 @@ public class PaymentController {
         paymentService.handleStripeWebhook(payload, sigHeader);
         return ResponseEntity.ok("received");
     }
+
+    // Test endpoint to simulate successful payment
+    @PostMapping("/test/complete/{orderId}")
+    public ResponseEntity<String> testCompletePayment(@PathVariable Long orderId) {
+        paymentService.testCompletePayment(orderId);
+        return ResponseEntity.ok("Payment completed successfully");
+    }
+
+    // Endpoint to check payment status
+    @GetMapping("/status/{orderId}")
+    public ResponseEntity<PaymentOrderResponse> getPaymentStatus(@PathVariable Long orderId) {
+        PaymentOrderResponse response = paymentService.getPaymentOrderById(orderId);
+        return ResponseEntity.ok(response);
+    }
 }

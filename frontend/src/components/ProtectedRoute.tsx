@@ -10,6 +10,8 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   const { user, userRole, loading } = useAuth();
+  const normalizedUserRole = userRole?.toUpperCase();
+  const normalizedRequiredRole = requiredRole?.toUpperCase();
 
   if (loading) {
     return (
@@ -23,7 +25,7 @@ const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
     return <Navigate to="/auth" replace />;
   }
 
-  if (requiredRole && userRole !== requiredRole) {
+  if (normalizedRequiredRole && normalizedUserRole !== normalizedRequiredRole) {
     return <Navigate to="/" replace />;
   }
 

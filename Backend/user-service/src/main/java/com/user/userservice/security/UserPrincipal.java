@@ -9,55 +9,51 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import com.user.userservice.domain.User;
 
-public class UserPrincipal implements UserDetails {
+public record UserPrincipal(User user) implements UserDetails {
 
-	private final User user;
+    public UserPrincipal {
+        if (user == null) {
+            throw new IllegalArgumentException("User cannot be null");
+        }
+    }
 
-	public UserPrincipal(User user) {
-		this.user = user;
-	}
+    public Long getUserId() {
+        return user.getId();
+    }
 
-	public Long getUserId() {
-		return user.getId();
-	}
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        String authority = "ROLE_" + (user.getRole() != null ? user.getRole().name() : "UNKNOWN");
+        return List.of(new SimpleGrantedAuthority(authority));
+    }
 
-	public User getUser() {
-		return user;
-	}
+    @Override
+    public String getPassword() {
+        return user.getPassword();
+    }
 
-	@Override
-	public Collection<? extends GrantedAuthority> getAuthorities() {
-		String authority = "ROLE_" + user.getRole().name();
-		return List.of(new SimpleGrantedAuthority(authority));
-	}
+    @Override
+    public String getUsername() {
+        return user.getEmail();
+    }
 
-	@Override
-	public String getPassword() {
-		return user.getPassword();
-	}
+    @Override
+    public boolean isAccountNonExpired() {
+        return true;
+    }
 
-	@Override
-	public String getUsername() {
-		return user.getEmail();
-	}
+    @Override
+    public boolean isAccountNonLocked() {
+        return true;
+    }
 
-	@Override
-	public boolean isAccountNonExpired() {
-		return true;
-	}
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true;
+    }
 
-	@Override
-	public boolean isAccountNonLocked() {
-		return true;
-	}
-
-	@Override
-	public boolean isCredentialsNonExpired() {
-		return true;
-	}
-
-	@Override
-	public boolean isEnabled() {
-		return true;
-	}
+    @Override
+    public boolean isEnabled() {
+        return true;
+    }
 }

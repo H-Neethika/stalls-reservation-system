@@ -1,7 +1,7 @@
 package com.exhibition.exhibition_service.mapper;
 
 
-import com.exhibition.exhibition_service.domain.EXHIBITION_STATE;
+import com.exhibition.exhibition_service.enums.ExhibitionState;
 import com.exhibition.exhibition_service.dto.ExhibitionDTO;
 import com.exhibition.exhibition_service.model.Exhibition;
 import org.springframework.stereotype.Component;
@@ -38,7 +38,7 @@ public class ExhibitionMapper {
                 .stallsPerPerson(dto.getStallsPerPerson())
                 .exhibitionState(dto.getExhibitionState() != null
                         ? dto.getExhibitionState()
-                        : EXHIBITION_STATE.DRAFT)
+                        : ExhibitionState.DRAFT)
                 .build();
     }
 }

@@ -21,7 +21,8 @@ public class ReservationNotificationResponse {
     private Long reservationId;
     private String fairName;
     private String stallName;
-    private String stallSize;
+    private String stallType;
+    private String hallName;
     private LocalDateTime bookingTime;
     private LocalDateTime eventTime;
     private String eventLink;

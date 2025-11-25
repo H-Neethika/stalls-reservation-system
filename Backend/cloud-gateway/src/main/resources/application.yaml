@@ -1,5 +1,5 @@
 server:
-  port: ${CLOUD_GATEWAY_PORT:5000}
+  port: ${CLOUD_GATEWAY_PORT:9000}
 
 spring:
   application:
@@ -9,7 +9,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${APP_JWT_ISSUER:http://localhost:9090}
+          issuer-uri: ${APP_JWT_ISSUER:http://localhost:9002}
 
   cloud:
     gateway:
@@ -57,7 +57,7 @@ spring:
         - id: EXHIBITION-SERVICE-API
           uri: lb://EXHIBITION-SERVICE
           predicates:
-            - Path=/api/exhibition/**
+            - Path=/api/exhibition/**, /api/layout/**, /api/genres/**, /api/booking-statuses/**, /api/hall-prices/**, /api/halls/**, /api/stall-types/**
           filters:
             - StripPrefix=0
             - JwtRelay
@@ -101,6 +101,14 @@ spring:
           filters:
             - StripPrefix=1
 
+        # ---------- REALTIME SERVICE ----------
+        - id: REALTIME-SERVICE-WS
+          uri: lb:ws://REALTIME-SERVICE
+          predicates:
+            - Path=/ws-stalls/**
+          filters:
+            - StripPrefix=0
+
 
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
@@ -125,11 +133,7 @@ eureka:
     register-with-eureka: true
     fetch-registry: true
     serviceUrl:
-      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:8070/eureka}
-
-app:
-  jwt:
-    issuer: ${APP_JWT_ISSUER:http://localhost:9090}
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:9001/eureka}
 
 logging:
   level:

@@ -1,0 +1,32 @@
+server:
+  port: ${REALTIME_SERVICE_PORT:9010}
+
+spring:
+  application:
+    name: REALTIME-SERVICE
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${REALTIME_STALL_STATUS_GROUP:realtime-stall-status}
+      auto-offset-reset: earliest
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:9001/eureka}
+  instance:
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  kafka:
+    topics:
+      stall-status-events: ${STALL_STATUS_EVENTS_TOPIC:stall.status.events}

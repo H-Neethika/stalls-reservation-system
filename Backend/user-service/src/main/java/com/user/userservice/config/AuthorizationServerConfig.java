@@ -1,6 +1,5 @@
 package com.user.userservice.config;
 
-import java.time.Duration;
 import java.util.Set;
 import java.util.UUID;
 
@@ -37,102 +36,98 @@ import com.user.userservice.security.UserPrincipal;
 @Configuration
 public class AuthorizationServerConfig {
 
-	@Value("${app.oauth2.client-id:user-service-client}")
-	private String defaultClientId;
+    @Value("${app.oauth2.client-id}")
+    private String defaultClientId;
 
-	@Value("${app.oauth2.client-secret:user-service-secret}")
-	private String defaultClientSecret;
+    @Value("${app.oauth2.client-secret}")
+    private String defaultClientSecret;
 
-	@Value("${app.oauth2.redirect-uris:http://localhost:8081/login/oauth2/code/user-service-client}")
-	private String defaultRedirectUris;
+    @Value("${app.oauth2.redirect-uris}")
+    private String defaultRedirectUris;
 
-	@Value("${app.oauth2.post-logout-redirect-uris:http://localhost:8081/}")
-	private String defaultPostLogoutRedirectUris;
+    @Value("${app.oauth2.post-logout-redirect-uris}")
+    private String defaultPostLogoutRedirectUris;
 
-	@Bean
-	public RegisteredClientRepository registeredClientRepository(PasswordEncoder passwordEncoder,
-			JwtProperties jwtProperties) {
-		RegisteredClient.Builder builder = RegisteredClient.withId(UUID.randomUUID().toString())
-				.clientId(defaultClientId)
-				.clientSecret(passwordEncoder.encode(defaultClientSecret))
-				.clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-				.authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-				.authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-				.authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-				.redirectUris(uris -> parseUris(defaultRedirectUris).forEach(uris::add))
-				.postLogoutRedirectUris(uris -> parseUris(defaultPostLogoutRedirectUris).forEach(uris::add))
-				.scope(OidcScopes.OPENID)
-				.scope(OidcScopes.PROFILE)
-				.scope("users.read")
-					.scope("users.write")
-					.clientSettings(ClientSettings.builder()
-							.requireAuthorizationConsent(true)
-							.build())
-					.tokenSettings(TokenSettings.builder()
-							.reuseRefreshTokens(false)
-							.accessTokenTimeToLive(jwtProperties.accessTokenTtl())
-							.refreshTokenTimeToLive(jwtProperties.refreshTokenTtl())
-							.build());
+    @Bean
+    public RegisteredClientRepository registeredClientRepository(PasswordEncoder passwordEncoder,
+                                                                 JwtProperties jwtProperties) {
+        RegisteredClient.Builder builder = RegisteredClient.withId(UUID.randomUUID().toString())
+                .clientId(defaultClientId)
+                .clientSecret(passwordEncoder.encode(defaultClientSecret))
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
+                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+                .redirectUris(uris -> uris.addAll(parseUris(defaultRedirectUris)))
+                .postLogoutRedirectUris(uris -> uris.addAll(parseUris(defaultPostLogoutRedirectUris)))
+                .scope(OidcScopes.OPENID)
+                .scope(OidcScopes.PROFILE)
+                .scope("users.read")
+                .scope("users.write")
+                .clientSettings(ClientSettings.builder()
+                        .requireAuthorizationConsent(true)
+                        .build())
+                .tokenSettings(TokenSettings.builder()
+                        .reuseRefreshTokens(false)
+                        .accessTokenTimeToLive(jwtProperties.accessTokenTtl())
+                        .refreshTokenTimeToLive(jwtProperties.refreshTokenTtl())
+                        .build());
 
-		return new InMemoryRegisteredClientRepository(builder.build());
-	}
+        return new InMemoryRegisteredClientRepository(builder.build());
+    }
 
-	@Bean
-	public JWKSource<SecurityContext> jwkSource() {
-		return Jwks.jwkSource();
-	}
+    @Bean
+    public JWKSource<SecurityContext> jwkSource() {
+        return Jwks.jwkSource();
+    }
 
-	@Bean
-	public JwtEncoder jwtEncoder(JWKSource<SecurityContext> jwkSource) {
-		return new NimbusJwtEncoder(jwkSource);
-	}
+    @Bean
+    public JwtEncoder jwtEncoder(JWKSource<SecurityContext> jwkSource) {
+        return new NimbusJwtEncoder(jwkSource);
+    }
 
-	@Bean
-	public JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
-		return OAuth2AuthorizationServerConfiguration.jwtDecoder(jwkSource);
-	}
+    @Bean
+    public JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
+        return OAuth2AuthorizationServerConfiguration.jwtDecoder(jwkSource);
+    }
 
-	@Bean
-	public OAuth2AuthorizationService authorizationService() {
-		return new InMemoryOAuth2AuthorizationService();
-	}
+    @Bean
+    public OAuth2AuthorizationService authorizationService() {
+        return new InMemoryOAuth2AuthorizationService();
+    }
 
-	@Bean
-	public OAuth2AuthorizationConsentService authorizationConsentService() {
-		return new InMemoryOAuth2AuthorizationConsentService();
-	}
+    @Bean
+    public OAuth2AuthorizationConsentService authorizationConsentService() {
+        return new InMemoryOAuth2AuthorizationConsentService();
+    }
 
-	@Bean
-	public AuthorizationServerSettings authorizationServerSettings(JwtProperties jwtProperties) {
-		return AuthorizationServerSettings.builder()
-				.issuer(jwtProperties.issuer())
-				.build();
-	}
+    @Bean
+    public AuthorizationServerSettings authorizationServerSettings(JwtProperties jwtProperties) {
+        return AuthorizationServerSettings.builder()
+                .issuer(jwtProperties.issuer())
+                .build();
+    }
 
-	@Bean
-	public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
-		return context -> {
-			if (context.getPrincipal().getPrincipal() instanceof UserPrincipal userPrincipal) {
-				context.getClaims().claim("userId", userPrincipal.getUserId());
-				context.getClaims().claim("role", userPrincipal.getUser().getRole().name());
-				context.getClaims().claim("name", userPrincipal.getUser().getName());
-				context.getClaims().claim("organization", userPrincipal.getUser().getOrganizationName());
-			} else {
-				Role role = context.getPrincipal().getAuthorities().stream()
-						.filter(authority -> authority.getAuthority().startsWith("ROLE_"))
-						.findFirst()
-						.map(authority -> Role.valueOf(authority.getAuthority().substring("ROLE_".length())))
-						.orElse(null);
-				if (role != null) {
-					context.getClaims().claim("role", role.name());
-				}
-			}
-		};
-	}
+    @Bean
+    public OAuth2TokenCustomizer<JwtEncodingContext> jwtCustomizer() {
+        return context -> {
+            if (context.getPrincipal().getPrincipal() instanceof UserPrincipal userPrincipal) {
+                context.getClaims().claim("userId", userPrincipal.getUserId());
+                context.getClaims().claim("role", userPrincipal.user().getRole().name());
+                context.getClaims().claim("name", userPrincipal.user().getName());
+                context.getClaims().claim("organization", userPrincipal.user().getOrganizationName());
+            } else {
+                context.getPrincipal().getAuthorities().stream()
+                        .filter(authority -> authority.getAuthority().startsWith("ROLE_"))
+                        .findFirst()
+                        .map(authority -> Role.valueOf(authority.getAuthority().substring("ROLE_".length()))).ifPresent(role -> context.getClaims().claim("role", role.name()));
+            }
+        };
+    }
 
-	private Set<String> parseUris(String uris) {
-		Set<String> values = StringUtils.commaDelimitedListToSet(uris);
-		values.removeIf(value -> !StringUtils.hasText(value));
-		return values;
-	}
+    private Set<String> parseUris(String uris) {
+        Set<String> values = StringUtils.commaDelimitedListToSet(uris);
+        values.removeIf(value -> !StringUtils.hasText(value));
+        return values;
+    }
 }

@@ -1,10 +1,10 @@
 package com.exhibition.exhibition_service.service;
 
-import com.exhibition.exhibition_service.dto.ExhibitionDTO;
-import com.exhibition.exhibition_service.model.Exhibition;
-import com.exhibition.exhibition_service.domain.EXHIBITION_STATE;
-
+import java.time.LocalDateTime;
 import java.util.List;
+
+import com.exhibition.exhibition_service.dto.ExhibitionDTO;
+import com.exhibition.exhibition_service.enums.ExhibitionState;
 
 public interface ExhibitionService {
 
@@ -14,7 +14,9 @@ public interface ExhibitionService {
     void deleteExhibition(Long id);
     ExhibitionDTO getExhibitionById(Long id);
     List<ExhibitionDTO> getAllExhibitions();
-    List<ExhibitionDTO> getExhibitionsByState(EXHIBITION_STATE state);
-    List<ExhibitionDTO> getExhibitionsByUserId(Long userId);
+    List<ExhibitionDTO> getExhibitionsByState(ExhibitionState state);
+    List<com.exhibition.exhibition_service.dto.ExhibitionWithHallsResponse> getExhibitionsByOrganizer(Long organizerId);
+    List<com.exhibition.exhibition_service.dto.ExhibitionWithHallsResponse> getExhibitionsByStateWithHalls(ExhibitionState state);
+    List<com.exhibition.exhibition_service.dto.ExhibitionBriefResponse> getExhibitionsByDateRange(LocalDateTime start, LocalDateTime end);
 
 }
