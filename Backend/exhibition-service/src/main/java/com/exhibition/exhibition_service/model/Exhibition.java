@@ -1,6 +1,6 @@
 package com.exhibition.exhibition_service.model;
 
-import com.exhibition.exhibition_service.domain.EXHIBITION_STATE;
+import com.exhibition.exhibition_service.enums.ExhibitionState;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -31,7 +31,7 @@ public class Exhibition {
     private int stallsPerPerson;
     @Enumerated(EnumType.STRING)
     @Builder.Default
-    private EXHIBITION_STATE exhibitionState = EXHIBITION_STATE.DRAFT;
+    private ExhibitionState exhibitionState = ExhibitionState.DRAFT;
 
 
 }

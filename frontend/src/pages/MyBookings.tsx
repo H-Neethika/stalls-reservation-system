@@ -1,72 +1,96 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { mockApi } from "@/lib/mockData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, Download } from "lucide-react";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
+import { reservationService } from "@/services/reservationService";
+import { exhibitionService } from "@/services/exhibitionService";
+import { Exhibition } from "@/types";
 
-interface Booking {
-  id: string;
-  status: string;
-  created_at: string;
-  qr_code?: string;
-  stall: {
-    name: string;
-    size: string;
-    price: number;
-  };
-  hall: {
-    name: string;
-  };
+interface ReservedStall {
+  id: number;
+  hallName?: string;
+  stallName?: string;
+  stallType?: string;
+  price?: number;
+  bookingStatus?: string;
 }
+
+interface ReservationSummary {
+  id: number;
+  exhibitionId?: number;
+  createdAt?: string;
+  status?: string;
+  totalAmount?: number;
+  stalls?: ReservedStall[];
+}
+
+const statusVariant = (status?: string) => {
+  if (!status) return "secondary";
+  const normalized = status.toUpperCase();
+  if (normalized === "CONFIRMED") return "default";
+  if (normalized === "FAILED") return "destructive";
+  return "secondary";
+};
 
 const MyBookings = () => {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<ReservationSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exhibitions, setExhibitions] = useState<Record<number, Exhibition | null>>({});
 
-  useEffect(() => {
-    if (user) {
-      fetchBookings();
+  const fetchExhibitionDetails = async (reservations: ReservationSummary[]) => {
+    const uniqueIds = Array.from(
+      new Set(
+        reservations
+          .map((r) => r.exhibitionId)
+          .filter((id): id is number => typeof id === "number"),
+      ),
+    ).filter((id) => exhibitions[id] === undefined);
+
+    if (uniqueIds.length === 0) return;
+
+    try {
+      const results = await Promise.all(
+        uniqueIds.map(async (id) => {
+          try {
+            const data = await exhibitionService.getExhibition(String(id));
+            return { id, data };
+          } catch (error) {
+            console.error("Failed to fetch exhibition", id, error);
+            return { id, data: null };
+          }
+        }),
+      );
+
+      setExhibitions((prev) => {
+        const next = { ...prev };
+        results.forEach(({ id, data }) => {
+          next[id] = data;
+        });
+        return next;
+      });
+    } catch (error) {
+      console.error("Unexpected exhibition fetch error", error);
     }
-  }, [user]);
+  };
 
   const fetchBookings = async () => {
+    setLoading(true);
     try {
-      const reservations = await mockApi.getReservations(user?.id);
-      const allStalls = await mockApi.getStalls();
-      const allHalls = await mockApi.getHalls();
-
-      const transformedBookings: Booking[] = reservations.map((res) => {
-        const stall = allStalls.find((s) => s.id === res.stall_id);
-        const hall = allHalls.find((h) => h.id === stall?.hall_id);
-
-        return {
-          id: res.id,
-          status: res.status,
-          created_at: res.created_at,
-          qr_code: res.qr_code,
-          stall: {
-            name: stall?.name || "Unknown",
-            size: stall?.size || "SMALL",
-            price: stall?.price || 0,
-          },
-          hall: {
-            name: hall?.name || "Unknown",
-          },
-        };
-      });
-
-      setBookings(transformedBookings);
+      const reservations = await reservationService.getMyReservations();
+      const list = Array.isArray(reservations) ? reservations : [];
+      setBookings(list);
+      await fetchExhibitionDetails(list);
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Could not load bookings",
+        description: error?.message || "Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -74,12 +98,26 @@ const MyBookings = () => {
     }
   };
 
-  const downloadQRCode = (qrCode: string, stallName: string) => {
-    const link = document.createElement("a");
-    link.download = `${stallName}_QRCode.png`;
-    link.href = qrCode;
-    link.click();
-  };
+  useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+    fetchBookings();
+  }, [user]);
+
+  const reservedBookings = useMemo(
+    () =>
+      bookings.filter(
+        (booking) =>
+          booking.stalls?.some(
+            (stall) => (stall.bookingStatus || "").toUpperCase() === "RESERVED",
+          ),
+      ).filter((booking) => booking.status === "CONFIRMED"),
+    [bookings],
+
+  );
+  // console.log("Reserved Bookings:", reservedBookings);
 
   if (loading) {
     return (
@@ -94,11 +132,7 @@ const MyBookings = () => {
       <nav className="border-b bg-card/50 backdrop-blur">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/halls")}
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigate("/halls")}>
               <ArrowLeft className="w-5 h-5" />
             </Button>
             <h1 className="text-2xl font-bold">My Bookings</h1>
@@ -110,7 +144,16 @@ const MyBookings = () => {
       </nav>
 
       <div className="container mx-auto px-4 py-8">
-        {bookings.length === 0 ? (
+        {!user ? (
+          <Card className="text-center py-12">
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                Please sign in to view your bookings.
+              </p>
+              <Button onClick={() => navigate("/login")}>Go to Login</Button>
+            </CardContent>
+          </Card>
+        ) : reservedBookings.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
               <p className="text-muted-foreground mb-4">
@@ -121,66 +164,86 @@ const MyBookings = () => {
           </Card>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {bookings.map((booking) => (
-              <Card key={booking.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>{booking.hall.name}</span>
-                    <Badge
-                      variant={
-                        booking.status === "CONFIRMED" ? "default" : "secondary"
-                      }
-                    >
-                      {booking.status}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Stall:</span>
-                      <span className="font-medium">{booking.stall.name}</span>
+            {reservedBookings.map((booking) => {
+              const exhibition = booking.exhibitionId
+                ? exhibitions[booking.exhibitionId]
+                : undefined;
+              return (
+                <Card key={booking.id}>
+                  <CardHeader className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle>
+                        {exhibition?.exhibitionName
+                          ? exhibition.exhibitionName
+                          : `Reservation #${booking.id}`}
+                      </CardTitle>
+                      <Badge variant={statusVariant(booking.status)}>
+                        {booking.status || "UNKNOWN"}
+                      </Badge>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Size:</span>
-                      <Badge variant="outline">{booking.stall.size}</Badge>
+                    <div className="text-xs text-muted-foreground">
+                      {booking.createdAt
+                        ? `Booked on ${new Date(booking.createdAt).toLocaleString()}`
+                        : "Booking date unavailable"}
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Price:</span>
-                      <span className="font-medium">
-                        LKR {Number(booking.stall.price).toLocaleString()}
+                    <div className="text-xs text-muted-foreground">
+                      Exhibition ID: {booking.exhibitionId ?? "N/A"}
+                    </div>
+                    {exhibition && (
+                      <div className="text-xs text-muted-foreground">
+                        {exhibition.startDateTime && exhibition.endDateTime
+                          ? `${new Date(exhibition.startDateTime).toLocaleDateString()} - ${new Date(exhibition.endDateTime).toLocaleDateString()}`
+                          : "Dates not available"}
+                      </div>
+                    )}
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Total amount</span>
+                      <span className="font-semibold">
+                        LKR {Number(booking.totalAmount || 0).toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Booked on:</span>
-                      <span>
-                        {new Date(booking.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
 
-                  {booking.qr_code && (
-                    <div className="space-y-2">
-                      <img
-                        src={booking.qr_code}
-                        alt="QR Code"
-                        className="w-full h-auto border rounded"
-                      />
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() =>
-                          downloadQRCode(booking.qr_code!, booking.stall.name)
-                        }
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download QR Code
-                      </Button>
+                    <div className="space-y-3">
+                      <div className="text-sm font-semibold">Stalls</div>
+                      {booking.stalls && booking.stalls.length > 0 ? (
+                        booking.stalls.map((stall) => (
+                          <div
+                            key={`${booking.id}-${stall.id}`}
+                            className="rounded border px-3 py-3 text-sm flex items-start justify-between gap-3"
+                          >
+                            <div>
+                              <div className="font-semibold">
+                                {stall.stallName || `Stall ${stall.id}`}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {stall.hallName || "Hall not available"}
+                                {stall.stallType ? ` • ${stall.stallType}` : ""}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-semibold">
+                                LKR {Number(stall.price || 0).toLocaleString()}
+                              </div>
+                              {stall.bookingStatus && (
+                                <Badge variant="outline" className="mt-1">
+                                  {stall.bookingStatus}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">
+                          No stall details available for this reservation.
+                        </p>
+                      )}
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

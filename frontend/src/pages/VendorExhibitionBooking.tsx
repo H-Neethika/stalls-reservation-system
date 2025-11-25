@@ -8,7 +8,17 @@ import { Loader2, ArrowLeft, Map, ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { exhibitionService } from "@/services/exhibitionService";
 import { layoutService } from "@/services/layoutService";
+import { reservationService } from "@/services/reservationService";
+import { connectRealtime } from "@/services/realtimeService";
 import StallMap from "./organizer/StallMap";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Price {
   hallId: number;
@@ -40,6 +50,7 @@ interface SelectedStall {
   stallTypeId?: number;
   stallType?: string;
   price: number;
+  exhibitionStallId?: number;
 }
 
 const MAX_SELECTION = 3;
@@ -57,6 +68,14 @@ const VendorExhibitionBooking = () => {
   const [hallLayouts, setHallLayouts] = useState<Record<string, any[]>>({});
   const [loadingHallId, setLoadingHallId] = useState<string | null>(null);
   const [selectedStalls, setSelectedStalls] = useState<SelectedStall[]>([]);
+  const [availabilityMap, setAvailabilityMap] = useState<
+    Record<string, Record<string, { status?: string; exhibitionStallId?: number }>>
+  >({});
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [paymentRedirecting, setPaymentRedirecting] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const [realtimeDisconnect, setRealtimeDisconnect] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     const fetchExhibition = async () => {
@@ -86,24 +105,92 @@ const VendorExhibitionBooking = () => {
     fetchExhibition();
   }, [exhibitionId, initialExhibition, toast]);
 
-  const priceLookup = useMemo(() => {
-    const map: Record<string, Record<number, number>> = {};
-    exhibition?.halls?.forEach((hall) => {
-      const hId = Number(hall.id);
-      hall.prices?.forEach((p) => {
-        map[String(hId)] = map[String(hId)] || {};
-        map[String(hId)][Number(p.stallTypeId)] = Number(p.price);
+  useEffect(() => {
+    const fetchAvailability = async () => {
+      if (!exhibitionId) return;
+
+      try {
+        const data = await layoutService.getExhibitionLayouts(Number(exhibitionId));
+        // console.log("Availability Data:", data);
+
+        const map: Record<string, Record<string, { status?: string; exhibitionStallId?: number }>> = {};
+
+        (data || []).forEach((hall) => {
+          if (!hall.hallId) return;
+
+          const hallKey = String(hall.hallId);
+          map[hallKey] = map[hallKey] || {};
+
+          hall.stalls?.forEach((stall) => {
+            map[hallKey][String(stall.stallId)] = {
+              status: stall.status,
+              exhibitionStallId: stall.exhibitionStallId,
+            };
+          });
+        });
+
+        setAvailabilityMap(map);
+
+      } catch (error: any) {
+        toast({
+          title: "Failed to load availability",
+          description: error?.message || "Stall availability could not be loaded.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchAvailability();
+  }, [exhibitionId, toast]);
+
+  useEffect(() => {
+    if (!exhibitionId) return;
+    const sub = connectRealtime(exhibitionId, (msg) => {
+      const { hallId, stallId, status } = msg || {};
+      if (!hallId || !stallId || !status) return;
+      setAvailabilityMap((prev) => {
+        const next = { ...prev };
+        const hallKey = String(hallId);
+        const stallKey = String(stallId);
+        next[hallKey] = next[hallKey] || {};
+        next[hallKey][stallKey] = {
+          ...(next[hallKey][stallKey] || {}),
+          status: status.toUpperCase(),
+          exhibitionStallId: msg.exhibitionStallId ?? next[hallKey][stallKey]?.exhibitionStallId,
+        };
+        return next;
       });
     });
-    return map;
-  }, [exhibition]);
+    setRealtimeDisconnect(() => sub.disconnect);
+    return () => {
+      sub.disconnect();
+      setRealtimeDisconnect(null);
+    };
+  }, [exhibitionId]);
+
+  const mergedLayouts = useMemo(() => {
+    const result: Record<string, any[]> = {};
+    Object.entries(hallLayouts).forEach(([hallId, stalls]) => {
+      const availability = availabilityMap[hallId] || {};
+      result[hallId] = stalls.map((stall: any) => ({
+        ...stall,
+        bookingStatus: availability[String(stall.id)]?.status || stall.bookingStatus,
+        exhibitionStallId: availability[String(stall.id)]?.exhibitionStallId ?? stall.exhibitionStallId,
+      }));
+    });
+    // console.log("Hall Layouts:", hallLayouts);
+    // console.log("Availability Map:", availabilityMap);
+    console.log("Merged Layouts:", result);
+    return result;
+  }, [hallLayouts, availabilityMap]);
 
   const handleLoadHallLayout = async (hallId: string | number) => {
     if (hallLayouts[String(hallId)]) return;
     try {
       setLoadingHallId(String(hallId));
       const data = await layoutService.getLayoutByHall(Number(hallId));
-      setHallLayouts((prev) => ({ ...prev, [String(hallId)]: data?.stalls || [] }));
+      const baseStalls = data?.stalls || [];
+      setHallLayouts((prev) => ({ ...prev, [String(hallId)]: baseStalls }));
     } catch (error: any) {
       toast({
         title: "Failed to load hall map",
@@ -119,6 +206,20 @@ const VendorExhibitionBooking = () => {
   const handleToggleStall = (hallId: string, stall: any) => {
     const stallId = String(stall.id);
     const isSelected = selectedStalls.some((s) => s.stallId === stallId);
+    const currentStatus =
+      availabilityMap[hallId]?.[stallId]?.status ||
+      stall.bookingStatus ||
+      stall.status ||
+      "AVAILABLE";
+    const normalizedStatus = String(currentStatus).toUpperCase();
+    if (normalizedStatus !== "AVAILABLE") {
+      toast({
+        title: "Stall unavailable",
+        description: "This stall cannot be selected.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     if (isSelected) {
       setSelectedStalls((prev) => prev.filter((s) => s.stallId !== stallId));
@@ -135,10 +236,14 @@ const VendorExhibitionBooking = () => {
     }
 
     const typeId = Number(stall.stallTypeId) || undefined;
-    const price =
-      priceLookup[String(hallId)]?.[typeId || 0] ??
-      priceLookup[String(hallId)]?.[1] ??
-      0;
+    const hallPrices =
+      exhibition?.halls?.find((h) => String(h.id) === String(hallId))?.prices || [];
+    const normalizedType = String(stall.stallType || stall.size || "").toUpperCase();
+    const priceEntry =
+      hallPrices.find((p) => Number(p.stallTypeId) === typeId) ||
+      hallPrices.find((p) => String(p.stallType || "").toUpperCase() === normalizedType) ||
+      hallPrices[0];
+    const price = priceEntry ? Number(priceEntry.price) : 0;
 
     setSelectedStalls((prev) => [
       ...prev,
@@ -148,11 +253,82 @@ const VendorExhibitionBooking = () => {
         stallTypeId: typeId,
         stallType: stall.stallType || stall.size,
         price,
+        exhibitionStallId: availabilityMap[hallId]?.[stallId]?.exhibitionStallId,
       },
     ]);
   };
 
   const totalPrice = selectedStalls.reduce((sum, s) => sum + Number(s.price || 0), 0);
+
+  const handleProceed = () => {
+    if (selectedStalls.length === 0) return;
+    setShowConfirm(true);
+  };
+
+  const lockSelectedStalls = async (status: "PENDING" | "AVAILABLE") => {
+    const stallIds = selectedStalls.map((s) => Number(s.stallId));
+    if (stallIds.length === 0) return;
+    try {
+      await reservationService.updateStallStatus({
+        stallIds,
+        bookingStatus: status,
+      });
+    } catch (error: any) {
+      console.error("Failed to update stall lock status", error);
+      toast({
+        title: "Stall lock failed",
+        description: error?.message || `Could not set stalls to ${status}.`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleConfirmBooking = async () => {
+    setBookingLoading(true);
+    try {
+      const stallIds = selectedStalls.map((s) => Number(s.stallId));
+      const reservationData = await reservationService.createReservation({
+        exhibitionId: Number(exhibition?.id),
+        stallIds,
+      });
+      const reservationId = reservationData?.reservationId ?? reservationData?.id ?? reservationData;
+
+      const paymentData = await reservationService.createPayment({
+        reservationId,
+        currency: "LKR",
+      });
+
+      const link =
+        paymentData?.paymentUrl || paymentData?.url || paymentData?.link || paymentData?.redirectUrl;
+      if (!link) {
+        throw new Error("Payment link not returned");
+      }
+
+      setPaymentRedirecting(true);
+      setPaymentUrl(link);
+      setShowConfirm(false);
+      window.location.href = link;
+    } catch (error: any) {
+      toast({
+        title: "Booking failed",
+        description: error?.message || "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setBookingLoading(false);
+      setPaymentRedirecting(false);
+    }
+  };
+
+  // useEffect(() => {
+  //   if (showConfirm) {
+  //     lockSelectedStalls("PENDING");
+  //   } else if (!bookingLoading && !paymentUrl) {
+  //     // only unlock if user closed the dialog without proceeding
+  //     lockSelectedStalls("AVAILABLE");
+  //   }
+  //   // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, [showConfirm]);
 
   if (loading) {
     return (
@@ -172,7 +348,15 @@ const VendorExhibitionBooking = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <div className="border-b bg-card/60 backdrop-blur">
+      {paymentRedirecting && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="flex items-center gap-3 rounded-lg bg-card px-4 py-3 shadow-lg">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-sm font-medium text-foreground">Redirecting to payment...</span>
+          </div>
+        </div>
+      )}
+      <div className="border-b bg-card/60 backdrop-blur sticky top-0 z-30">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -183,8 +367,8 @@ const VendorExhibitionBooking = () => {
               <p className="text-sm text-muted-foreground">
                 {exhibition.startDateTime && exhibition.endDateTime
                   ? `${new Date(exhibition.startDateTime).toLocaleDateString()} - ${new Date(
-                      exhibition.endDateTime,
-                    ).toLocaleDateString()}`
+                    exhibition.endDateTime,
+                  ).toLocaleDateString()}`
                   : "Dates TBA"}
               </p>
             </div>
@@ -194,6 +378,28 @@ const VendorExhibitionBooking = () => {
 
       <div className="container mx-auto px-4 py-8 grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
+          <Card className="border-dashed sticky top-24 z-20">
+            <CardContent className="flex flex-wrap gap-4 items-center py-4 text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">Status</span>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-3 w-3 rounded-full bg-white border" />
+                <span>Available</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-3 w-3 rounded-full bg-[#ea9c0cff]" />
+                <span>Pending</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-3 w-3 rounded-full bg-[#e00707ff]" />
+                <span>Reserved</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-block h-3 w-3 rounded-full bg-[#046528ff]" />
+                <span>Selected</span>
+              </div>
+            </CardContent>
+          </Card>
+
           <Collapse
             accordion={false}
             bordered={false}
@@ -222,10 +428,10 @@ const VendorExhibitionBooking = () => {
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         Loading hall map...
                       </div>
-                    ) : hallLayouts[String(hall.id)] ? (
-                      hallLayouts[String(hall.id)].length > 0 ? (
+                    ) : mergedLayouts[String(hall.id)] ? (
+                      mergedLayouts[String(hall.id)].length > 0 ? (
                         <StallMap
-                          stalls={hallLayouts[String(hall.id)]}
+                          stalls={mergedLayouts[String(hall.id)]}
                           readOnly={false}
                           selectedIds={selectedStalls
                             .filter((s) => s.hallId === String(hall.id))
@@ -254,7 +460,7 @@ const VendorExhibitionBooking = () => {
         </div>
 
         <div className="lg:col-span-1">
-          <Card className="sticky top-4">
+          <Card className="sticky top-28">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5" />
@@ -305,13 +511,58 @@ const VendorExhibitionBooking = () => {
                 </div>
               </div>
 
-              <Button className="w-full" disabled={selectedStalls.length === 0}>
+              <Button className="w-full" disabled={selectedStalls.length === 0} onClick={handleProceed}>
                 Proceed to Pay
               </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Booking</DialogTitle>
+            <DialogDescription>Review your selected stalls before proceeding to payment.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <div className="space-y-2">
+              {selectedStalls.map((stall) => (
+                <div key={stall.stallId} className="flex justify-between rounded border px-3 py-2">
+                  <div>
+                    <div className="font-semibold">{stall.stallId}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Hall {stall.hallId} · {stall.stallType || "Stall"}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold">LKR {Number(stall.price).toLocaleString()}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between font-semibold border-t pt-3">
+              <span>Total</span>
+              <span>LKR {totalPrice.toLocaleString()}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowConfirm(false)} disabled={bookingLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmBooking} disabled={bookingLoading}>
+              {bookingLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                "Confirm Booking"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

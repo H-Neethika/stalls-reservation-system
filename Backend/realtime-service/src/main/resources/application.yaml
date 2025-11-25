@@ -1,0 +1,16 @@
+server:
+  port: ${REALTIME_SERVICE_PORT:9010}
+
+spring:
+  application:
+    name: REALTIME-SERVICE
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: ${REALTIME_STALL_STATUS_GROUP:realtime-stall-status}
+      auto-offset-reset: earliest
+
+app:
+  kafka:
+    topics:
+      stall-status-events: ${STALL_STATUS_EVENTS_TOPIC:stall.status.events}

@@ -1,11 +1,10 @@
 package com.booking.booking_service.model;
 
-
+import com.booking.booking_service.enums.ReservationStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -23,13 +22,17 @@ public class Reservation {
 
     private Long userId;
 
-    @OneToMany(cascade = CascadeType.ALL)
-    @JoinColumn(name = "reservation_id")
-    private List<ExhibitionStall> stall=new ArrayList<>();
+    private Long exhibitionId;
+
+    @ElementCollection
+    @CollectionTable(name = "reservation_stall_ids", joinColumns = @JoinColumn(name = "reservation_id"))
+    @Column(name = "stall_id")
+    private List<Long> stallIds = new ArrayList<>();
 
     private Date createdAt;
 
     private Long totalAmount;
 
-
+    @Enumerated(EnumType.STRING)
+    private ReservationStatus status;
 }

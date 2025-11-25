@@ -5,9 +5,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
-import org.springframework.security.oauth2.client.endpoint.DefaultAuthorizationCodeTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
+import org.springframework.security.oauth2.client.endpoint.RestClientAuthorizationCodeTokenResponseClient;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
@@ -17,13 +17,13 @@ import reactor.netty.transport.ProxyProvider;
 @Configuration
 public class ProxyConfig {
 
-    @Value("${http.proxy.host:#{null}}")
+    @Value("${http.proxy.host}")
     private String proxyHost;
 
-    @Value("${http.proxy.port:#{null}}")
+    @Value("${http.proxy.port}")
     private Integer proxyPort;
 
-    @Value("${http.non.proxy.hosts:localhost|127.*|[::1]}")
+    @Value("${http.non.proxy.hosts}")
     private String nonProxyHosts;
 
     @Bean
@@ -42,11 +42,10 @@ public class ProxyConfig {
             }
 
             // Return default client - it will use the system proxy properties
-            return new DefaultAuthorizationCodeTokenResponseClient();
         } else {
             log.info("No proxy configuration detected. Using default OAuth2 client.");
-            return new DefaultAuthorizationCodeTokenResponseClient();
         }
+        return new RestClientAuthorizationCodeTokenResponseClient();
     }
 
     @Bean
@@ -78,10 +77,6 @@ public class ProxyConfig {
         }
     }
 
-    /**
-     * Extract hostname from proxy URL if it includes protocol
-     * e.g., "http://10.50.225.222" -> "10.50.225.222"
-     */
     private String extractHost(String proxyHost) {
         if (proxyHost.startsWith("http://")) {
             return proxyHost.substring(7);
@@ -91,14 +86,7 @@ public class ProxyConfig {
         return proxyHost;
     }
 
-    /**
-     * Escape special regex characters in nonProxyHosts pattern
-     * Converts patterns like "localhost|127.*|[::1]|*.local" 
-     * to valid regex by escaping the * character
-     */
     private String escapeRegexSpecialChars(String pattern) {
-        // Replace standalone * with .* for proper regex matching
-        // This converts "*.local" to ".*\.local"
         return pattern.replace("*.", ".*\\.");
     }
 }

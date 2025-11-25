@@ -41,7 +41,6 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 		String registrationId = userRequest.getClientRegistration().getRegistrationId();
 		String email = extractEmail(userRequest, oauth2User);
 
-		// Check if user exists, but DON'T create yet - let the success handler decide
 		User user = externalUserProcessor.findUser(email);
 
 		Map<String, Object> attributes = new HashMap<>(oauth2User.getAttributes());
@@ -49,14 +48,11 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 		attributes.put("registrationId", registrationId);
 
 		if (user != null) {
-			// Existing user - add user info to attributes
 			UserPrincipal principal = new UserPrincipal(user);
 			attributes.put("userId", user.getId());
 			attributes.putIfAbsent("name", user.getName());
 			return new DefaultOAuth2User(principal.getAuthorities(), attributes, "email");
 		} else {
-			// New user - just return OAuth2 info, don't create yet
-			// The success handler will validate and create if appropriate
 			attributes.putIfAbsent("name", extractDisplayName(oauth2User));
 			return new DefaultOAuth2User(List.of(), attributes, "email");
 		}

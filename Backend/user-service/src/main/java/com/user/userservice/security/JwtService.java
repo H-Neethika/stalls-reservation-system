@@ -24,16 +24,13 @@ public class JwtService {
 		this.jwtEncoder = jwtEncoder;
 	}
 
-	public String generateToken(User user) {
-		return generateAccessToken(user);
-	}
-
 	public String generateAccessToken(User user) {
 		return buildToken(user, properties.accessTokenTtl(), Map.of("scope", List.of("users.read")), "ACCESS");
 	}
 
-	public String generateRefreshToken(User user) {
-		return buildToken(user, properties.refreshTokenTtl(), Map.of("scope", List.of("users.refresh")), "REFRESH");
+	public String generateRefreshToken(User user, String tokenId) {
+		return buildToken(user, properties.refreshTokenTtl(),
+				Map.of("scope", List.of("users.refresh"), "jti", tokenId), "REFRESH");
 	}
 
 	private String buildToken(User user, Duration ttl, Map<String, Object> additionalClaims, String tokenType) {

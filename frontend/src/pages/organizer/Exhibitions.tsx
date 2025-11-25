@@ -14,7 +14,7 @@ import { OrganizerLayout } from "@/components/organizer/OrganizerLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { exhibitionService } from "@/services/exhibitionService";
@@ -97,6 +97,9 @@ const OrganizerExhibitions = () => {
   const [stallTypes, setStallTypes] = useState<{ id: number; label: string }[]>([]);
   const [selectedHallIds, setSelectedHallIds] = useState<number[]>([]);
   const [hallPrices, setHallPrices] = useState<Record<number, Record<number, number>>>({});
+  const startDateValue = Form.useWatch("startDateTime", form);
+  const endDateValue = Form.useWatch("endDateTime", form);
+  const bookingOpenValue = Form.useWatch("bookingOpenDateTime", form);
 
   const toCard = (expo: Exhibition): ExhibitionCard => ({
     ...expo,
@@ -493,6 +496,10 @@ const OrganizerExhibitions = () => {
               variant="outline"
               size="sm"
               onClick={() => handleEditExhibition(record.id)}
+              disabled={
+                String(record.exhibitionState || record.status || "")
+                  .toUpperCase() === "PUBLISHED"
+              }
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -500,6 +507,10 @@ const OrganizerExhibitions = () => {
               variant="destructive"
               size="sm"
               onClick={() => handleDeleteExhibition(record.id)}
+              disabled={
+                String(record.exhibitionState || record.status || "")
+                  .toUpperCase() === "PUBLISHED"
+              }
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -513,6 +524,14 @@ const OrganizerExhibitions = () => {
   return (
     <OrganizerLayout title="Exhibitions">
       <div className="flex flex-col gap-6">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold">Publishing is final</p>
+            <p>Exhibitions can’t be modified once they are published.</p>
+          </div>
+        </div>
+
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-3xl font-bold">Manage Exhibitions</h2>
@@ -620,7 +639,19 @@ const OrganizerExhibitions = () => {
               name="bookingOpenDateTime"
               rules={[{ required: true, message: "Select when booking opens" }]}
             >
-              <DatePicker showTime className="w-full" />
+              <DatePicker
+                showTime
+                className="w-full"
+                disabled={!startDateValue || !endDateValue}
+                disabledDate={(current) => {
+                  if (!startDateValue) return true;
+                  const today = dayjs().startOf("day");
+                  return (
+                    (current && current < today) ||
+                    (current && current > dayjs(startDateValue).endOf("day"))
+                  );
+                }}
+              />
             </Form.Item>
             <Form.Item
               label="Booking Closes"
@@ -641,7 +672,18 @@ const OrganizerExhibitions = () => {
                 }),
               ]}
             >
-              <DatePicker showTime className="w-full" />
+              <DatePicker
+                showTime
+                className="w-full"
+                disabled={!startDateValue || !endDateValue || !bookingOpenValue}
+                disabledDate={(current) => {
+                  if (!bookingOpenValue || !startDateValue) return true;
+                  return (
+                    (current && current < dayjs(bookingOpenValue).startOf("day")) ||
+                    (current && current > dayjs(startDateValue).endOf("day"))
+                  );
+                }}
+              />
             </Form.Item>
           </div>
           <Divider orientation="left" plain>
@@ -776,18 +818,31 @@ const OrganizerExhibitions = () => {
               </Badge>
             </div>
             <div className="space-y-2">
-              <p className="text-muted-foreground">Halls</p>
-              <div className="flex flex-wrap gap-2">
-                {Array.isArray(selectedExhibition.halls) && selectedExhibition.halls.length > 0 ? (
-                  selectedExhibition.halls.map((hall: any) => (
-                    <Badge key={hall.id} variant="secondary">
-                      {hall.hallName || `Hall ${hall.id}`}
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="text-sm text-muted-foreground">No halls linked.</span>
-                )}
-              </div>
+              <p className="text-muted-foreground">Halls & Prices</p>
+              {Array.isArray((selectedExhibition as any).halls) &&
+                (selectedExhibition as any).halls.length > 0 ? (
+                (selectedExhibition as any).halls.map((hall: any) => (
+                  <div key={hall.id || hall.hallId} className="rounded border p-2">
+                    <div className="font-semibold text-foreground">
+                      {hall.hallName || `Hall ${hall.hallId || hall.id}`}
+                    </div>
+                    {Array.isArray(hall.prices) && hall.prices.length > 0 ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {hall.prices.map((price: any) => (
+                          <Badge key={price.id || `${hall.id}-${price.stallTypeId}`} variant="secondary">
+                            {price.stallType || `Type ${price.stallTypeId}`}: LKR{" "}
+                            {Number(price.price).toLocaleString()}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No prices found for this hall.</p>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No halls linked.</p>
+              )}
             </div>
           </div>
         ) : (

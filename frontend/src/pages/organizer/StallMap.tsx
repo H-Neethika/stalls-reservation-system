@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import hallData from "./mockHallMap.json";
 
 type StallSize = "SMALL" | "MEDIUM" | "LARGE";
-type StallStatus = "available" | "held" | "processing" | "booked" | "reserved";
+type StallStatus = "available" | "held" | "processing" | "booked" | "reserved" | "pending";
 
 type Point = { x: number; y: number };
 
@@ -25,11 +25,12 @@ type Stall = {
 };
 
 const statusColors: Record<StallStatus, string> = {
-  available: "#22c55e",
-  held: "#3b82f6",
+  available: "#ffffff",
+  held: "#046528ff", // user-selected
   processing: "#eab308",
   booked: "#ef4444",
-  reserved: "#94a3b8",
+  reserved: "#e00707ff",
+  pending: "#ea9c0cff",
 };
 
 const toSize = (value?: string): StallSize => {
@@ -45,6 +46,7 @@ const toStatus = (value?: string): StallStatus => {
   if (normalized === "PROCESSING") return "processing";
   if (normalized === "BOOKED") return "booked";
   if (normalized === "RESERVED") return "reserved";
+  if (normalized === "PENDING") return "pending";
   return "available";
 };
 
@@ -88,7 +90,7 @@ export default function StallMap({
   const handleStallClick = (stall: Stall) => {
     const current = status[stall.id];
     if (readOnly) return;
-    if (current === "booked" || current === "reserved" || current === "processing") return;
+    if (current === "booked" || current === "reserved" || current === "processing" || current === "pending") return;
     if (onToggleSelect) {
       onToggleSelect(stall.id, stall);
     }
