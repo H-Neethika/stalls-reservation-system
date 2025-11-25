@@ -77,8 +77,8 @@ const ManageStalls = () => {
   }, [toast]);
 
   const filteredStalls = useMemo(() => {
-    if (selectedHall === "all") return stalls;
-    return stalls.filter((stall) => stall.hall_id === selectedHall);
+    const scoped = selectedHall === "all" ? stalls : stalls.filter((stall) => stall.hall_id === selectedHall);
+    return scoped.filter((stall) => stall.is_reserved);
   }, [selectedHall, stalls]);
 
   const statusBadge = (isReserved: boolean) =>
@@ -103,10 +103,8 @@ const ManageStalls = () => {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-3xl font-bold">Stalls</h2>
-            <p className="text-muted-foreground">
-              View availability and create new stalls for each hall.
-            </p>
+            <h2 className="text-3xl font-bold">Reserved Stalls</h2>
+            <p className="text-muted-foreground">Only stalls that are already reserved are shown here.</p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Select value={selectedHall} onValueChange={setSelectedHall}>
@@ -131,12 +129,12 @@ const ManageStalls = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Stall inventory</CardTitle>
+            <CardTitle>Reserved stall inventory</CardTitle>
           </CardHeader>
           <CardContent className="overflow-x-auto">
             {filteredStalls.length === 0 ? (
               <p className="py-6 text-center text-muted-foreground">
-                No stalls found for the selected hall.
+                No reserved stalls found for the selected hall.
               </p>
             ) : (
               <Table>
