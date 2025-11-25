@@ -10,6 +10,22 @@ spring:
       group-id: ${REALTIME_STALL_STATUS_GROUP:realtime-stall-status}
       auto-offset-reset: earliest
 
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: ${EUREKA_DEFAULT_ZONE:http://localhost:9001/eureka}
+  instance:
+    instance-id: ${spring.application.name}:${spring.application.instance_id:${random.value}}
+    prefer-ip-address: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
 app:
   kafka:
     topics:
