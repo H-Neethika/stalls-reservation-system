@@ -41,7 +41,24 @@ public class CorsConfig {
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+
+        // Apply CORS on REST/HTTP endpoints only. The realtime websocket path
+        // adds its own CORS headers downstream, and duplicating them here causes
+        // browsers to see multiple Access-Control-Allow-Origin values.
+        for (String path : List.of(
+                "/api/**",
+                "/oauth2/**",
+                "/login/oauth2/**",
+                "/swagger-ui/**",
+                "/v3/api-docs/**",
+                "/USER-SERVICE/**",
+                "/BOOKING-SERVICE/**",
+                "/EXHIBITION-SERVICE/**",
+                "/NOTIFICATION-SERVICE/**",
+                "/PAYMENT-SERVICE/**")) {
+            source.registerCorsConfiguration(path, configuration);
+        }
+
         return new CorsWebFilter(source);
     }
 }

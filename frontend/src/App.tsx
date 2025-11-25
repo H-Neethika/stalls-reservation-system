@@ -14,9 +14,9 @@ import OrganizerDashboard from "./pages/organizer/Dashboard";
 import OrganizerExhibitions from "./pages/organizer/Exhibitions";
 import OrganizerSettings from "./pages/organizer/Settings";
 import ManageHalls from "./pages/organizer/ManageHalls";
-import ManageStalls from "./pages/organizer/ManageStalls";
 import HallDesigner from "./pages/organizer/HallDesigner";
 import AllReservations from "./pages/organizer/AllReservations";
+import ExhibitionReservations from "./pages/organizer/ExhibitionReservations";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -109,23 +109,7 @@ const App = () => (
               }
             />
             <Route
-              path="/organizer/stalls"
-              element={
-                <ProtectedRoute requiredRole="organizer">
-                  <ManageStalls />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/organizer/halls/design"
-              element={
-                <ProtectedRoute requiredRole="organizer">
-                  <HallDesigner />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/organizer/stalls/create"
               element={
                 <ProtectedRoute requiredRole="organizer">
                   <HallDesigner />
@@ -137,6 +121,14 @@ const App = () => (
               element={
                 <ProtectedRoute requiredRole="organizer">
                   <AllReservations />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/exhibition-reservations"
+              element={
+                <ProtectedRoute requiredRole="organizer">
+                  <ExhibitionReservations />
                 </ProtectedRoute>
               }
             />

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Building2, Loader2, Map, ArrowLeft } from "lucide-react";
 import { OrganizerLayout } from "@/components/organizer/OrganizerLayout";
 import { hallService } from "@/services/hallService";
@@ -8,6 +8,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import StallMap from "./StallMap";
 import { layoutService } from "@/services/layoutService";
+import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
 
 interface HallResponse {
   id?: string;
@@ -28,6 +30,7 @@ const ManageHalls = () => {
   const [showMap, setShowMap] = useState(false);
   const [hallLayouts, setHallLayouts] = useState<Record<string, any[]>>({});
   const [layoutLoading, setLayoutLoading] = useState(false);
+  const mapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadHalls = async () => {
@@ -91,6 +94,39 @@ const ManageHalls = () => {
   const closeHallMap = () => {
     setActiveHall(null);
     setShowMap(false);
+  };
+
+  const downloadMap = async (mode: "png" | "pdf") => {
+    if (!mapRef.current) return;
+    try {
+      const canvas = await html2canvas(mapRef.current, { scale: 2 });
+      if (mode === "png") {
+        const link = document.createElement("a");
+        link.download = `${activeHall?.hallName || "hall-map"}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      } else {
+        const imgData = canvas.toDataURL("image/png");
+        const pdf = new jsPDF({
+          orientation: canvas.width > canvas.height ? "landscape" : "portrait",
+          unit: "px",
+          format: [canvas.width, canvas.height],
+        });
+        pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+        pdf.save(`${activeHall?.hallName || "hall-map"}.pdf`);
+      }
+      toast({
+        title: "Download started",
+        description: `Your hall map is being saved as ${mode.toUpperCase()}.`,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not download map.";
+      toast({
+        title: "Download failed",
+        description: message,
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -206,6 +242,8 @@ const ManageHalls = () => {
     </>
   );
 
+  console.log(hallLayouts, "hall layouts");
+
   return (
     <OrganizerLayout title="Halls">
       <div className="space-y-6">
@@ -216,6 +254,14 @@ const ManageHalls = () => {
               <Map className="h-4 w-4" />
               Viewing map for {activeHall?.hallName || "Hall"}
             </div>
+            <div className="flex gap-2 mb-4">
+              <Button size="sm" variant="outline" onClick={() => downloadMap("png")} disabled={layoutLoading}>
+                Download PNG
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => downloadMap("pdf")} disabled={layoutLoading}>
+                Download PDF
+              </Button>
+            </div>
             {layoutLoading && (
               <div className="flex h-32 items-center justify-center text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -225,7 +271,12 @@ const ManageHalls = () => {
             {!layoutLoading && (
               <>
                 {activeHall?.id && hallLayouts[String(activeHall.id)] ? (
-                  <StallMap stalls={hallLayouts[String(activeHall.id)]} readOnly />
+                  <div ref={mapRef} className="space-y-2">
+                    {activeHall?.hallName && (
+                      <div className="text-sm font-semibold text-foreground">{activeHall.hallName}</div>
+                    )}
+                    <StallMap stalls={hallLayouts[String(activeHall.id)]} readOnly />
+                  </div>
                 ) : (
                   <div className="text-sm text-muted-foreground">
                     No layout data available for this hall.
