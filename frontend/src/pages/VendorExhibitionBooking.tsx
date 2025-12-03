@@ -390,7 +390,7 @@ const VendorExhibitionBooking = () => {
                 <span>Pending</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="inline-block h-3 w-3 rounded-full bg-[#e00707ff]" />
+                <span className="inline-block h-3 w-3 rounded-full bg-[#ADADAD]" />
                 <span>Reserved</span>
               </div>
               <div className="flex items-center gap-2">
