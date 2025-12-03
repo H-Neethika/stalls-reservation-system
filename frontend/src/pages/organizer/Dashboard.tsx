@@ -95,11 +95,10 @@ const OrganizerDashboard = () => {
 
       setLoading(true);
       try {
-        const [expoData, hallData, resData] = await Promise.all([
-          exhibitionService.getExhibitionsByOrganizer(user.id),
-          hallService.getHalls(),
-          reservationService.getAllReservations(),
-        ]);
+        const expoData = await exhibitionService.getExhibitionsByOrganizer(user.id).catch(() => []);
+        const hallData = await hallService.getHalls().catch(() => []);
+        const resData = await reservationService.getAllReservations().catch(() => []);
+
 
         const expoList = Array.isArray(expoData) ? expoData : [];
         const expoIdSet = new Set(expoList.map((expo) => Number(expo.id)));

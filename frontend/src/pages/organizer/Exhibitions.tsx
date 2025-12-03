@@ -408,9 +408,11 @@ const OrganizerExhibitions = () => {
         const created = await exhibitionService.createExhibition(payload);
         toast({
           title: "Exhibition created",
-          description: `${created.exhibitionName} has been created successfully.`,
+          description: `${payload.exhibitionName} has been created successfully.`,
         });
-        setExhibitions((prev) => [toCard(created), ...prev]);
+        const fullList = await exhibitionService.getExhibitionsByOrganizer(user.id);
+
+        setExhibitions(fullList.map(toCard));
       }
       closeModal();
     } catch (error: unknown) {
@@ -589,7 +591,7 @@ const OrganizerExhibitions = () => {
           layout="vertical"
           form={form}
           onFinish={handleSubmitExhibition}
-          initialValues={{ stallsPerPerson: 1 }}
+          initialValues={{ stallsPerPerson: 3 }}
         >
           <div className="grid md:grid-cols-2 gap-2">
             <Form.Item
@@ -691,7 +693,7 @@ const OrganizerExhibitions = () => {
           </Divider>
           <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
             <p className="text-sm text-muted-foreground">
-              Select one or more halls and set stall type prices for each hall. These sample halls are shown until the backend halls endpoint is wired.
+              Select one or more halls and set stall type prices for each hall.
             </p>
             <div className="grid gap-3">
               <Checkbox.Group
