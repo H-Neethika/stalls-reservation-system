@@ -408,9 +408,11 @@ const OrganizerExhibitions = () => {
         const created = await exhibitionService.createExhibition(payload);
         toast({
           title: "Exhibition created",
-          description: `${created.exhibitionName} has been created successfully.`,
+          description: `${payload.exhibitionName} has been created successfully.`,
         });
-        setExhibitions((prev) => [toCard(created), ...prev]);
+        const fullList = await exhibitionService.getExhibitionsByOrganizer(user.id);
+
+        setExhibitions(fullList.map(toCard));
       }
       closeModal();
     } catch (error: unknown) {
