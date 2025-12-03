@@ -40,4 +40,9 @@ public class GenreServiceImpl implements GenreService {
     public List<Genre> findAll() {
         return genreRepository.findAll();
     }
+
+    @Override
+    public Genre getGenreByStallId(Long id) {
+        return genreRepository.findByStallId(id);
+    }
 }

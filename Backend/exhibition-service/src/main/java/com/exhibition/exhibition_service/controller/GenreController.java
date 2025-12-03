@@ -46,4 +46,11 @@ public class GenreController {
         genreService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/stall/{id}")
+    public ResponseEntity<Genre> findByStallId(@PathVariable Long id) {
+        return ResponseEntity.ok(genreService.getGenreByStallId(id));
+    }
+
+
 }

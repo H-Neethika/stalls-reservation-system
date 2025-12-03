@@ -9,4 +9,6 @@ public interface GenreService {
     Genre find(Long id);
     void delete(Long id);
     List<Genre> findAll();
+    public Genre getGenreByStallId(Long id);
+
 }
