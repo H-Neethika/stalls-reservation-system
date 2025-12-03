@@ -693,7 +693,7 @@ const OrganizerExhibitions = () => {
           </Divider>
           <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
             <p className="text-sm text-muted-foreground">
-              Select one or more halls and set stall type prices for each hall. These sample halls are shown until the backend halls endpoint is wired.
+              Select one or more halls and set stall type prices for each hall.
             </p>
             <div className="grid gap-3">
               <Checkbox.Group
