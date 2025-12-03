@@ -589,7 +589,7 @@ const OrganizerExhibitions = () => {
           layout="vertical"
           form={form}
           onFinish={handleSubmitExhibition}
-          initialValues={{ stallsPerPerson: 1 }}
+          initialValues={{ stallsPerPerson: 3 }}
         >
           <div className="grid md:grid-cols-2 gap-2">
             <Form.Item
