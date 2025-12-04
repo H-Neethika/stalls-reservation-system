@@ -16,6 +16,7 @@ public class ReservationEmailDetails extends EmailDetails {
     private Long reservationId;
     private String fairName;
     private String stallName;
+    private String displayName;
     private String stallType;
     private String hallName;
     private LocalDateTime bookingTime;

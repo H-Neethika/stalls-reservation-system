@@ -23,6 +23,7 @@ public class NotificationMapper {
             reservationNotificationRequest.setEventLink(emailDetails.getEventLink());
             reservationNotificationRequest.setBookingTime(emailDetails.getBookingTime());
             reservationNotificationRequest.setFairName(emailDetails.getFairName());
+            reservationNotificationRequest.setDisplayName(emailDetails.getDisplayName());
             reservationNotificationRequest.setStallName(emailDetails.getStallName());
             reservationNotificationRequest.setStallType(emailDetails.getStallType());
             reservationNotificationRequest.setHallName(emailDetails.getHallName());
@@ -58,6 +59,7 @@ public class NotificationMapper {
         EmailDetails emailDetails = new ReservationEmailDetails(
                 reservationNotificationRequest.getReservationId(),
                 reservationNotificationRequest.getFairName(),
+                reservationNotificationRequest.getDisplayName(),
                 reservationNotificationRequest.getStallName(),
                 reservationNotificationRequest.getStallType(),
                 reservationNotificationRequest.getHallName(),
@@ -95,6 +97,7 @@ public class NotificationMapper {
             return new ReservationEmailDetails(
                     emailDetails.getReservationId(),
                     emailDetails.getFairName(),
+                    emailDetails.getDisplayName(),
                     emailDetails.getStallName(),
                     emailDetails.getStallType(),
                     emailDetails.getHallName(),
@@ -120,6 +123,7 @@ public class NotificationMapper {
         return new ReservationEmailDetails(
                 notificationRequest.getReservationId(),
                 notificationRequest.getFairName(),
+                notificationRequest.getDisplayName(),
                 notificationRequest.getStallName(),
                 notificationRequest.getStallType(),
                 notificationRequest.getHallName(),
@@ -143,6 +147,7 @@ public class NotificationMapper {
         reservationNotificationResponse.setEventTime(notificationRequest.getEventTime());
         reservationNotificationResponse.setReservationId(notificationRequest.getReservationId());
         reservationNotificationResponse.setFairName(notificationRequest.getFairName());
+        reservationNotificationResponse.setDisplayName(notificationRequest.getDisplayName());
         reservationNotificationResponse.setStallName(notificationRequest.getStallName());
         reservationNotificationResponse.setStallType(notificationRequest.getStallType());
         reservationNotificationResponse.setHallName(notificationRequest.getHallName());

@@ -179,6 +179,7 @@ public class ReservationServiceImpl implements ReservationService {
             .map(st -> {
               ReservedStallResponse stallDto = new ReservedStallResponse();
               stallDto.setId(st.getId());
+              stallDto.setDisplayName(st.getDisplayName());
               stallDto.setPrice(st.getPrice());
               stallDto.setStallType(st.getStallType());
               stallDto.setHallName(st.getHallName());

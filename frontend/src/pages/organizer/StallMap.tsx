@@ -8,15 +8,18 @@ type Point = { x: number; y: number };
 
 type StallInput = {
   id: string | number;
+  displayName?: string; 
   size?: StallSize;
   stallType?: string;
   bookingStatus?: string;
   points?: Point[];
   path?: string | null;
+
 };
 
 type Stall = {
   id: string;
+  displayName: string; 
   size: StallSize;
   points: Point[];
   path?: string | null;
@@ -72,6 +75,7 @@ export default function StallMap({
       .filter((s) => s.points && s.points.length > 0)
       .map((stall) => ({
         id: String(stall.id),
+        displayName: stall.displayName ?? String(stall.id),
         size: toSize(stall.size || stall.stallType),
         points: stall.points as Point[],
         path: stall.path ?? null,
@@ -84,6 +88,7 @@ export default function StallMap({
     });
 
     setStalls(mapped);
+    console.log("stalls : ",stalls);
     setStatus(initialStatus);
   }, [externalStalls]);
 
@@ -143,7 +148,7 @@ export default function StallMap({
               fill="#0f172a"
               fontWeight="400"
             >
-              {stall.id}
+             {stall.displayName}
             </text>
           </g>
         );

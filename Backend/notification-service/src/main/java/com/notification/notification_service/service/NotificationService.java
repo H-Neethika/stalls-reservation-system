@@ -141,7 +141,7 @@ public class NotificationService {
         Map<String, Object> qrcodeDetails = new HashMap<>();
         qrcodeDetails.put("reservationId", notificationRequest.getReservationId());
         qrcodeDetails.put("stallType", notificationRequest.getStallType());
-        qrcodeDetails.put("stallName", notificationRequest.getStallName());
+        qrcodeDetails.put("stallName", notificationRequest.getDisplayName());
         qrcodeDetails.put("fairName", notificationRequest.getFairName());
 
         try {
@@ -312,7 +312,7 @@ public class NotificationService {
                         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8f9fa; color: #333; }
                         .container { max-width: 600px; background: #fff; margin: 30px auto; border-radius: 12px;
                                      box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
-                        .header { background-color: #5b3cc4; color: #fff; text-align: center; padding: 25px 20px; }
+                        .header { background-color: #0b428e; color: #fff; text-align: center; padding: 25px 20px; }
                         .header h1 { margin: 0; font-size: 24px; }
                         .content { padding: 30px 40px; text-align: left; }
                         .details { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px; line-height: 1.6; }

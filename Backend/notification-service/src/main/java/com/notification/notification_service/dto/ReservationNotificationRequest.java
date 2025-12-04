@@ -18,6 +18,7 @@ public class ReservationNotificationRequest {
     private String email;
     private Long reservationId;
     private String fairName;
+    private String displayName;
     private String stallName;
     private String stallType;
     private String hallName;

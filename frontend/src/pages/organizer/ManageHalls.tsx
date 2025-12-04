@@ -151,7 +151,7 @@ const ManageHalls = () => {
           <h2 className="text-3xl font-bold">{showMap ? activeHall?.hallName || "Hall map" : "Halls"}</h2>
           <p className="text-muted-foreground">
             {showMap
-              ? "Interactive hall map. Click a stall to toggle its state (demo)."
+              ? "Hall layout overview. Stall positions and numbers are fixed and shown for reference."
               : user?.organizationName
                 ? `${user.organizationName}'s halls`
                 : "Your halls at a glance."}
@@ -209,7 +209,7 @@ const ManageHalls = () => {
               <CardContent>
                 <div className="text-sm text-muted-foreground space-y-2">
                   {hall.hallName && <p className="font-semibold text-foreground">{hall.hallName}</p>}
-                  <p>ID: {hall.id ?? "N/A"}</p>
+                  {/* <p>ID: {hall.id ?? "N/A"}</p> */}
                   {typeof hall.totalStalls === "number" && (
                     <p>
                       Total Stalls: <span className="font-medium text-foreground">{hall.totalStalls}</span>

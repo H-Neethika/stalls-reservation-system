@@ -20,6 +20,7 @@ public class ReservationNotificationResponse {
     private String userName;
     private Long reservationId;
     private String fairName;
+    private String displayName;
     private String stallName;
     private String stallType;
     private String hallName;
