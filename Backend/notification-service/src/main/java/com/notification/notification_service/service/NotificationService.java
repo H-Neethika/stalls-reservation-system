@@ -24,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.util.*;
+import java.util.stream.Collectors;
+
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 
@@ -140,9 +142,8 @@ public class NotificationService {
     private byte[] getQRCodeBytes(ReservationNotificationRequest notificationRequest) {
         Map<String, Object> qrcodeDetails = new HashMap<>();
         qrcodeDetails.put("reservationId", notificationRequest.getReservationId());
-        qrcodeDetails.put("stallType", notificationRequest.getStallType());
-        qrcodeDetails.put("stallName", notificationRequest.getStallName());
         qrcodeDetails.put("fairName", notificationRequest.getFairName());
+        qrcodeDetails.put("stalls", notificationRequest.getStalls());
 
         try {
             ObjectMapper objectMapper = new ObjectMapper();
@@ -153,6 +154,7 @@ public class NotificationService {
             throw new QRCodeGenerationException("Failed to generate QR code", e);
         }
     }
+
 
     public byte[] getQRCodeBytes(Long reservationId, Long userId) {
         Notification notification = getReservationNotification(reservationId, userId)
@@ -305,69 +307,114 @@ public class NotificationService {
             ReservationNotificationRequest notificationRequest,
             URI websiteUri
     ) {
+
+        String stallDetailsHtml = notificationRequest.getStalls()
+                .stream()
+                .map(s -> """
+        <div style="margin: 6px 0;">
+            <b>%s</b> — %s (%s)
+        </div>
+    """.formatted(s.getStallName(), s.getStallType(), s.getHallName()))
+                .collect(Collectors.joining());
+
+
+
+
+
         return """
-                <html>
-                <head>
-                    <style>
-                        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8f9fa; color: #333; }
-                        .container { max-width: 600px; background: #fff; margin: 30px auto; border-radius: 12px;
-                                     box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
-                        .header { background-color: #5b3cc4; color: #fff; text-align: center; padding: 25px 20px; }
-                        .header h1 { margin: 0; font-size: 24px; }
-                        .content { padding: 30px 40px; text-align: left; }
-                        .details { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px; line-height: 1.6; }
-                        .qr-section { text-align: center; margin-top: 30px; }
-                        #qrCode { width: 180px; height: 180px; border: 4px solid #eee; border-radius: 10px; }
-                        .footer { background: #f1f1f1; text-align: center; padding: 15px; font-size: 13px; color: #666; }
-                        .btn { display: inline-block; background-color: #5b3cc4; color: white; padding: 10px 20px;
-                               border-radius: 5px; text-decoration: none; margin-top: 15px; }
-                        .btn:hover { background-color: #4a2aa5; color: white; }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="header">
-                            <h1>📖 %s - Stall Reservation Confirmed!</h1>
-                        </div>
-                        <div class="content">
-                            <h2>Dear %s,</h2>
-                            <p>We’re thrilled to confirm your stall reservation for the upcoming <b>%s</b>.</p>
-                            <div class="details">
-                                <p><b>Reservation ID:</b> %s</p>
-                                <p><b>Stall Name:</b> %s</p>
-                                <p><b>Stall Type:</b> %s</p>
-                                <p><b>Hall:</b> %s</p>
-                                <p><b>Booking Time:</b> %s</p>
-                                <p><b>Event Date & Time:</b> %s</p>
-                            </div>
-                
-                            <div class="qr-section">
-                                <p>Please present this QR code at the venue entrance for verification:</p>
-                                <img id="qrCode" src="cid:qrCode" alt="QR Code" />
-                                <p>We look forward to seeing you at the fair!</p>
-                                <a href="%s" class="btn">View Event Details</a>
-                            </div>
-                        </div>
-                        <div class="footer">
-                            <p>© 2025 Book Fair Committee |
-                            <a href="%s" style="color:#5b3cc4;text-decoration:none;">Visit Website</a></p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-                """.formatted(
-                notificationRequest.getFairName(),
-                notificationRequest.getUserName(),
-                notificationRequest.getFairName(),
-                notificationRequest.getReservationId(),
-                notificationRequest.getStallName(),
-                notificationRequest.getStallType(),
-                notificationRequest.getHallName(),
-                notificationRequest.getBookingTime(),
-                notificationRequest.getEventTime(),
-                notificationRequest.getEventLink(),
-                websiteUri
+<html>
+<head>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8f9fa; color: #333; }
+        .container { max-width: 600px; background: #fff; margin: 30px auto; border-radius: 12px;
+                     box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background-color: #0b428e; color: #fff; text-align: center; padding: 25px 20px; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .content { padding: 30px 40px; text-align: left; }
+        .details { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px; line-height: 1.6; }
+
+        /* Bullet point fix: using inline SVG ensures visibility in all mail clients */
+        .stall-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+        }
+        .stall-bullet {
+            width: 10px;
+            height: 10px;
+            margin-right: 10px;
+        }
+        .stall-text {
+            font-size: 14px;
+        }
+
+        .qr-section { text-align: center; margin-top: 30px; }
+        #qrCode { width: 180px; height: 180px; border: 4px solid #eee; border-radius: 10px; }
+
+        .btn {
+             display: inline-block;
+             background-color: #0b428e;
+             color: white !important;
+             padding: 12px 24px;
+             border-radius: 6px;
+             text-decoration: none;
+             margin-top: 20px;
+             font-weight: 600;
+         }
+         .btn:hover { background-color: #09366f; }
+
+        .footer { background: #f1f1f1; text-align: center; padding: 15px; font-size: 13px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📖 %s - Stall Reservation Confirmed!</h1>
+        </div>
+
+        <div class="content">
+            <h2>Dear %s,</h2>
+            <p>We’re thrilled to confirm your stall reservation for the upcoming <b>%s</b>.</p>
+
+            <div class="details">
+
+                <p><b>Exhibition Date & Time:</b> %s</p>
+
+                <p><b>Your Booking Time:</b> %s</p>
+
+                <p><b>Your Booked Stalls:</b></p>
+
+                %s   <!-- stall details HTML inserted here -->
+
+            </div>
+
+            <div class="qr-section">
+                <p>Please present this QR code at the venue entrance for verification:</p>
+                <img id="qrCode" src="cid:qrCode" alt="QR Code" />
+                <p>We look forward to seeing you at the fair!</p>
+                <a href="%s" class="btn">View Event Details</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>© 2025 Book Fair Committee |
+            <a href="%s" style="color:#5b3cc4;text-decoration:none;">Visit Website</a></p>
+        </div>
+    </div>
+</body>
+</html>
+""".formatted(
+                notificationRequest.getFairName(),        // header fair name
+                notificationRequest.getUserName(),        // Dear X
+                notificationRequest.getFairName(),        // fair name again
+                notificationRequest.getEventTime(),       // Exhibition time
+                notificationRequest.getBookingTime(),     // Booking time
+                stallDetailsHtml,                         // Stalls HTML
+                notificationRequest.getEventLink(),       // Event button link
+                websiteUri                                // Footer site link
         );
+
+
     }
 
     private String getAccountActivationEmailBody(AccountActivationNotificationRequest notificationRequest) {

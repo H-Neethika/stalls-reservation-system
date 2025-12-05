@@ -5,6 +5,7 @@ import lombok.Data;
 @Data
 public class ReservedStallResponse {
     private Long id;
+    private String displayName;
     private Long price;
     private String stallType;
     private String hallName;

@@ -1,5 +1,6 @@
 package com.notification.notification_service.model.email_details;
 
+import com.notification.notification_service.dto.StallInfo;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -7,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -15,9 +17,8 @@ import java.time.LocalDateTime;
 public class ReservationEmailDetails extends EmailDetails {
     private Long reservationId;
     private String fairName;
-    private String stallName;
-    private String stallType;
-    private String hallName;
+    private String displayName;
+    private List<StallInfo> stalls;
     private LocalDateTime bookingTime;
     private LocalDateTime eventTime;
     private URI eventLink;

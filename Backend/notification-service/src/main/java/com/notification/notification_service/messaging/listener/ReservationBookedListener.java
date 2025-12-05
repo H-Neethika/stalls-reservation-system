@@ -1,6 +1,7 @@
 package com.notification.notification_service.messaging.listener;
 
 import com.notification.notification_service.dto.ReservationNotificationRequest;
+import com.notification.notification_service.dto.StallInfo;
 import com.notification.notification_service.enums.NotificationType;
 import com.notification.notification_service.messaging.event.ReservationBookedEvent;
 import com.notification.notification_service.messaging.event.ReservationBookedEvent.StallSummary;
@@ -54,12 +55,18 @@ public class ReservationBookedListener {
         request.setEventTime(toLocalDateTime(event.getEventTime()));
         request.setEventLink(resolveEventLink(event.getEventLink()));
 
-        StallSummary stall = firstStall(event.getStalls());
-        if (stall != null) {
-            request.setStallName(stall.getStallName());
-            request.setStallType(stall.getStallType());
-            request.setHallName(stall.getHallName());
+        if (event.getStalls() != null && !event.getStalls().isEmpty()) {
+            List<StallInfo> stallInfoList = event.getStalls().stream()
+                    .map(s -> new StallInfo(
+                            s.getStallName(),
+                            s.getStallType(),
+                            s.getHallName()
+                    ))
+                    .toList();
+
+            request.setStalls(stallInfoList);
         }
+
         return request;
     }
 
