@@ -333,12 +333,12 @@ public class NotificationService {
                             <h2>Dear %s,</h2>
                             <p>We’re thrilled to confirm your stall reservation for the upcoming <b>%s</b>.</p>
                             <div class="details">
-                                <p><b>Reservation ID:</b> %s</p>
-                                <p><b>Stall Name:</b> %s</p>
-                                <p><b>Stall Type:</b> %s</p>
-                                <p><b>Hall:</b> %s</p>
-                                <p><b>Booking Time:</b> %s</p>
-                                <p><b>Event Date & Time:</b> %s</p>
+                                <p><b>Reservation ID :</b> %s</p>
+                                <p><b>Stall Number :</b> %s</p>
+                                <p><b>Stall Type :</b> %s</p>
+                                <p><b>Hall Name :</b> %s</p>
+                                <p><b>Reservation Time :</b> %s</p>
+                                <p><b>Exhibition Date & Time :</b> %s</p>
                             </div>
                 
                             <div class="qr-section">

@@ -141,7 +141,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
      * Promote draft exhibitions to PUBLISHED when booking window has opened.
      * Runs every 10 minutes.
      */
-    @Scheduled(fixedDelayString = "600000")
+    @Scheduled(fixedDelayString = "30000")
     @Transactional
     public void autoPublishOpenedExhibitions() {
         LocalDateTime now = LocalDateTime.now();

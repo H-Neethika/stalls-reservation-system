@@ -133,6 +133,8 @@ public class LayoutService {
                 es.setExhibition(exhibition);
                 es.setStall(stall);
                 es.setBookingStatus(available);
+                es.setStallName(stall.getDisplayName());
+
                 exhibitionStalls.add(es);
             }
             if (!exhibitionStalls.isEmpty()) {
