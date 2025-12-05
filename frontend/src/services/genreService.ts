@@ -43,7 +43,7 @@ class GenreService {
   }
 
   async createGenre(payload: {
-    name: string;
+    names: string[];
     reservationId: number;
     stallId: number;
   }) {
@@ -84,13 +84,29 @@ class GenreService {
   async updateGenre(
     genreId: number,
     payload: {
-      name?: string;
+      names?: string[];
       reservationId?: number;
       stallId?: number;
     }
   ) {
     const response = await authFetch(`${API_BASE_URL}/api/genres/${genreId}`, {
       method: "PUT",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw await parseErrorResponse(response);
+    }
+
+    return response.json();
+  }
+
+  async createBulkGenres(
+    payload: Array<{ names: string[]; reservationId: number; stallId: number }>
+  ) {
+    const response = await authFetch(`${API_BASE_URL}/api/genres/bulk`, {
+      method: "POST",
       headers: this.getAuthHeaders(),
       body: JSON.stringify(payload),
     });

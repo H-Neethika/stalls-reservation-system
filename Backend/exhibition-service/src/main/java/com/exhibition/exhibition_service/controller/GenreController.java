@@ -52,5 +52,10 @@ public class GenreController {
         return ResponseEntity.ok(genreService.getGenreByStallId(id));
     }
 
+    @PostMapping("/bulk")
+    public ResponseEntity<List<Genre>> createBulkGenres(@RequestBody List<Genre> genres) {
+        return ResponseEntity.ok(genreService.createGenres(genres));
+    }
+
 
 }
