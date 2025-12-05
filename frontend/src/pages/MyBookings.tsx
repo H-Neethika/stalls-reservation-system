@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 
 interface ReservedStall {
   id: number;
+  displayName?: string;
   hallName?: string;
   stallName?: string;
   stallType?: string;
@@ -350,7 +351,7 @@ const MyBookings = () => {
                               <div className="flex items-start justify-between gap-3">
                                 <div>
                                   <div className="font-semibold">
-                                    {stall.stallName || `Stall ${stall.id}`}
+                                    {`Stall ${stall.displayName}` || `Stall ${stall.id}`}
                                   </div>
                                   <div className="text-xs text-muted-foreground">
                                     {stall.hallName || "Hall not available"}

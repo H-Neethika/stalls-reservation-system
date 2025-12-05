@@ -133,6 +133,8 @@ public class LayoutService {
                 es.setExhibition(exhibition);
                 es.setStall(stall);
                 es.setBookingStatus(available);
+                es.setStallName(stall.getDisplayName());
+
                 exhibitionStalls.add(es);
             }
             if (!exhibitionStalls.isEmpty()) {
@@ -329,6 +331,7 @@ public class LayoutService {
     private StallLayoutResponse toStallLayout(Stall stall) {
         StallLayoutResponse dto = new StallLayoutResponse();
         dto.setId(stall.getId());
+        dto.setDisplayName(stall.getDisplayName());
         Optional.ofNullable(stall.getStallType()).ifPresent(type -> {
             dto.setStallTypeId(type.getId());
             dto.setStallType(type.getType());
@@ -352,6 +355,7 @@ public class LayoutService {
     private StallSummaryResponse toSummary(Stall stall) {
         StallSummaryResponse response = new StallSummaryResponse();
         response.setId(stall.getId());
+        response.setDisplayName(stall.getDisplayName());
         Optional.ofNullable(stall.getStallType()).ifPresent(type -> {
             response.setStallType(type.getType());
             priceFor(stall.getHall(), type).ifPresent(response::setPrice);

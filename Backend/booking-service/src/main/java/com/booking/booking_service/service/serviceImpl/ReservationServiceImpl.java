@@ -42,51 +42,71 @@ public class ReservationServiceImpl implements ReservationService {
 
   @Override
   public Reservation createReservation(ReservationRequest reservationRequest, Long userId) {
+
+    System.out.println("\n========== [DEBUG] createReservation() START ==========");
+    System.out.println("[DEBUG] Incoming userId       = " + userId);
+    System.out.println("[DEBUG] Incoming exhibitionId = " + reservationRequest.getExhibitionId());
+    System.out.println("[DEBUG] Incoming stallIds     = " + reservationRequest.getStallIds());
+
     List<Long> stallIds = reservationRequest.getStallIds();
     if (stallIds == null || stallIds.isEmpty()) {
+      System.out.println("[ERROR] No stall IDs provided!");
       throw new IllegalArgumentException("At least one stall must be selected");
     }
 
+    // Fetch stall summary
     List<ExternalStallSummaryResponse> summaries = fetchStallSummaries(stallIds);
+    System.out.println("[DEBUG] Stall summary count   = " + summaries.size());
+    summaries.forEach(s -> System.out.println("[DEBUG] Stall Summary => id=" + s.getId()
+            + ", status=" + s.getBookingStatus()
+            + ", price=" + s.getPrice()
+            + ", hall=" + s.getHallName()
+    ));
+
+    // Check for missing stalls
     if (summaries.size() != stallIds.size()) {
-      Set<Long> returned = summaries.stream()
-          .map(ExternalStallSummaryResponse::getId)
-          .collect(Collectors.toSet());
+      System.out.println("[ERROR] MISMATCH: Input stallIds vs Fetched summaries!");
+      Set<Long> returnedIds = summaries.stream().map(ExternalStallSummaryResponse::getId).collect(Collectors.toSet());
+      System.out.println("[DEBUG] Returned stalls: " + returnedIds);
+
       List<Long> missing = stallIds.stream()
-          .filter(id -> !returned.contains(id))
-          .toList();
-      throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST,
-          "Unknown stall ids: " + missing
-      );
+              .filter(id -> !returnedIds.contains(id))
+              .toList();
+
+      System.out.println("[ERROR] Missing stalls = " + missing);
+
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown stall ids: " + missing);
     }
 
-    // Block double-booking: ensure all requested stalls are available
+    // Check for unavailable stalls
     List<Long> unavailable = summaries.stream()
-        .filter(s -> s.getBookingStatus() != null && !"AVAILABLE".equalsIgnoreCase(s.getBookingStatus()))
-        .map(ExternalStallSummaryResponse::getId)
-        .toList();
+            .filter(s -> s.getBookingStatus() != null && !"AVAILABLE".equalsIgnoreCase(s.getBookingStatus()))
+            .map(ExternalStallSummaryResponse::getId)
+            .toList();
+
     List<Long> available = summaries.stream()
-        .filter(s -> s.getBookingStatus() == null || "AVAILABLE".equalsIgnoreCase(s.getBookingStatus()))
-        .map(ExternalStallSummaryResponse::getId)
-        .toList();
+            .filter(s -> s.getBookingStatus() == null || "AVAILABLE".equalsIgnoreCase(s.getBookingStatus()))
+            .map(ExternalStallSummaryResponse::getId)
+            .toList();
+
+    System.out.println("[DEBUG] Available stalls   = " + available);
+    System.out.println("[DEBUG] Unavailable stalls = " + unavailable);
+
     if (!unavailable.isEmpty()) {
-        String reasonJson = String.format(
-            "{\"detail\":\"Some requested stalls are not available\",\"errors\":{\"unavailable\":%s,\"available\":%s}}",
-            unavailable,
-            available
-        );
-        throw new ResponseStatusException(
-            HttpStatus.CONFLICT,
-            reasonJson
-        );
+      System.out.println("[ERROR] Stalls unavailable: " + unavailable);
+      throw new ResponseStatusException(HttpStatus.CONFLICT,
+              "Some requested stalls are not available. unavailable=" + unavailable);
     }
 
+    // Calculate total price
     Long totalAmount = summaries.stream()
-        .map(ExternalStallSummaryResponse::getPrice)
-        .filter(p -> p != null)
-        .reduce(0L, Long::sum);
+            .map(ExternalStallSummaryResponse::getPrice)
+            .filter(p -> p != null)
+            .reduce(0L, Long::sum);
 
+    System.out.println("[DEBUG] Total Amount = " + totalAmount);
+
+    // Create reservation entity
     Reservation newReservation = new Reservation();
     newReservation.setUserId(userId);
     newReservation.setExhibitionId(reservationRequest.getExhibitionId());
@@ -95,22 +115,108 @@ public class ReservationServiceImpl implements ReservationService {
     newReservation.setCreatedAt(new Date());
     newReservation.setStatus(ReservationStatus.PENDING_PAYMENT);
 
-    // mark stalls as PENDING to avoid race with other bookings
+    System.out.println("[DEBUG] Saving reservation object = " + newReservation);
+
+    // Mark stalls as PENDING
     UpdateStallStatusRequest statusRequest = new UpdateStallStatusRequest();
     statusRequest.setStallIds(stallIds);
     statusRequest.setBookingStatus("PENDING");
+
+    System.out.println("[DEBUG] Sending stall lock request to exhibition-service:");
+    System.out.println("        stallIds      = " + stallIds);
+    System.out.println("        newStatus     = PENDING");
+
     try {
       exhibitionServiceClient.updateBookingStatus(statusRequest);
+      System.out.println("[DEBUG] Successfully locked stalls in exhibition-service");
     } catch (Exception ex) {
+      System.out.println("[ERROR] FAILED locking stalls in exhibition-service");
+      ex.printStackTrace();
       throw new ResponseStatusException(
-          HttpStatus.SERVICE_UNAVAILABLE,
-          "Failed to lock stalls in exhibition-service",
-          ex
+              HttpStatus.SERVICE_UNAVAILABLE,
+              "Failed to lock stalls in exhibition-service",
+              ex
       );
     }
 
-    return reservationRepository.save(newReservation);
+    Reservation saved = reservationRepository.save(newReservation);
+    System.out.println("[DEBUG] Reservation saved with ID = " + saved.getId());
+
+    System.out.println("========== [DEBUG] createReservation() END ==========\n");
+    return saved;
   }
+
+//  public Reservation createReservation(ReservationRequest reservationRequest, Long userId) {
+//    List<Long> stallIds = reservationRequest.getStallIds();
+//    if (stallIds == null || stallIds.isEmpty()) {
+//      throw new IllegalArgumentException("At least one stall must be selected");
+//    }
+//
+//    List<ExternalStallSummaryResponse> summaries = fetchStallSummaries(stallIds);
+//    if (summaries.size() != stallIds.size()) {
+//      Set<Long> returned = summaries.stream()
+//          .map(ExternalStallSummaryResponse::getId)
+//          .collect(Collectors.toSet());
+//      List<Long> missing = stallIds.stream()
+//          .filter(id -> !returned.contains(id))
+//          .toList();
+//      throw new ResponseStatusException(
+//          HttpStatus.BAD_REQUEST,
+//          "Unknown stall ids: " + missing
+//      );
+//    }
+//
+//    // Block double-booking: ensure all requested stalls are available
+//    List<Long> unavailable = summaries.stream()
+//        .filter(s -> s.getBookingStatus() != null && !"AVAILABLE".equalsIgnoreCase(s.getBookingStatus()))
+//        .map(ExternalStallSummaryResponse::getId)
+//        .toList();
+//    List<Long> available = summaries.stream()
+//        .filter(s -> s.getBookingStatus() == null || "AVAILABLE".equalsIgnoreCase(s.getBookingStatus()))
+//        .map(ExternalStallSummaryResponse::getId)
+//        .toList();
+//    if (!unavailable.isEmpty()) {
+//        String reasonJson = String.format(
+//            "{\"detail\":\"Some requested stalls are not available\",\"errors\":{\"unavailable\":%s,\"available\":%s}}",
+//            unavailable,
+//            available
+//        );
+//        throw new ResponseStatusException(
+//            HttpStatus.CONFLICT,
+//            reasonJson
+//        );
+//    }
+//
+//    Long totalAmount = summaries.stream()
+//        .map(ExternalStallSummaryResponse::getPrice)
+//        .filter(p -> p != null)
+//        .reduce(0L, Long::sum);
+//
+//    Reservation newReservation = new Reservation();
+//    newReservation.setUserId(userId);
+//    newReservation.setExhibitionId(reservationRequest.getExhibitionId());
+//    newReservation.setStallIds(stallIds);
+//    newReservation.setTotalAmount(totalAmount);
+//    newReservation.setCreatedAt(new Date());
+//    newReservation.setStatus(ReservationStatus.PENDING_PAYMENT);
+//
+//    // mark stalls as PENDING to avoid race with other bookings
+//    UpdateStallStatusRequest statusRequest = new UpdateStallStatusRequest();
+//
+//    statusRequest.setStallIds(stallIds);
+//    statusRequest.setBookingStatus("PENDING");
+//    try {
+//      exhibitionServiceClient.updateBookingStatus(statusRequest);
+//    } catch (Exception ex) {
+//      throw new ResponseStatusException(
+//          HttpStatus.SERVICE_UNAVAILABLE,
+//          "Failed to lock stalls in exhibition-service",
+//          ex
+//      );
+//    }
+//
+//    return reservationRepository.save(newReservation);
+//  }
 
   @Override
   public ReservationResponse getReservationById(Long id) throws Exception {
@@ -179,6 +285,7 @@ public class ReservationServiceImpl implements ReservationService {
             .map(st -> {
               ReservedStallResponse stallDto = new ReservedStallResponse();
               stallDto.setId(st.getId());
+              stallDto.setDisplayName(st.getDisplayName());
               stallDto.setPrice(st.getPrice());
               stallDto.setStallType(st.getStallType());
               stallDto.setHallName(st.getHallName());

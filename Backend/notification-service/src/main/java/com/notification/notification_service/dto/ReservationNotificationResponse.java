@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -20,9 +21,8 @@ public class ReservationNotificationResponse {
     private String userName;
     private Long reservationId;
     private String fairName;
-    private String stallName;
-    private String stallType;
-    private String hallName;
+    private String displayName;
+    private List<StallInfo> stalls;
     private LocalDateTime bookingTime;
     private LocalDateTime eventTime;
     private String eventLink;

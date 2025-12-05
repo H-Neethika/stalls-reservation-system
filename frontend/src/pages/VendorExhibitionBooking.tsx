@@ -46,6 +46,7 @@ interface ExhibitionPayload {
 
 interface SelectedStall {
   hallId: string;
+  displayName: string;
   stallId: string;
   stallTypeId?: number;
   stallType?: string;
@@ -250,6 +251,7 @@ const VendorExhibitionBooking = () => {
       {
         hallId: String(hallId),
         stallId,
+        displayName: stall.displayName || `Stall ${stallId}`,
         stallTypeId: typeId,
         stallType: stall.stallType || stall.size,
         price,
@@ -259,6 +261,7 @@ const VendorExhibitionBooking = () => {
   };
 
   const totalPrice = selectedStalls.reduce((sum, s) => sum + Number(s.price || 0), 0);
+  console.log("selected stalls : ",selectedStalls);
 
   const handleProceed = () => {
     if (selectedStalls.length === 0) return;
@@ -330,6 +333,11 @@ const VendorExhibitionBooking = () => {
   //   // eslint-disable-next-line react-hooks/exhaustive-deps
   // }, [showConfirm]);
 
+  const getHallName = (hallId: string) => {
+  return exhibition?.halls?.find((h) => String(h.id) === hallId)?.hallName || `Hall ${hallId}`;
+};
+
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -363,11 +371,11 @@ const VendorExhibitionBooking = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">{exhibition.exhibitionName || "Exhibition"}</h1>
+              <h1 className="text-2xl font-bold">{exhibition.title || "Exhibition"}</h1>
               <p className="text-sm text-muted-foreground">
-                {exhibition.startDateTime && exhibition.endDateTime
-                  ? `${new Date(exhibition.startDateTime).toLocaleDateString()} - ${new Date(
-                    exhibition.endDateTime,
+                {exhibition.exhibitionStart && exhibition.exhibitionEnd
+                  ? `${new Date(exhibition.exhibitionStart).toLocaleDateString()} - ${new Date(
+                    exhibition.exhibitionEnd,
                   ).toLocaleDateString()}`
                   : "Dates TBA"}
               </p>
@@ -481,9 +489,9 @@ const VendorExhibitionBooking = () => {
                       className="flex items-center justify-between rounded border px-2 py-2 text-sm"
                     >
                       <div className="flex flex-col">
-                        <span className="font-medium">{stall.stallId}</span>
+                        <span className="font-medium">{stall.displayName}</span>
                         <span className="text-xs text-muted-foreground">
-                          Hall {stall.hallId} · {stall.stallType || "Stall"}
+                           {getHallName(stall.hallId)} · {stall.stallType || "Stall"}
                         </span>
                       </div>
                       <div className="text-right">
@@ -530,9 +538,9 @@ const VendorExhibitionBooking = () => {
               {selectedStalls.map((stall) => (
                 <div key={stall.stallId} className="flex justify-between rounded border px-3 py-2">
                   <div>
-                    <div className="font-semibold">{stall.stallId}</div>
+                    <div className="font-semibold">{stall.displayName}</div>
                     <div className="text-xs text-muted-foreground">
-                      Hall {stall.hallId} · {stall.stallType || "Stall"}
+                      {getHallName(stall.hallId)} · {stall.stallType || "Stall"}
                     </div>
                   </div>
                   <div className="text-right">
