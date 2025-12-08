@@ -39,6 +39,7 @@ public class StallStatusUpdateListener {
             UpdateStallStatusRequest request = new UpdateStallStatusRequest();
             request.setStallIds(stallIds);
             request.setBookingStatus(bookingStatus);
+            request.setExhibitionId(event.getExhibitionId());
             layoutService.updateStallStatuses(request)
                     .forEach(status -> {
                         // broadcast happens inside layoutService, but leave hook for future

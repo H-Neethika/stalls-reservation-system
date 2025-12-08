@@ -119,6 +119,7 @@ public class ReservationServiceImpl implements ReservationService {
 
     // Mark stalls as PENDING
     UpdateStallStatusRequest statusRequest = new UpdateStallStatusRequest();
+    statusRequest.setExhibitionId(reservationRequest.getExhibitionId());
     statusRequest.setStallIds(stallIds);
     statusRequest.setBookingStatus("PENDING");
 
@@ -279,7 +280,10 @@ public class ReservationServiceImpl implements ReservationService {
     dto.setCreatedAt(reservation.getCreatedAt());
     dto.setStatus(reservation.getStatus() != null ? reservation.getStatus().name() : null);
 
-    List<ExternalStallSummaryResponse> summaries = fetchStallSummaries(reservation.getStallIds());
+//    List<ExternalStallSummaryResponse> summaries = fetchStallSummaries(reservation.getStallIds());
+    List<ExternalStallSummaryResponse> summaries =
+        fetchStallSummariesByExhibition(reservation.getExhibitionId(), reservation.getStallIds());
+
 
     List<ReservedStallResponse> stalls = summaries.stream()
             .map(st -> {
@@ -308,4 +312,17 @@ public class ReservationServiceImpl implements ReservationService {
     List<ExternalStallSummaryResponse> response = exhibitionServiceClient.getStallSummaries(stallIds);
     return response != null ? response : List.of();
   }
+
+  private List<ExternalStallSummaryResponse> fetchStallSummariesByExhibition(Long exhibitionId, List<Long> stallIds) {
+
+    if (stallIds == null || stallIds.isEmpty() || exhibitionId == null) {
+      return List.of();
+    }
+
+    List<ExternalStallSummaryResponse> response =
+        exhibitionServiceClient.getExhibitionStallSummaries(exhibitionId,stallIds);
+
+    return response != null ? response : List.of();
+  }
+
 }

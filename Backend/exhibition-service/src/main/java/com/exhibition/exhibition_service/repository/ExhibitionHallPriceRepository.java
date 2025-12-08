@@ -11,4 +11,11 @@ public interface ExhibitionHallPriceRepository extends JpaRepository<ExhibitionH
     List<ExhibitionHallPrice> findByExhibitionHall(ExhibitionHall hall);
     Optional<ExhibitionHallPrice> findByExhibitionHallAndStallType(ExhibitionHall hall, StallType stallType);
     Optional<ExhibitionHallPrice> findFirstByExhibitionHall_Hall_IdAndStallType(Long hallId, StallType stallType);
+    Optional<ExhibitionHallPrice>
+    findByExhibitionHall_Exhibition_IdAndExhibitionHall_Hall_IdAndStallType_Id(
+        Long exhibitionId,
+        Long hallId,
+        Long stallTypeId
+    );
+
 }

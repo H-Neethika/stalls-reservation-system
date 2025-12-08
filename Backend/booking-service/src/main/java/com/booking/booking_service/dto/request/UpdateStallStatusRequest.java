@@ -5,6 +5,7 @@ import lombok.Data;
 
 @Data
 public class UpdateStallStatusRequest {
+  private Long exhibitionId;
   private List<Long> stallIds;
   private String bookingStatus;
 }

@@ -10,4 +10,5 @@ public class StallStatusUpdateEvent {
     private Long reservationId;
     private List<Long> stallIds;
     private String bookingStatus;
+    private Long exhibitionId;
 }
