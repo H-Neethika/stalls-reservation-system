@@ -115,12 +115,16 @@ const MyBookings = () => {
           names: genreList,
           reservationId: selectedStall.reservationId!,
           stallId: selectedStall.id,
-          exhibitionId: selectedStall.exhibitionId!, 
+          exhibitionId: selectedStall.exhibitionId!,
         });
       }
 
       // refresh list
-      const updated = await genreService.getGenresByStall(selectedStall.id);
+      const updated = await genreService.getGenresByStall(
+        selectedStall.id,
+        selectedStall.reservationId!
+      );
+
       setStallGenres((prev) => ({
         ...prev,
         [selectedStall.id]: Array.isArray(updated) ? updated : [updated],
@@ -151,7 +155,7 @@ const MyBookings = () => {
 
     for (const booking of bookings) {
       for (const stall of booking.stalls || []) {
-        const data = await genreService.getGenresByStall(stall.id);
+        const data = await genreService.getGenresByStall(stall.id, booking.id);
 
         map[stall.id] = Array.isArray(data)
           ? (data as Genre[])

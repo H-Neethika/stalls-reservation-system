@@ -9,7 +9,7 @@ public interface GenreService {
     Genre find(Long id);
     void delete(Long id);
     List<Genre> findAll();
-    public Genre getGenreByStallId(Long id);
+    public Genre getGenreByStallId(Long id, Long reservationId);
     public List<Genre> createGenres(List<Genre> genres);
 
     public List<String> getGenresByStallIdAndExhibitionId(Long exhibitionId, Long stallId);

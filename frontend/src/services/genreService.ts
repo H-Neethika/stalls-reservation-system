@@ -60,9 +60,9 @@ class GenreService {
     return response.json();
   }
 
-  async getGenresByStall(stallId: number) {
+  async getGenresByStall(stallId: number, reservationId: number) {
     const response = await authFetch(
-      `${API_BASE_URL}/api/genres/stall/${stallId}`,
+      `${API_BASE_URL}/api/genres/stall/${stallId}/${reservationId}`,
       {
         method: "GET",
         headers: this.getAuthHeaders(),

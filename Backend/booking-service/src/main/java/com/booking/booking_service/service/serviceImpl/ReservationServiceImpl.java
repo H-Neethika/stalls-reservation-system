@@ -56,7 +56,10 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     // Fetch stall summary
-    List<ExternalStallSummaryResponse> summaries = fetchStallSummaries(stallIds);
+//    List<ExternalStallSummaryResponse> summaries = fetchStallSummaries(stallIds);
+    List<ExternalStallSummaryResponse> summaries =
+        fetchStallSummariesByExhibition(reservationRequest.getExhibitionId(), stallIds);
+
     System.out.println("[DEBUG] Stall summary count   = " + summaries.size());
     summaries.forEach(s -> System.out.println("[DEBUG] Stall Summary => id=" + s.getId()
             + ", status=" + s.getBookingStatus()
@@ -282,8 +285,20 @@ public class ReservationServiceImpl implements ReservationService {
     dto.setStatus(reservation.getStatus() != null ? reservation.getStatus().name() : null);
 
 //    List<ExternalStallSummaryResponse> summaries = fetchStallSummaries(reservation.getStallIds());
+//    List<ExternalStallSummaryResponse> summaries =
+//        fetchStallSummariesByExhibition(reservation.getExhibitionId(), reservation.getStallIds());
+
+    List<Long> stallIds = reservation.getStallIds();
+
+    if (stallIds == null || stallIds.isEmpty()|| reservation.getExhibitionId() == null) {
+      // Return empty stall list instead of failing
+      dto.setStalls(List.of());
+      return dto;
+    }
+
     List<ExternalStallSummaryResponse> summaries =
-        fetchStallSummariesByExhibition(reservation.getExhibitionId(), reservation.getStallIds());
+        fetchStallSummariesByExhibition(reservation.getExhibitionId(), stallIds);
+
 
 
     List<ReservedStallResponse> stalls = summaries.stream()
