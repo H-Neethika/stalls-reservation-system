@@ -1,5 +1,6 @@
 package com.booking.booking_service.dto.response;
 
+import java.util.List;
 import lombok.Data;
 
 @Data
@@ -11,4 +12,5 @@ public class ReservedStallResponse {
     private String hallName;
     private String stallName;
     private String bookingStatus;
+    private List<String> genres;
 }

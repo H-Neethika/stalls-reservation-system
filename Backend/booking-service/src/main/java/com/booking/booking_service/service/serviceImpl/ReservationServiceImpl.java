@@ -32,6 +32,7 @@ public class ReservationServiceImpl implements ReservationService {
   private final PaymentService paymentService;
   private final ExhibitionServiceClient exhibitionServiceClient;
 
+
   public ReservationServiceImpl(ReservationRepository reservationRepository,
                                 PaymentService paymentService,
                                 ExhibitionServiceClient exhibitionServiceClient) {
@@ -290,6 +291,7 @@ public class ReservationServiceImpl implements ReservationService {
               ReservedStallResponse stallDto = new ReservedStallResponse();
               stallDto.setId(st.getId());
               stallDto.setDisplayName(st.getDisplayName());
+              stallDto.setGenres(st.getGenres());
               stallDto.setPrice(st.getPrice());
               stallDto.setStallType(st.getStallType());
               stallDto.setHallName(st.getHallName());

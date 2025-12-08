@@ -46,6 +46,7 @@ class GenreService {
     names: string[];
     reservationId: number;
     stallId: number;
+    exhibitionId: number;
   }) {
     const response = await authFetch(`${API_BASE_URL}/api/genres`, {
       method: "POST",
@@ -87,6 +88,7 @@ class GenreService {
       names?: string[];
       reservationId?: number;
       stallId?: number;
+      exhibitionId?: number;
     }
   ) {
     const response = await authFetch(`${API_BASE_URL}/api/genres/${genreId}`, {
@@ -103,7 +105,12 @@ class GenreService {
   }
 
   async createBulkGenres(
-    payload: Array<{ names: string[]; reservationId: number; stallId: number }>
+    payload: Array<{
+      names: string[];
+      reservationId: number;
+      stallId: number;
+      exhibitionId: number;
+    }>
   ) {
     const response = await authFetch(`${API_BASE_URL}/api/genres/bulk`, {
       method: "POST",

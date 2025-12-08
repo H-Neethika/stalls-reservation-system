@@ -51,4 +51,16 @@ public class GenreServiceImpl implements GenreService {
     public List<Genre> createGenres(List<Genre> genres) {
         return genreRepository.saveAll(genres);
     }
+
+    @Override
+    public List<String> getGenresByStallIdAndExhibitionId(Long exhibitionId, Long stallId) {
+        Genre genre = genreRepository.findByExhibitionIdAndStallId(exhibitionId, stallId);
+
+        if (genre == null || genre.getNames() == null) {
+            return List.of();
+        }
+
+        return genre.getNames();
+
+    }
 }

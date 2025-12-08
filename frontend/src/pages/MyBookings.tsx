@@ -31,6 +31,7 @@ interface ReservedStall {
   price?: number;
   bookingStatus?: string;
   reservationId?: number;
+  exhibitionId?: number;
 }
 
 interface ReservationSummary {
@@ -77,9 +78,10 @@ const MyBookings = () => {
   const openGenreModal = (
     stall: ReservedStall,
     reservationId: number,
+    exhibitionId: number,
     existingGenre: Genre | null = null
   ) => {
-    setSelectedStall({ ...stall, reservationId });
+    setSelectedStall({ ...stall, reservationId, exhibitionId });
 
     if (existingGenre) {
       // EDIT MODE
@@ -113,6 +115,7 @@ const MyBookings = () => {
           names: genreList,
           reservationId: selectedStall.reservationId!,
           stallId: selectedStall.id,
+          exhibitionId: selectedStall.exhibitionId!, 
         });
       }
 
@@ -430,7 +433,8 @@ const MyBookings = () => {
                               <div className="flex items-start justify-between gap-3">
                                 <div>
                                   <div className="font-semibold">
-                                    {`Stall ${stall.displayName}` || `Stall ${stall.id}`}
+                                    {`Stall ${stall.displayName}` ||
+                                      `Stall ${stall.id}`}
                                   </div>
                                   <div className="text-xs text-muted-foreground">
                                     {stall.hallName || "Hall not available"}
@@ -486,7 +490,8 @@ const MyBookings = () => {
                                     openGenreModal(
                                       stall,
                                       booking.id,
-                                      stallGenres[stall.id]?.[0] || null // pass first genre if exists
+                                      booking.exhibitionId!, // ← pass exhibitionId
+                                      stallGenres[stall.id]?.[0] || null
                                     )
                                   }
                                 >

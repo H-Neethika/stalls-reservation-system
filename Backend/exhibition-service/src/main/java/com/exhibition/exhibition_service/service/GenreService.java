@@ -12,4 +12,6 @@ public interface GenreService {
     public Genre getGenreByStallId(Long id);
     public List<Genre> createGenres(List<Genre> genres);
 
+    public List<String> getGenresByStallIdAndExhibitionId(Long exhibitionId, Long stallId);
+
 }

@@ -23,4 +23,5 @@ public class Genre {
 
     private Long reservationId;
     private Long stallId;
+    private Long exhibitionId;
 }
