@@ -20,7 +20,7 @@ public record RegisterUserRequest(
 		@Size(min = 8, max = 128, message = "Password must be between 8 and 128 characters")
 		String password,
 
-		@NotBlank(message = "Organization name is required")
+//		@NotBlank(message = "Organization name is required")
 		@Size(max = 150, message = "Organization name must be at most 150 characters")
 		String organizationName,
 

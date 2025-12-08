@@ -52,6 +52,12 @@ public class UserService {
 			throw new UserAlreadyExistsException("A user with email %s already exists".formatted(request.email()));
 		}
 
+		if (request.role() == Role.VENDOR) {
+			if (request.organizationName() == null || request.organizationName().isBlank()) {
+				throw new IllegalArgumentException("Organization name is required for vendors");
+			}
+		}
+
 		User user = User.builder()
 				.name(request.name())
 				.email(request.email())
