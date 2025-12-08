@@ -3,6 +3,7 @@ package com.exhibition.exhibition_service.service.impl;
 import com.exhibition.exhibition_service.model.Genre;
 import com.exhibition.exhibition_service.repository.GenreRepository;
 import com.exhibition.exhibition_service.service.GenreService;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,9 +21,9 @@ public class GenreServiceImpl implements GenreService {
 
     @Override
     public Genre update(Long id, Genre genre) {
-        Genre existing = find(id);
-        existing.setName(genre.getName());
-        return genreRepository.save(existing);
+        Genre existingGenre = find(id);
+        existingGenre.setNames(genre.getNames());
+        return genreRepository.save(existingGenre);
     }
 
     @Override
@@ -44,5 +45,10 @@ public class GenreServiceImpl implements GenreService {
     @Override
     public Genre getGenreByStallId(Long id) {
         return genreRepository.findByStallId(id);
+    }
+
+    @Override
+    public List<Genre> createGenres(List<Genre> genres) {
+        return genreRepository.saveAll(genres);
     }
 }

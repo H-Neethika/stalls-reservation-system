@@ -39,4 +39,13 @@ public class LayoutController {
     public ResponseEntity<List<StallSummaryResponse>> getStallSummaries(@RequestParam List<Long> ids) {
         return ResponseEntity.ok(layoutService.getStallSummaries(ids));
     }
+
+    @GetMapping("/exhibitions/{exhibitionId}/stalls/summary")
+    public ResponseEntity<List<StallSummaryResponse>> getExhibitionStallSummaries(
+        @PathVariable Long exhibitionId,
+        @RequestParam List<Long> ids
+    ) {
+        return ResponseEntity.ok(layoutService.getExhibitionStallSummaries(exhibitionId, ids));
+    }
+
 }

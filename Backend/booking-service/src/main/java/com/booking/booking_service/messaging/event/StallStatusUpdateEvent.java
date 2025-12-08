@@ -13,4 +13,5 @@ public class StallStatusUpdateEvent {
     Long reservationId;
     List<Long> stallIds;
     String bookingStatus; // e.g. RESERVED
+    Long exhibitionId;
 }

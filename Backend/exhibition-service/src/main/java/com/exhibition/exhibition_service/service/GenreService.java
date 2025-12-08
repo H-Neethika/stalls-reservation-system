@@ -10,5 +10,6 @@ public interface GenreService {
     void delete(Long id);
     List<Genre> findAll();
     public Genre getGenreByStallId(Long id);
+    public List<Genre> createGenres(List<Genre> genres);
 
 }
