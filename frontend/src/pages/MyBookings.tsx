@@ -363,7 +363,7 @@ const MyBookings = () => {
                 <p className="text-muted-foreground mb-4">
                   You haven't made any bookings yet.
                 </p>
-                <Button onClick={() => navigate("/halls")}>Browse Halls</Button>
+                <Button onClick={() => navigate("/halls")}>Browse Available Exhibitions</Button>
               </CardContent>
             </Card>
           ) : (

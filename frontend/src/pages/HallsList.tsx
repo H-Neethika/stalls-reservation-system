@@ -101,26 +101,16 @@ const HallsList = () => {
         }
         setPublishedExhibitions(mapped);
       } catch (error: any) {
-        // fallback sample data
-        setPublishedExhibitions([
-          {
-            id: "sample-1",
-            title: "Sample Exhibition",
-            description: "Sample published exhibition (fallback).",
-            dateRange: "TBA",
-            location: "Hall Complex",
-            hallIds: halls.map((h) => h.id),
-            status: "PUBLISHED",
-          },
-        ]);
-        toast({
-          title: "Showing sample exhibitions",
-          description:
-            typeof error?.message === "string"
-              ? error.message
-              : "Using sample data because published exhibitions could not be loaded.",
-        });
-      } finally {
+  setPublishedExhibitions([]); // ← no fallback
+  // toast({
+  //   title: "No exhibitions available",
+  //   description:
+  //     typeof error?.message === "string"
+  //       ? error.message
+  //       : "Unable to load exhibitions at the moment.",
+  // });
+}
+ finally {
         setLoadingExhibitions(false);
       }
     };
@@ -158,16 +148,28 @@ const HallsList = () => {
       );
     }
 
-    if (publishedExhibitions.length === 0) {
-      return (
-        <Card className="text-center py-12">
-          <CardContent>
-            <Grid3x3 className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">No Exhibitions available at the moment.</p>
-          </CardContent>
-        </Card>
-      );
-    }
+if (publishedExhibitions.length === 0) {
+  return (
+    <Card className="text-center py-12">
+      <CardContent>
+        <Map className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+
+
+        <h3 className="text-xl font-semibold mb-2">No Exhibitions Available</h3>
+
+        <p className="text-muted-foreground">
+          There are currently no exhibitions published for booking.
+        </p>
+
+        <p className="text-sm text-muted-foreground mt-2">
+          Please check back later or contact the organizer for updates.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+
 
     return (
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
