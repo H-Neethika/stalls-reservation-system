@@ -15,20 +15,36 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/hooks/use-auth";
 import { z } from "zod";
 import { Eye, EyeOff } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const authSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   name: z.string().min(2, "Name must be at least 2 characters").optional(),
   organizationName: z.string().optional(),
-  role: z.enum(["vendor", "organizer"]).optional(),
+  role: z.enum(["vendor", "organizer"]),
+}).refine(
+  (data) =>
+    data.role !== "vendor" || (data.organizationName && data.organizationName.trim().length > 0),
+  {
+    message: "Organization name is required for vendors",
+    path: ["organizationName"],
+  }
+);
+
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
+
+
 
 const Auth = () => {
   const navigate = useNavigate();
   const { user, userRole, signUp, signIn, signInWithOAuth, signUpWithOAuth } =
     useAuth();
   const [isLoading, setIsLoading] = useState(false);
+const { toast } = useToast();
 
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
@@ -49,43 +65,74 @@ const Auth = () => {
     }
   }, [user, userRole, navigate]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
 
-    try {
-      authSchema.parse({ email: loginEmail, password: loginPassword });
-      await signIn(loginEmail, loginPassword);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        console.error("Validation error:", error.errors);
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  try {
+    loginSchema.parse({ email: loginEmail, password: loginPassword });
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      authSchema.parse({
-        email: signupEmail,
-        password: signupPassword,
-        name,
-        role,
+    await signIn(loginEmail, loginPassword);
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      toast({
+        title: "Validation Error",
+        description: error.errors[0].message,
+        variant: "destructive",
       });
-
-      await signUp(signupEmail, signupPassword, name, organizationName, role);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        console.error("Validation error:", error.errors);
-      }
-    } finally {
-      setIsLoading(false);
+    } else {
+      toast({
+        title: "Login Failed",
+        description: "Invalid email or password",
+        variant: "destructive",
+      });
     }
-  };
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+
+
+ const handleSignup = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setIsLoading(true);
+
+  try {
+    authSchema.parse({
+      email: signupEmail,
+      password: signupPassword,
+      name,
+      organizationName,
+      role,
+    });
+
+    await signUp(signupEmail, signupPassword, name, organizationName, role);
+
+    toast({
+      title: "Account Created",
+      description: "Your account has been created successfully!",
+    });
+
+  } catch (error: any) {
+    if (error instanceof z.ZodError) {
+      toast({
+        title: "Validation Error",
+        description: error.errors[0].message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Registration Failed",
+        description: error?.message || "Something went wrong during signup",
+        variant: "destructive",
+      });
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleOAuthLogin = (provider: "google" | "github") => {
     signInWithOAuth(provider);
@@ -221,7 +268,10 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                 <Label htmlFor="name">
+  Full Name <span className="text-red-500">*</span>
+</Label>
+
                   <Input
                     id="name"
                     type="text"
@@ -232,7 +282,10 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email">
+  Email <span className="text-red-500">*</span>
+</Label>
+
                   <Input
                     id="signup-email"
                     type="email"
@@ -243,7 +296,10 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password">
+  Password <span className="text-red-500">*</span>
+</Label>
+
                   <div className="relative">
                     <Input
                       id="signup-password"
@@ -271,18 +327,24 @@ const Auth = () => {
                     </button>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="organization">
-                    Organization Name (Optional)
-                  </Label>
-                  <Input
-                    id="organization"
-                    type="text"
-                    placeholder="Your organization"
-                    value={organizationName}
-                    onChange={(e) => setOrganizationName(e.target.value)}
-                  />
-                </div>
+                {role === "vendor" && (
+  <div className="space-y-2">
+   <Label htmlFor="organization">
+  Organization / Publisher Name 
+  {role === "vendor" && <span className="text-red-500 ml-1">*</span>}
+</Label>
+
+    <Input
+      id="organization"
+      type="text"
+      placeholder="Ex: Sadeepa Publishers"
+      value={organizationName}
+      onChange={(e) => setOrganizationName(e.target.value)}
+      required
+    />
+  </div>
+)}
+
                 <div className="space-y-2">
                   <Label>I am a:</Label>
                   <RadioGroup
