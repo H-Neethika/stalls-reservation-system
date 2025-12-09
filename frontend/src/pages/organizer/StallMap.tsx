@@ -128,6 +128,7 @@ export default function StallMap({
       {stalls.map((stall) => {
         const centroid = getCentroid(stall.points);
         const baseStatus = status[stall.id] || "available";
+        const isDisabled = ["booked", "reserved", "processing", "pending"].includes(baseStatus);
         const isSelected = selectedIds.includes(stall.id);
         const visualStatus =
           baseStatus === "available" && isSelected ? ("held" as StallStatus) : (baseStatus as StallStatus);
@@ -135,38 +136,64 @@ export default function StallMap({
 
         return (
           <g
-            key={stall.id}
-            onClick={() => handleStallClick(stall)}
-            className={readOnly ? "cursor-default" : "cursor-pointer transition-all"}
-            style={{ filter: "drop-shadow(0px 1px 3px rgba(0,0,0,0.1))" }}
-          >
-            {stall.path ? (
-              <path d={stall.path} fill={fillColor} opacity="0.8" />
-            ) : (
-              <polygon
-                points={stall.points.map((p) => `${p.x},${p.y}`).join(" ")}
-                fill={fillColor}
-                opacity="0.8"
-              />
-            )}
-            <polygon
-              points={stall.points.map((p) => `${p.x},${p.y}`).join(" ")}
-              fill="none"
-              stroke="#0f172a"
-              strokeWidth="2"
-            />
-            <text
-              x={centroid.x}
-              y={centroid.y}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize="10"
-              fill="#0f172a"
-              fontWeight="400"
-            >
-             {stall.displayName}
-            </text>
-          </g>
+  key={stall.id}
+  onClick={() => {
+    if (!isDisabled) handleStallClick(stall);
+  }}
+  className={isDisabled ? "cursor-not-allowed" : "cursor-pointer"}
+  style={{
+    filter: "drop-shadow(0px 1px 3px rgba(0,0,0,0.1))",
+  }}
+>
+  {stall.path ? (
+    <path
+      d={stall.path}
+      fill={fillColor}
+      opacity="0.8"
+      style={{ cursor: isDisabled ? "not-allowed" : "pointer" }}
+    />
+  ) : (
+    <polygon
+      points={stall.points.map((p) => `${p.x},${p.y}`).join(" ")}
+      fill={fillColor}
+      opacity="0.8"
+      style={{ cursor: isDisabled ? "not-allowed" : "pointer" }}
+    />
+  )}
+
+  {/* Border */}
+  <polygon
+    points={stall.points.map((p) => `${p.x},${p.y}`).join(" ")}
+    fill="none"
+    stroke="#0f172a"
+    strokeWidth="2"
+    style={{ cursor: isDisabled ? "not-allowed" : "pointer" }}
+  />
+
+  {/* Gray overlay */}
+  {isDisabled && (
+    <polygon
+      points={stall.points.map((p) => `${p.x},${p.y}`).join(" ")}
+      fill="none"
+      opacity="0.24"
+      style={{ cursor: "not-allowed" }}
+    />
+  )}
+
+  {/* Text */}
+  <text
+    x={centroid.x}
+    y={centroid.y}
+    textAnchor="middle"
+    dominantBaseline="middle"
+    fontSize="10"
+    fill="#0f172a"
+    fontWeight="400"
+    style={{ cursor: isDisabled ? "not-allowed" : "pointer" }}
+  >
+    {stall.displayName}
+  </text>
+</g>
         );
       })}
 

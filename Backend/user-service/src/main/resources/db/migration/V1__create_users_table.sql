@@ -22,7 +22,8 @@ VALUES (
     'organizer@gmail.com',
     'System Organizer',
     'COLOMBO INTERNATIONAL BOOK FAIR',
-    '$2a$12$exetL40BJ9HfStlZWQrToO58oVzbbyfzpS5GKPrnnBR9X54TafQUO',
+    '$2a$12$exetL40BJ9HfStlZWQrToO58oVzbbyfzpS5GKPrnnBR9X54TafQUO', -- Org@1234
     '3210754e-a2e4-4a58-99b6-ae69090e7585',
     'ORGANIZER'
 );
+
