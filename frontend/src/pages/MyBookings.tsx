@@ -139,8 +139,8 @@ const MyBookings = () => {
       setGenreModalOpen(false);
     } catch (error) {
       toast({
-        title: "Failed",
-        description: error?.message || "Please try again.",
+        title: "Unable to Save Genre",
+        description: "Something went wrong while saving your genre. Please try again shortly.",
         variant: "destructive",
       });
     }
@@ -214,8 +214,8 @@ const MyBookings = () => {
       await fetchGenresForStalls(list);
     } catch (error) {
       toast({
-        title: "Could not load bookings",
-        description: error?.message || "Please try again.",
+        title: "Unable to Load Bookings",
+        description: "We couldn’t retrieve your booking details. Please try again shortly.",
         variant: "destructive",
       });
     } finally {

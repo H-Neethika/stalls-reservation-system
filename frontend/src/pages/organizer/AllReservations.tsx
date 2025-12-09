@@ -99,8 +99,8 @@ const AllReservations = () => {
       });
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Unable to Load Reservations",
+        description: "Something went wrong while fetching reservation data. Please try again.",
         variant: "destructive",
       });
     } finally {
