@@ -16,35 +16,39 @@ import { useAuth } from "@/hooks/use-auth";
 import { z } from "zod";
 import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { set } from "date-fns";
 
-const authSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  name: z.string().min(2, "Name must be at least 2 characters").optional(),
-  organizationName: z.string().optional(),
-  role: z.enum(["vendor", "organizer"]),
-}).refine(
-  (data) =>
-    data.role !== "vendor" || (data.organizationName && data.organizationName.trim().length > 0),
-  {
-    message: "Organization name is required for vendors",
-    path: ["organizationName"],
-  }
-);
+const authSchema = z
+  .object({
+    email: z.string().email("Invalid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    name: z.string().min(2, "Name must be at least 2 characters").optional(),
+    organizationName: z.string().optional(),
+    role: z.enum(["vendor", "organizer"]),
+  })
+  .refine(
+    (data) =>
+      data.role !== "vendor" ||
+      (data.organizationName && data.organizationName.trim().length > 0),
+    {
+      message: "Organization name is required for vendors",
+      path: ["organizationName"],
+    }
+  );
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
-
-
 const Auth = () => {
   const navigate = useNavigate();
   const { user, userRole, signUp, signIn, signInWithOAuth, signUpWithOAuth } =
     useAuth();
   const [isLoading, setIsLoading] = useState(false);
-const { toast } = useToast();
+  const { toast } = useToast();
+const [activeTab, setActiveTab] = useState("login");
+const [justSignedUp, setJustSignedUp] = useState(false);
 
   // Login form
   const [loginEmail, setLoginEmail] = useState("");
@@ -59,80 +63,91 @@ const { toast } = useToast();
   const [role, setRole] = useState<"vendor" | "organizer">("vendor");
   const [isSignupPasswordVisible, setIsSignupPasswordVisible] = useState(false);
 
-  useEffect(() => {
-    if (user && userRole) {
+ useEffect(() => {
+  if (user && userRole) {
+   
+    if (!justSignedUp) {
       navigate(userRole === "ORGANIZER" ? "/organizer/dashboard" : "/");
+    }else if(userRole === "VENDOR"){
+      setActiveTab("login");
     }
-  }, [user, userRole, navigate]);
 
-const handleLogin = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
 
-  try {
-    loginSchema.parse({ email: loginEmail, password: loginPassword });
-
-    await signIn(loginEmail, loginPassword);
-  } catch (error: any) {
-    if (error instanceof z.ZodError) {
-      toast({
-        title: "Validation Error",
-        description: error.errors[0].message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Login Failed",
-        description: "Invalid email or password",
-        variant: "destructive",
-      });
-    }
-  } finally {
-    setIsLoading(false);
   }
-};
+}, [user, userRole, navigate, justSignedUp]);
 
 
 
- const handleSignup = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setIsLoading(true);
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-  try {
-    authSchema.parse({
-      email: signupEmail,
-      password: signupPassword,
-      name,
-      organizationName,
-      role,
-    });
+    try {
+      loginSchema.parse({ email: loginEmail, password: loginPassword });
 
-    await signUp(signupEmail, signupPassword, name, organizationName, role);
-
-    toast({
-      title: "Account Created",
-      description: "Your account has been created successfully!",
-    });
-
-  } catch (error: any) {
-    if (error instanceof z.ZodError) {
-      toast({
-        title: "Validation Error",
-        description: error.errors[0].message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Registration Failed",
-        description: error?.message || "Something went wrong during signup",
-        variant: "destructive",
-      });
+      await signIn(loginEmail, loginPassword);
+      setJustSignedUp(false);
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Login Failed",
+          description: "Invalid email or password",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsLoading(false);
     }
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setRole("vendor"); 
+    try {
+      authSchema.parse({
+        email: signupEmail,
+        password: signupPassword,
+        name,
+        organizationName,
+        role,
+      });
+
+      await signUp(signupEmail, signupPassword, name, organizationName, role);
+
+      toast({
+        title: "Account Created",
+        description: "Your account has been created successfully!",
+      });
+    setJustSignedUp(true);
+
+    setActiveTab("login");
+
+
+    } catch (error: any) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Registration Failed",
+          description: error?.message || "Something went wrong during signup",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleOAuthLogin = (provider: "google" | "github") => {
     signInWithOAuth(provider);
@@ -152,7 +167,7 @@ const handleLogin = async (e: React.FormEvent) => {
           <CardDescription>Stall Reservation System</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -185,7 +200,9 @@ const handleLogin = async (e: React.FormEvent) => {
                     <button
                       type="button"
                       aria-label={
-                        isLoginPasswordVisible ? "Hide password" : "Show password"
+                        isLoginPasswordVisible
+                          ? "Hide password"
+                          : "Show password"
                       }
                       onClick={() =>
                         setIsLoginPasswordVisible(!isLoginPasswordVisible)
@@ -268,9 +285,9 @@ const handleLogin = async (e: React.FormEvent) => {
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
-                 <Label htmlFor="name">
-  Full Name <span className="text-red-500">*</span>
-</Label>
+                  <Label htmlFor="name">
+                    Full Name <span className="text-red-500">*</span>
+                  </Label>
 
                   <Input
                     id="name"
@@ -283,8 +300,8 @@ const handleLogin = async (e: React.FormEvent) => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">
-  Email <span className="text-red-500">*</span>
-</Label>
+                    Email <span className="text-red-500">*</span>
+                  </Label>
 
                   <Input
                     id="signup-email"
@@ -297,8 +314,8 @@ const handleLogin = async (e: React.FormEvent) => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">
-  Password <span className="text-red-500">*</span>
-</Label>
+                    Password <span className="text-red-500">*</span>
+                  </Label>
 
                   <div className="relative">
                     <Input
@@ -312,7 +329,9 @@ const handleLogin = async (e: React.FormEvent) => {
                     <button
                       type="button"
                       aria-label={
-                        isSignupPasswordVisible ? "Hide password" : "Show password"
+                        isSignupPasswordVisible
+                          ? "Hide password"
+                          : "Show password"
                       }
                       onClick={() =>
                         setIsSignupPasswordVisible(!isSignupPasswordVisible)
@@ -328,51 +347,25 @@ const handleLogin = async (e: React.FormEvent) => {
                   </div>
                 </div>
                 {role === "vendor" && (
-  <div className="space-y-2">
-   <Label htmlFor="organization">
-  Organization / Publisher Name 
-  {role === "vendor" && <span className="text-red-500 ml-1">*</span>}
-</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="organization">
+                      Organization / Publisher Name
+                      {role === "vendor" && (
+                        <span className="text-red-500 ml-1">*</span>
+                      )}
+                    </Label>
 
-    <Input
-      id="organization"
-      type="text"
-      placeholder="Ex: Sadeepa Publishers"
-      value={organizationName}
-      onChange={(e) => setOrganizationName(e.target.value)}
-      required
-    />
-  </div>
-)}
+                    <Input
+                      id="organization"
+                      type="text"
+                      placeholder="Ex: Sadeepa Publishers"
+                      value={organizationName}
+                      onChange={(e) => setOrganizationName(e.target.value)}
+                      required
+                    />
+                  </div>
+                )}
 
-                <div className="space-y-2">
-                  <Label>I am a:</Label>
-                  <RadioGroup
-                    value={role}
-                    onValueChange={(value: "vendor" | "organizer") =>
-                      setRole(value)
-                    }
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="vendor" id="vendor" />
-                      <Label
-                        htmlFor="vendor"
-                        className="font-normal cursor-pointer"
-                      >
-                        Vendor (Book Publisher/Seller)
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="organizer" id="organizer" />
-                      <Label
-                        htmlFor="organizer"
-                        className="font-normal cursor-pointer"
-                      >
-                        Organizer (Exhibition Admin)
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Creating account..." : "Create Account"}
                 </Button>
