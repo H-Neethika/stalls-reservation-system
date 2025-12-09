@@ -103,6 +103,23 @@ class ReservationService {
 
     return response.json();
   }
+
+    async getReservationCount(userId: number, exhibitionId: number) {
+    const response = await authFetch(
+      `${API_BASE_URL}/api/reservation/user/${userId}/exhibition/${exhibitionId}/count`,
+      {
+        method: "GET",
+        headers: this.getAuthHeaders(),
+      }
+    );
+
+    if (!response.ok) {
+      throw await parseErrorResponse(response);
+    }
+
+    return response.json();
+  }
+
 }
 
 export const reservationService = new ReservationService();

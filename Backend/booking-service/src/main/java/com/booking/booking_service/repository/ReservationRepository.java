@@ -15,17 +15,19 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Reservation> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     @Query(
-        value = "SELECT COUNT(rsi.stall_id) " +
-            "FROM reservation_stall_ids rsi " +
-            "JOIN reservation r ON r.id = rsi.reservation_id " +
-            "WHERE r.user_id = :userId " +
-            "AND r.exhibition_id = :exhibitionId",
-        nativeQuery = true
+            value = "SELECT COUNT(rsi.stall_id) " +
+                    "FROM reservation_stall_ids rsi " +
+                    "JOIN reservation r ON r.id = rsi.reservation_id " +
+                    "WHERE r.user_id = :userId " +
+                    "AND r.exhibition_id = :exhibitionId " +
+                    "AND r.status = 'CONFIRMED'",
+            nativeQuery = true
     )
     int countUserBookedStalls(
-        @Param("userId") Long userId,
-        @Param("exhibitionId") Long exhibitionId
+            @Param("userId") Long userId,
+            @Param("exhibitionId") Long exhibitionId
     );
+
 
 
 

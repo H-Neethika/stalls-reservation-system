@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Price {
   hallId: number;
@@ -77,6 +78,7 @@ const VendorExhibitionBooking = () => {
   const [paymentRedirecting, setPaymentRedirecting] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [realtimeDisconnect, setRealtimeDisconnect] = useState<(() => void) | null>(null);
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     const fetchExhibition = async () => {
@@ -204,7 +206,7 @@ const VendorExhibitionBooking = () => {
     }
   };
 
-  const handleToggleStall = (hallId: string, stall: any) => {
+  const handleToggleStall = async(hallId: string, stall: any) => {
     const stallId = String(stall.id);
     const isSelected = selectedStalls.some((s) => s.stallId === stallId);
     const currentStatus =
@@ -226,15 +228,17 @@ const VendorExhibitionBooking = () => {
       setSelectedStalls((prev) => prev.filter((s) => s.stallId !== stallId));
       return;
     }
+      const numberOfReservedStalls = await reservationService.getReservationCount(user!.id,  Number(exhibitionId));
+console.log("number of reserved stalls : ",numberOfReservedStalls);
+    if (numberOfReservedStalls + selectedStalls.length >= MAX_SELECTION) {
+  toast({
+    title: "Stall limit reached",
+    description: `You may reserve up to ${MAX_SELECTION} stalls in total.`,
+    variant: "destructive",
+  });
+  return;
+}
 
-    if (selectedStalls.length >= MAX_SELECTION) {
-      toast({
-        title: "Selection limit reached",
-        description: `You can select up to ${MAX_SELECTION} stalls.`,
-        variant: "destructive",
-      });
-      return;
-    }
 
     const typeId = Number(stall.stallTypeId) || undefined;
     const hallPrices =
