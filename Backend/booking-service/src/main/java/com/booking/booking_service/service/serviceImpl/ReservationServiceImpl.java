@@ -273,6 +273,11 @@ public class ReservationServiceImpl implements ReservationService {
     return response;
   }
 
+  @Override
+  public int getUserBookedStallCount(Long userId, Long exhibitionId) {
+    return reservationRepository.countUserBookedStalls(userId, exhibitionId);
+  }
+
 
   //Convert Entity to DTO
   private ReservationResponse mapToResponse(Reservation reservation) {
