@@ -47,9 +47,9 @@ public class GenreController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/stall/{id}")
-    public ResponseEntity<Genre> findByStallId(@PathVariable Long id) {
-        return ResponseEntity.ok(genreService.getGenreByStallId(id));
+    @GetMapping("/stall/{id}/{reservationId}")
+    public ResponseEntity<Genre> findByStallIdAndReservationId(@PathVariable Long id, @PathVariable Long reservationId) {
+        return ResponseEntity.ok(genreService.getGenreByStallId(id, reservationId));
     }
 
     @PostMapping("/bulk")

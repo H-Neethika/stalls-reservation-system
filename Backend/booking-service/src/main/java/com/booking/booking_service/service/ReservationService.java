@@ -21,5 +21,7 @@ public interface ReservationService {
 
   PaymentIntentResponse updateReservation(CreatePaymentRequest request);
 
+  int getUserBookedStallCount(Long userId, Long exhibitionId);
+
 
 }

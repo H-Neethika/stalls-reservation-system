@@ -46,6 +46,7 @@ class GenreService {
     names: string[];
     reservationId: number;
     stallId: number;
+    exhibitionId: number;
   }) {
     const response = await authFetch(`${API_BASE_URL}/api/genres`, {
       method: "POST",
@@ -59,9 +60,9 @@ class GenreService {
     return response.json();
   }
 
-  async getGenresByStall(stallId: number) {
+  async getGenresByStall(stallId: number, reservationId: number) {
     const response = await authFetch(
-      `${API_BASE_URL}/api/genres/stall/${stallId}`,
+      `${API_BASE_URL}/api/genres/stall/${stallId}/${reservationId}`,
       {
         method: "GET",
         headers: this.getAuthHeaders(),
@@ -87,6 +88,7 @@ class GenreService {
       names?: string[];
       reservationId?: number;
       stallId?: number;
+      exhibitionId?: number;
     }
   ) {
     const response = await authFetch(`${API_BASE_URL}/api/genres/${genreId}`, {
@@ -103,7 +105,12 @@ class GenreService {
   }
 
   async createBulkGenres(
-    payload: Array<{ names: string[]; reservationId: number; stallId: number }>
+    payload: Array<{
+      names: string[];
+      reservationId: number;
+      stallId: number;
+      exhibitionId: number;
+    }>
   ) {
     const response = await authFetch(`${API_BASE_URL}/api/genres/bulk`, {
       method: "POST",

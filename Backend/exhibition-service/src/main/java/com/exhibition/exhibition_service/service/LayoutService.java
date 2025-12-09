@@ -42,6 +42,7 @@ public class LayoutService {
     private final ExhibitionStallRepository exhibitionStallRepository;
     private final ExhibitionHallPriceRepository exhibitionHallPriceRepository;
     private final StallStatusEventProducer stallStatusEventProducer;
+    private final GenreService genreService;
 
     public List<HallSummaryResponse> getHallSummaries() {
         return hallRepository.findAll().stream()
@@ -384,6 +385,9 @@ public class LayoutService {
             .map(es -> {
                 Stall stall = es.getStall();
                 StallSummaryResponse dto = new StallSummaryResponse();
+
+                List<String> genres = genreService.getGenresByStallIdAndExhibitionId(exhibitionId,stall.getId());
+                dto.setGenres(genres);
 
                 dto.setId(stall.getId());
                 dto.setDisplayName(stall.getDisplayName());

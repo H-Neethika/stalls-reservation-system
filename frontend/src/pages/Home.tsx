@@ -37,6 +37,8 @@ const Home = () => {
   const [bookings, setBookings] = useState([]);
 
   const [reservationId, setReservationId] = useState<number | null>(null);
+  const [exhibitionId, setExhibitionId] = useState<number | null>(null);
+
 
   useEffect(() => {
     if (!openGenrePopup) return;
@@ -59,10 +61,12 @@ const Home = () => {
 
       // Save reservation ID in state
       setReservationId(confirmed.id);
+      setExhibitionId(confirmed.exhibitionId); 
 
       const stalls = (confirmed.stalls || []).map((s) => ({
         hallName: s.hallName ?? "Unknown Hall",
         stallId: s.id,
+        displayName: s.displayName ?? "-",
       }));
 
       setPopupStalls(stalls);
@@ -80,6 +84,7 @@ const Home = () => {
           onClose={() => setOpenGenrePopup(false)}
           stalls={popupStalls}
           reservationId={reservationId}
+          exhibitionId={exhibitionId}
         />
       )}
 
@@ -91,10 +96,18 @@ const Home = () => {
               <div className="font-semibold">
                 Welcome, <span className="text-primary">{user.name}</span>
               </div>
-              <Button variant="ghost" onClick={signOut}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate("/my-bookings")}
+                >
+                  My Bookings
+                </Button>
+                <Button variant="ghost" onClick={signOut}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </Button>
+              </div>
             </div>
           </div>
         )}

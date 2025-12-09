@@ -16,6 +16,8 @@ import com.notification.notification_service.model.email_details.EmailDetails;
 import com.notification.notification_service.model.email_details.ReservationEmailDetails;
 import com.notification.notification_service.repository.NotificationRepository;
 import com.notification.notification_service.service.event.EmailNotificationEvent;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -28,6 +30,8 @@ import java.util.stream.Collectors;
 
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @Slf4j
@@ -37,12 +41,46 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final ApplicationEventPublisher publisher;
     private final QRCodeService qrCodeService;
+    private static final ZoneId SL_ZONE = ZoneId.of("Asia/Kolkata");
+
 
     @Value("${OFFICIAL_WEBSITE_LINK}")
     private String websiteLink;
 
     @Value("${NOTIFICATION_QRCODE_SECRET:YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=}")
     private String base64Secret;
+
+    private Map<String, String> formatDateTime(String isoDateTime) {
+
+        LocalDateTime dt = LocalDateTime.parse(isoDateTime);
+
+        ZonedDateTime colomboTime = dt.atZone(ZoneId.of("UTC"))
+            .withZoneSameInstant(SL_ZONE);
+
+        String date = colomboTime.toLocalDate().toString();
+        String time = colomboTime.toLocalTime().format(DateTimeFormatter.ofPattern("hh:mm a"));
+
+        Map<String, String> result = new HashMap<>();
+        result.put("date", date);
+        result.put("time", time);
+        return result;
+    }
+
+    private Map<String, String> formatDateTimeNoUTC(String isoDateTime) {
+
+        LocalDateTime dt = LocalDateTime.parse(isoDateTime);
+
+        // Do NOT convert timezone – DB values are already local
+        String date = dt.toLocalDate().toString();
+        String time = dt.toLocalTime().format(DateTimeFormatter.ofPattern("hh:mm a"));
+
+        Map<String, String> result = new HashMap<>();
+        result.put("date", date);
+        result.put("time", time);
+        return result;
+    }
+
+
 
     @PostConstruct
     private void validateSecrets() {
@@ -303,7 +341,7 @@ public class NotificationService {
     }
 
     // --- HTML Template Methods ---
-    private static String getReservationConfirmationHTMLBody(
+    private String getReservationConfirmationHTMLBody(
             ReservationNotificationRequest notificationRequest,
             URI websiteUri
     ) {
@@ -318,6 +356,8 @@ public class NotificationService {
                 .collect(Collectors.joining());
 
 
+        Map<String, String> eventDT = formatDateTimeNoUTC(notificationRequest.getEventTime().toString());
+        Map<String, String> bookingDT = formatDateTime(notificationRequest.getBookingTime().toString());
 
 
 
@@ -378,9 +418,8 @@ public class NotificationService {
 
             <div class="details">
 
-                <p><b>Exhibition Date & Time:</b> %s</p>
-
-                <p><b>Your Booking Time:</b> %s</p>
+                <p><b>Exhibition Date:</b> %s &nbsp;&nbsp;&nbsp; <b>Exhibition Time:</b> %s</p>
+                <p><b>Booking Date:</b> %s &nbsp;&nbsp;&nbsp; <b>Booking Time:</b> %s</p>
 
                 <p><b>Your Booked Stalls:</b></p>
 
@@ -407,12 +446,17 @@ public class NotificationService {
                 notificationRequest.getFairName(),        // header fair name
                 notificationRequest.getUserName(),        // Dear X
                 notificationRequest.getFairName(),        // fair name again
-                notificationRequest.getEventTime(),       // Exhibition time
-                notificationRequest.getBookingTime(),     // Booking time
+                eventDT.get("date"),
+                eventDT.get("time"),
+                bookingDT.get("date"),
+                bookingDT.get("time"),
                 stallDetailsHtml,                         // Stalls HTML
                 notificationRequest.getEventLink(),       // Event button link
                 websiteUri                                // Footer site link
+
+
         );
+
 
 
     }

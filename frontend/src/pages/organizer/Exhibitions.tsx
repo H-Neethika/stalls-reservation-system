@@ -142,8 +142,6 @@ const OrganizerExhibitions = () => {
         toast({
           title: "Failed to load exhibitions",
           description:
-            backendMessage ||
-            err.message ||
             "Please try again later or refresh the page.",
           variant: "destructive",
         });
@@ -229,10 +227,7 @@ const OrganizerExhibitions = () => {
       const err = error as ApiError;
       toast({
         title: "Failed to load exhibition",
-        description:
-          extractErrorSection(err.responseBody) ||
-          err.message ||
-          "Please try again later.",
+        description: "Please try again later.",
         variant: "destructive",
       });
     }
@@ -315,10 +310,7 @@ const OrganizerExhibitions = () => {
       const err = error as ApiError;
       toast({
         title: "Failed to load exhibition",
-        description:
-          extractErrorSection(err.responseBody) ||
-          err.message ||
-          "Please try again later.",
+        description: "Please try again later.",
         variant: "destructive",
       });
     }
@@ -342,10 +334,7 @@ const OrganizerExhibitions = () => {
           const err = error as ApiError;
           toast({
             title: "Failed to delete exhibition",
-            description:
-              extractErrorSection(err.responseBody) ||
-              err.message ||
-              "Please try again later.",
+            description: "Please try again later.",
             variant: "destructive",
           });
         }

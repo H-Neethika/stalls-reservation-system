@@ -1,11 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { OrganizerLayout } from "@/components/organizer/OrganizerLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Loader2, FileDown, Users, Layers, CircleDollarSign } from "lucide-react";
+import {
+  Loader2,
+  FileDown,
+  Users,
+  Layers,
+  CircleDollarSign,
+} from "lucide-react";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +41,7 @@ interface ReservedStall {
   hallName?: string;
   stallName?: string;
   bookingStatus?: string;
+  genres?: string[];
 }
 
 interface ReservationRecord {
@@ -40,13 +60,18 @@ const statusVariant = (status?: string) => {
   const normalized = status.toUpperCase();
   if (normalized === "CONFIRMED") return "default";
   if (normalized === "FAILED") return "destructive";
-  if (normalized === "PENDING_PAYMENT" || normalized === "PENDING") return "secondary";
+  if (normalized === "PENDING_PAYMENT" || normalized === "PENDING")
+    return "secondary";
   return "secondary";
 };
 
 const isStallReserved = (status?: string) => {
   const normalized = (status || "").toUpperCase();
-  return normalized === "RESERVED" || normalized === "BOOKED" || normalized === "CONFIRMED";
+  return (
+    normalized === "RESERVED" ||
+    normalized === "BOOKED" ||
+    normalized === "CONFIRMED"
+  );
 };
 
 const ExhibitionReservations = () => {
@@ -113,10 +138,14 @@ const ExhibitionReservations = () => {
         );
 
         const vendorIds = Array.from(
-          new Set(filtered.map((r) => r.userId).filter((id) => typeof id === "number"))
+          new Set(
+            filtered.map((r) => r.userId).filter((id) => typeof id === "number")
+          )
         );
 
-        const missingIds = vendorIds.filter((id) => vendorCache.current[String(id)] === undefined);
+        const missingIds = vendorIds.filter(
+          (id) => vendorCache.current[String(id)] === undefined
+        );
 
         if (missingIds.length > 0) {
           const vendorData = await Promise.all(
@@ -138,7 +167,8 @@ const ExhibitionReservations = () => {
         const hydrated = filtered
           .map((res) => ({
             ...res,
-            stalls: res.stalls?.filter((s) => isStallReserved(s.bookingStatus)) || [],
+            stalls:
+              res.stalls?.filter((s) => isStallReserved(s.bookingStatus)) || [],
             vendor: vendorCache.current[String(res.userId)] || null,
           }))
           .filter((res) => res.stalls.length > 0);
@@ -158,7 +188,9 @@ const ExhibitionReservations = () => {
   const summary = useMemo(
     () => ({
       total: reservations.length,
-      confirmed: reservations.filter((r) => (r.status || "").toUpperCase() === "CONFIRMED").length,
+      confirmed: reservations.filter(
+        (r) => (r.status || "").toUpperCase() === "CONFIRMED"
+      ).length,
       stalls: reservations.reduce((sum, r) => sum + (r.stalls?.length ?? 0), 0),
       revenue: reservations.reduce((sum, r) => sum + (r.totalAmount ?? 0), 0),
     }),
@@ -189,8 +221,10 @@ const ExhibitionReservations = () => {
 
           const img = document.createElement("img");
           img.src = `data:image/svg+xml;base64,${svg64}`;
-          img.style.width = svg.style.width || svg.getAttribute("width") || "100%";
-          img.style.height = svg.style.height || svg.getAttribute("height") || "100%";
+          img.style.width =
+            svg.style.width || svg.getAttribute("width") || "100%";
+          img.style.height =
+            svg.style.height || svg.getAttribute("height") || "100%";
 
           svg.replaceWith(img);
         })
@@ -218,7 +252,9 @@ const ExhibitionReservations = () => {
     }
   };
 
-  const selectedExhibition = exhibitions.find((e) => String(e.id) === selectedExhibitionId);
+  const selectedExhibition = exhibitions.find(
+    (e) => String(e.id) === selectedExhibitionId
+  );
 
   // -----------------------------------------------------
   // Render
@@ -226,14 +262,16 @@ const ExhibitionReservations = () => {
   return (
     <OrganizerLayout title="Exhibition Reservations">
       <div className="space-y-6">
-
         {/* Exhibition Selector */}
         <Card>
           <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
-              <CardTitle className="text-2xl">Reservation details by exhibition</CardTitle>
+              <CardTitle className="text-2xl">
+                Reservation details by exhibition
+              </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Pick an exhibition to view vendor reservations and download a PDF.
+                Pick an exhibition to view vendor reservations and download a
+                PDF.
               </p>
             </div>
 
@@ -260,7 +298,11 @@ const ExhibitionReservations = () => {
                 disabled={exporting || reservations.length === 0}
                 variant="outline"
               >
-                {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+                {exporting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileDown className="h-4 w-4" />
+                )}
                 <span className="ml-2">Export PDF</span>
               </Button>
             </div>
@@ -274,19 +316,27 @@ const ExhibitionReservations = () => {
                   <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
                     <Users className="h-4 w-4" /> Total reservations
                   </div>
-                  <div className="mt-2 text-2xl font-semibold">{summary.total}</div>
+                  <div className="mt-2 text-2xl font-semibold">
+                    {summary.total}
+                  </div>
                 </div>
 
                 <div className="rounded-lg border p-4 bg-muted/40">
-                  <Badge variant="default" className="h-5 text-[11px]">Confirmed</Badge>
-                  <div className="mt-2 text-2xl font-semibold">{summary.confirmed}</div>
+                  <Badge variant="default" className="h-5 text-[11px]">
+                    Confirmed
+                  </Badge>
+                  <div className="mt-2 text-2xl font-semibold">
+                    {summary.confirmed}
+                  </div>
                 </div>
 
                 <div className="rounded-lg border p-4 bg-muted/40">
                   <div className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
                     <Layers className="h-4 w-4" /> Stalls reserved
                   </div>
-                  <div className="mt-2 text-2xl font-semibold">{summary.stalls}</div>
+                  <div className="mt-2 text-2xl font-semibold">
+                    {summary.stalls}
+                  </div>
                 </div>
 
                 <div className="rounded-lg border p-4 bg-muted/40">
@@ -313,7 +363,9 @@ const ExhibitionReservations = () => {
               </CardTitle>
 
               {selectedExhibition && (
-                <Badge variant="outline">Exhibition ID: {selectedExhibition.id}</Badge>
+                <Badge variant="outline">
+                  Exhibition ID: {selectedExhibition.id}
+                </Badge>
               )}
             </div>
           </CardHeader>
@@ -322,13 +374,19 @@ const ExhibitionReservations = () => {
             {/* Dates */}
             {selectedExhibition && (
               <div className="text-sm">
-                <div className="font-semibold text-foreground">{selectedExhibition.exhibitionName}</div>
+                <div className="font-semibold text-foreground">
+                  {selectedExhibition.exhibitionName}
+                </div>
                 <div className="text-xs text-muted-foreground">
                   {selectedExhibition.startDateTime
-                    ? `From ${new Date(selectedExhibition.startDateTime).toLocaleDateString()}`
+                    ? `From ${new Date(
+                        selectedExhibition.startDateTime
+                      ).toLocaleDateString()}`
                     : ""}
                   {selectedExhibition.endDateTime
-                    ? ` • To ${new Date(selectedExhibition.endDateTime).toLocaleDateString()}`
+                    ? ` • To ${new Date(
+                        selectedExhibition.endDateTime
+                      ).toLocaleDateString()}`
                     : ""}
                 </div>
               </div>
@@ -352,6 +410,7 @@ const ExhibitionReservations = () => {
                       <TableHead>Organization</TableHead>
                       <TableHead>Reservation</TableHead>
                       <TableHead>Stalls</TableHead>
+                      <TableHead>Genres</TableHead>
                       <TableHead className="text-right">Total (LKR)</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Status</TableHead>
@@ -362,11 +421,17 @@ const ExhibitionReservations = () => {
                     {reservations.map((res) => (
                       <TableRow key={res.id}>
                         <TableCell>
-                          <div className="font-semibold">{res.vendor?.name}</div>
-                          <div className="text-xs text-muted-foreground">{res.vendor?.email}</div>
+                          <div className="font-semibold">
+                            {res.vendor?.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {res.vendor?.email}
+                          </div>
                         </TableCell>
 
-                        <TableCell>{res.vendor?.organizationName || "N/A"}</TableCell>
+                        <TableCell>
+                          {res.vendor?.organizationName || "N/A"}
+                        </TableCell>
 
                         <TableCell>
                           #{res.id}
@@ -378,12 +443,43 @@ const ExhibitionReservations = () => {
                         <TableCell>
                           {res.stalls?.map((stall) => (
                             <div key={stall.id}>
-                              <span className="font-medium">{stall.stallName || "Stall"}</span>
-                              <span className="text-xs text-muted-foreground ml-2">ID: {stall.id}</span>
+                              <span className="font-medium">
+                                {stall.stallName || "Stall"}
+                              </span>
+                              <span className="text-xs text-muted-foreground ml-2">
+                                ID: {stall.id}
+                              </span>
                               {stall.stallType && (
-                                <Badge variant="outline" className="ml-2 text-[11px]">
+                                <Badge
+                                  variant="outline"
+                                  className="ml-2 text-[11px]"
+                                >
                                   {stall.stallType}
                                 </Badge>
+                              )}
+                            </div>
+                          ))}
+                        </TableCell>
+
+                        <TableCell>
+                          {res.stalls?.map((stall) => (
+                            <div key={stall.id} className="mb-1">
+                              {stall.genres && stall.genres.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {stall.genres.map((g) => (
+                                    <Badge
+                                      key={g}
+                                      variant="outline"
+                                      className="text-[10px] px-1 py-0.5 bg-primary/10 text-primary"
+                                    >
+                                      {g}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">
+                                  No genres
+                                </span>
                               )}
                             </div>
                           ))}

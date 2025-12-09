@@ -33,7 +33,7 @@ const statusColors: Record<StallStatus, string> = {
   held: "#046528ff", // user-selected
   processing: "#eab308",
   booked: "#ef4444",
-  reserved: "#ADADAD",
+  reserved: "#FF0000",
   pending: "#ea9c0cff",
 };
 

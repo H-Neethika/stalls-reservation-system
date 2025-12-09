@@ -13,8 +13,9 @@ import { genreService } from "@/services/genreService";
 interface GenrePopupProps {
   open: boolean;
   onClose: () => void;
-  stalls: { hallName: string; stallId: number }[];
+  stalls: { hallName: string; stallId: number, displayName: string }[];
   reservationId: number;
+  exhibitionId: number;
 }
 
 export const GenrePopup = ({
@@ -22,6 +23,7 @@ export const GenrePopup = ({
   onClose,
   stalls,
   reservationId,
+  exhibitionId, 
 }: GenrePopupProps) => {
   const [stallInputs, setStallInputs] = useState<Record<number, string>>({});
   const [stallGenres, setStallGenres] = useState<Record<number, string[]>>({});
@@ -45,7 +47,7 @@ export const GenrePopup = ({
         {stalls.map((stall) => (
           <div key={stall.stallId} className="mb-6">
             <p className="text-lg font-bold">Hall Name: {stall.hallName}</p>
-            <p className="text-sm">StallId: {stall.stallId}</p>
+            <p className="text-sm">Stall: {stall.displayName}</p>
 
             {/* Render tags */}
             <div className="flex gap-2 mt-2 flex-wrap">
@@ -144,6 +146,7 @@ export const GenrePopup = ({
                     names,
                     stallId: Number(stallId),
                     reservationId,
+                    exhibitionId, 
                   }));
 
                 console.log("FINAL PAYLOAD BEFORE API:", payload);
