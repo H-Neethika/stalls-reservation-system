@@ -78,7 +78,7 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
     // treat the startDateTime as "local event time" without converting to system timezone
     response.setEventDateTime(Date.from(startDateTime.atZone(ZoneId.of("UTC")).toInstant()));
 
-
+    response.setFairName(exhibitionDTO.getExhibitionName());
     response.setStalls(reservedStallDtos);
     response.setBookingDateTime(new Date());
 

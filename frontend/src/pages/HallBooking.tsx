@@ -57,8 +57,8 @@ const HallBooking = () => {
       setStalls(stallsData);
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Failed to Load Hall",
+        description: "Unable to load hall details. Please refresh the page.",
         variant: "destructive",
       });
     } finally {
@@ -116,7 +116,7 @@ const HallBooking = () => {
       }
 
       toast({
-        title: "Success!",
+        title: "Booking Successful",
         description:
           "Your stalls have been booked successfully. Check My Bookings to view your QR codes.",
       });
@@ -125,8 +125,8 @@ const HallBooking = () => {
       navigate("/my-bookings");
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Booking Failed",
+        description: "Something went wrong while processing your booking. Please try again.",
         variant: "destructive",
       });
     } finally {

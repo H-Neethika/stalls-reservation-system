@@ -58,8 +58,8 @@ const HallsList = () => {
       setHalls(hallsWithCounts);
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Failed to Load Hall",
+        description: "Unable to load hall details. Please refresh the page.",
         variant: "destructive",
       });
     } finally {

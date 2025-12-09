@@ -363,8 +363,7 @@ const HallDesigner = () => {
     } catch (error: any) {
       toast({
         title: "Error",
-        description:
-          error?.message || "Something went wrong while saving the hall.",
+        description: "Something went wrong while saving the hall.",
         variant: "destructive",
       });
     } finally {

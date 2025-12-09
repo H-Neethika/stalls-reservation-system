@@ -96,7 +96,7 @@ const VendorExhibitionBooking = () => {
       } catch (error: any) {
         toast({
           title: "Failed to load exhibition",
-          description: error?.message || "Please try again later.",
+          description: "Please try again later.",
           variant: "destructive",
         });
       } finally {
@@ -135,7 +135,7 @@ const VendorExhibitionBooking = () => {
       } catch (error: any) {
         toast({
           title: "Failed to load availability",
-          description: error?.message || "Stall availability could not be loaded.",
+          description: "Stall availability could not be loaded.",
           variant: "destructive",
         });
       }
@@ -195,7 +195,7 @@ const VendorExhibitionBooking = () => {
     } catch (error: any) {
       toast({
         title: "Failed to load hall map",
-        description: error?.message || "Try again later.",
+        description: "Try again later.",
         variant: "destructive",
       });
       setHallLayouts((prev) => ({ ...prev, [String(hallId)]: [] }));
@@ -280,7 +280,7 @@ const VendorExhibitionBooking = () => {
       console.error("Failed to update stall lock status", error);
       toast({
         title: "Stall lock failed",
-        description: error?.message || `Could not set stalls to ${status}.`,
+        description: `Could not set stalls to ${status}.`,
         variant: "destructive",
       });
     }
