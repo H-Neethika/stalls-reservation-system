@@ -50,6 +50,16 @@ public class NotificationService {
     @Value("${NOTIFICATION_QRCODE_SECRET:YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=}")
     private String base64Secret;
 
+    private String formatDayWithSuffix(int day) {
+        if (day >= 11 && day <= 13) return day + "th";
+        return switch (day % 10) {
+            case 1 -> day + "st";
+            case 2 -> day + "nd";
+            case 3 -> day + "rd";
+            default -> day + "th";
+        };
+    }
+
     private Map<String, String> formatDateTime(String isoDateTime) {
 
         LocalDateTime dt = LocalDateTime.parse(isoDateTime);
@@ -66,19 +76,18 @@ public class NotificationService {
         return result;
     }
 
-    private Map<String, String> formatDateTimeNoUTC(String isoDateTime) {
+    private String formatDateTimeNoUTC(LocalDateTime dateTime) {
+        int day = dateTime.getDayOfMonth();
+        String daySuffix = formatDayWithSuffix(day);
 
-        LocalDateTime dt = LocalDateTime.parse(isoDateTime);
+        String month = dateTime.getMonth().name().substring(0, 1)
+            + dateTime.getMonth().name().substring(1).toLowerCase();
 
-        // Do NOT convert timezone – DB values are already local
-        String date = dt.toLocalDate().toString();
-        String time = dt.toLocalTime().format(DateTimeFormatter.ofPattern("hh:mm a"));
+        String formattedTime = dateTime.format(DateTimeFormatter.ofPattern("hh.mm a"));
 
-        Map<String, String> result = new HashMap<>();
-        result.put("date", date);
-        result.put("time", time);
-        return result;
+        return "%s %s %d (%s)".formatted(daySuffix, month, dateTime.getYear(), formattedTime);
     }
+
 
 
 
@@ -347,16 +356,21 @@ public class NotificationService {
     ) {
 
         String stallDetailsHtml = notificationRequest.getStalls()
-                .stream()
-                .map(s -> """
-        <div style="margin: 6px 0;">
-            <b>%s</b> — %s (%s)
-        </div>
-    """.formatted(s.getStallName(), s.getStallType(), s.getHallName()))
-                .collect(Collectors.joining());
+            .stream()
+            .map(s -> """
+            <p style="margin: 4px 0 4px 20px;">
+                <b>%s</b> — %s (%s)
+            </p>
+        """.formatted(s.getStallName(), s.getStallType(), s.getHallName()))
+            .collect(Collectors.joining());
 
 
-        Map<String, String> eventDT = formatDateTimeNoUTC(notificationRequest.getEventTime().toString());
+
+        String eventStart = formatDateTimeNoUTC(notificationRequest.getEventStartTime());
+        String eventEnd   = formatDateTimeNoUTC(notificationRequest.getEventEndTime());
+
+        String exhibitionPeriod = "From %s To %s".formatted(eventStart, eventEnd);
+
         Map<String, String> bookingDT = formatDateTime(notificationRequest.getBookingTime().toString());
 
 
@@ -415,15 +429,19 @@ public class NotificationService {
         <div class="content">
             <h2>Dear %s,</h2>
             <p>We’re thrilled to confirm your stall reservation for the upcoming <b>%s</b>.</p>
-
+            <p><b> %s</b></p>
             <div class="details">
 
-                <p><b>Exhibition Date:</b> %s &nbsp;&nbsp;&nbsp; <b>Exhibition Time:</b> %s</p>
-                <p><b>Booking Date:</b> %s &nbsp;&nbsp;&nbsp; <b>Booking Time:</b> %s</p>
+               
+                <p><b>Booked Date:</b> %s</p>
+                <p><b>Booked Time:</b> %s</p>
+            
 
                 <p><b>Your Booked Stalls:</b></p>
-
-                %s   <!-- stall details HTML inserted here -->
+            
+                <div style="margin-left: 10px; line-height: 1.6;">
+                  %s
+                </div>
 
             </div>
 
@@ -446,8 +464,7 @@ public class NotificationService {
                 notificationRequest.getFairName(),        // header fair name
                 notificationRequest.getUserName(),        // Dear X
                 notificationRequest.getFairName(),        // fair name again
-                eventDT.get("date"),
-                eventDT.get("time"),
+                exhibitionPeriod,
                 bookingDT.get("date"),
                 bookingDT.get("time"),
                 stallDetailsHtml,                         // Stalls HTML

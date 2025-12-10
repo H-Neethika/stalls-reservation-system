@@ -13,9 +13,11 @@ import com.exhibition.exhibition_service.mapper.ExhibitionMapper;
 import com.exhibition.exhibition_service.model.Exhibition;
 import com.exhibition.exhibition_service.model.ExhibitionHall;
 import com.exhibition.exhibition_service.model.ExhibitionHallPrice;
+import com.exhibition.exhibition_service.model.ExhibitionStall;
 import com.exhibition.exhibition_service.repository.ExhibitionRepository;
 import com.exhibition.exhibition_service.repository.ExhibitionHallRepository;
 import com.exhibition.exhibition_service.repository.ExhibitionHallPriceRepository;
+import com.exhibition.exhibition_service.repository.ExhibitionStallRepository;
 import com.exhibition.exhibition_service.service.ExhibitionService;
 import com.exhibition.exhibition_service.service.LayoutService;
 import com.exhibition.exhibition_service.enums.ExhibitionState;
@@ -40,6 +42,7 @@ public class ExhibitionServiceImpl implements ExhibitionService {
     private final ExhibitionHallPriceRepository exhibitionHallPriceRepository;
     private final ExhibitionMapper exhibitionMapper;
     private final LayoutService layoutService;
+    private final ExhibitionStallRepository exhibitionStallRepository;
 
 
 
@@ -230,8 +233,29 @@ public class ExhibitionServiceImpl implements ExhibitionService {
 
             throw new RuntimeException("Exhibition not found with id "+id);
         }
+        Exhibition exhibition = exhibitionRepository.findById(id).get();
 
-        exhibitionRepository.deleteById(id);
+        if (exhibition.getExhibitionState() == ExhibitionState.DRAFT) {
+            List<ExhibitionHall> exhibitionHalls = exhibitionHallRepository.findByExhibition(
+                exhibition);
+
+            for (ExhibitionHall hall : exhibitionHalls) {
+                List<ExhibitionStall> stalls = exhibitionStallRepository.findByExhibition(
+                    exhibition);
+                for (ExhibitionStall stall : stalls) {
+                    exhibitionStallRepository.deleteById(stall.getId());
+                }
+                List<ExhibitionHallPrice> hallPriceList = exhibitionHallPriceRepository.findByExhibitionHall(hall);
+                for (ExhibitionHallPrice price: hallPriceList){
+                    exhibitionHallPriceRepository.deleteById(price.getId());
+                }
+                exhibitionHallRepository.deleteById(hall.getId());
+            }
+
+
+            exhibitionRepository.deleteById(id);
+
+        }
 
     }
 
