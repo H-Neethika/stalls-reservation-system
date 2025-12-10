@@ -20,7 +20,8 @@ public class NotificationMapper {
         if (notification.getEmailDetails() instanceof ReservationEmailDetails details) {
             request.setReservationId(details.getReservationId());
             request.setUserName(details.getUserName());
-            request.setEventTime(details.getEventTime());
+            request.setEventStartTime(details.getEventStartTime());
+            request.setEventEndTime(details.getEventEndTime());
             request.setEventLink(details.getEventLink());
             request.setBookingTime(details.getBookingTime());
             request.setFairName(details.getFairName());
@@ -61,7 +62,8 @@ public class NotificationMapper {
                 req.getDisplayName(),
                 req.getStalls(),               // <-- list of stalls
                 req.getBookingTime(),
-                req.getEventTime(),
+                req.getEventStartTime(),
+                req.getEventEndTime(),
                 req.getEventLink()
         );
 
@@ -97,7 +99,8 @@ public class NotificationMapper {
                     details.getDisplayName(),
                     details.getStalls(),      // <-- list support
                     details.getBookingTime(),
-                    details.getEventTime(),
+                    details.getEventStartTime(),
+                    details.getEventEndTime(),
                     details.getEventLink()
             );
         }
@@ -121,7 +124,8 @@ public class NotificationMapper {
                 req.getDisplayName(),
                 req.getStalls(),
                 req.getBookingTime(),
-                req.getEventTime(),
+                req.getEventStartTime(),
+                req.getEventEndTime(),
                 req.getEventLink()
         );
     }
@@ -137,7 +141,8 @@ public class NotificationMapper {
         res.setRecipientEmail(notification.getRecipientEmail());
 
         res.setBookingTime(req.getBookingTime());
-        res.setEventTime(req.getEventTime());
+        res.setEventStartTime(req.getEventStartTime());
+        res.setEventEndTime(req.getEventEndTime());
         res.setReservationId(req.getReservationId());
         res.setFairName(req.getFairName());
         res.setDisplayName(req.getDisplayName());

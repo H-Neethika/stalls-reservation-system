@@ -52,7 +52,8 @@ public class ReservationBookedListener {
         request.setFairName(event.getFairName());
         request.setNotificationType(resolveType(event.getNotificationType()));
         request.setBookingTime(toLocalDateTime(event.getBookingTime()));
-        request.setEventTime(toLocalDateTime(event.getEventTime()));
+        request.setEventStartTime(toLocalDateTime(event.getEventStartTime()));
+        request.setEventEndTime(toLocalDateTime(event.getEventEndTime()));
         request.setEventLink(resolveEventLink(event.getEventLink()));
 
         if (event.getStalls() != null && !event.getStalls().isEmpty()) {

@@ -19,7 +19,8 @@ public class ReservationBookedEvent {
     private String fairName;
     private String notificationType;
     private Instant bookingTime;
-    private Instant eventTime;
+    private Instant eventStartTime;
+    private Instant eventEndTime;
     private String eventLink;
     private List<StallSummary> stalls;
 

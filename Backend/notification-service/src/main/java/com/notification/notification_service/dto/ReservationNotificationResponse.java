@@ -24,6 +24,7 @@ public class ReservationNotificationResponse {
     private String displayName;
     private List<StallInfo> stalls;
     private LocalDateTime bookingTime;
-    private LocalDateTime eventTime;
+    private LocalDateTime eventStartTime;
+    private LocalDateTime eventEndTime;
     private String eventLink;
 }
