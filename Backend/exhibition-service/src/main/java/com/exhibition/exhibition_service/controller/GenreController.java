@@ -46,4 +46,16 @@ public class GenreController {
         genreService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/stall/{id}/{reservationId}")
+    public ResponseEntity<Genre> findByStallIdAndReservationId(@PathVariable Long id, @PathVariable Long reservationId) {
+        return ResponseEntity.ok(genreService.getGenreByStallId(id, reservationId));
+    }
+
+    @PostMapping("/bulk")
+    public ResponseEntity<List<Genre>> createBulkGenres(@RequestBody List<Genre> genres) {
+        return ResponseEntity.ok(genreService.createGenres(genres));
+    }
+
+
 }

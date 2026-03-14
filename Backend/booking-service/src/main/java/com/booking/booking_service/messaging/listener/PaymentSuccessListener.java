@@ -60,7 +60,7 @@ public class PaymentSuccessListener {
             }
 
             // Also publish to Kafka so exhibition-service can update directly
-            stallStatusUpdateProducer.publishReservedStatus(reservation.getId(), stallIds);
+            stallStatusUpdateProducer.publishReservedStatus(reservation.getExhibitionId(), reservation.getId(), stallIds);
 
             PaymentSuccessResponse response = exhibitionStallService.updateStallBookingStatus(event.getReservationId());
             reservationBookedEventProducer.publishReservationBooked(response);

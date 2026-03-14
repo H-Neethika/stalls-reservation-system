@@ -34,6 +34,8 @@ public class Stall {
 
     private String path;
 
+    private String displayName;
+
     @ManyToOne
     private StallType stallType;
 

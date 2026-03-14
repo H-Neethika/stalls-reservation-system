@@ -22,10 +22,10 @@ public class StallLockExpiryJob {
     private final ReservationRepository reservationRepository;
     private final ExhibitionServiceClient exhibitionServiceClient;
 
-    @Value("${STALL_LOCK_TTL_MINUTES:10}")
+    @Value("${STALL_LOCK_TTL_MINUTES:2}")
     private long lockTtlMinutes;
 
-    @Scheduled(fixedDelayString = "${STALL_LOCK_SWEEP_MS:60000}")
+    @Scheduled(fixedDelayString = "${STALL_LOCK_SWEEP_MS:15000}")
     @Transactional
     public void releaseExpiredLocks() {
         long now = System.currentTimeMillis();
@@ -45,6 +45,7 @@ public class StallLockExpiryJob {
                 UpdateStallStatusRequest release = new UpdateStallStatusRequest();
                 release.setStallIds(stallIds);
                 release.setBookingStatus("AVAILABLE");
+                release.setExhibitionId(reservation.getExhibitionId());
                 try {
                     exhibitionServiceClient.updateBookingStatus(release);
                 } catch (Exception ex) {

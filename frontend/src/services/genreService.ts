@@ -4,6 +4,7 @@ type ApiError = Error & { status?: number; responseBody?: unknown };
 
 const parseErrorResponse = async (response: Response): Promise<ApiError> => {
   let body: unknown = null;
+
   try {
     const contentType = response.headers.get("content-type");
     if (contentType && contentType.includes("application/json")) {
@@ -14,6 +15,7 @@ const parseErrorResponse = async (response: Response): Promise<ApiError> => {
   } catch {
     body = null;
   }
+
   const message =
     (typeof body === "object" &&
       body !== null &&
@@ -28,7 +30,7 @@ const parseErrorResponse = async (response: Response): Promise<ApiError> => {
   return err;
 };
 
-class ReservationService {
+class GenreService {
   private getAuthHeaders() {
     const token = localStorage.getItem("accessToken");
     if (!token) {
@@ -40,8 +42,13 @@ class ReservationService {
     };
   }
 
-  async createReservation(payload: { exhibitionId: number; stallIds: number[] }) {
-    const response = await authFetch(`${API_BASE_URL}/api/reservation`, {
+  async createGenre(payload: {
+    names: string[];
+    reservationId: number;
+    stallId: number;
+    exhibitionId: number;
+  }) {
+    const response = await authFetch(`${API_BASE_URL}/api/genres`, {
       method: "POST",
       headers: this.getAuthHeaders(),
       body: JSON.stringify(payload),
@@ -53,60 +60,9 @@ class ReservationService {
     return response.json();
   }
 
-  async createPayment(payload: { reservationId: number; currency: string }) {
-    const response = await authFetch(`${API_BASE_URL}/api/reservation/payment`, {
-      method: "PUT",
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw await parseErrorResponse(response);
-    }
-    return response.json();
-  }
-
-  async updateStallStatus(payload: { stallIds: number[]; bookingStatus: string }) {
-    const response = await authFetch(`${API_BASE_URL}/api/booking-status/update`, {
-      method: "POST",
-      headers: this.getAuthHeaders(),
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      throw await parseErrorResponse(response);
-    }
-    return response.json();
-  }
-
-  async getMyReservations() {
-    const response = await authFetch(`${API_BASE_URL}/api/reservation/my`, {
-      method: "GET",
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw await parseErrorResponse(response);
-    }
-    return response.json();
-  }
-
-  async getAllReservations() {
-    const response = await authFetch(`${API_BASE_URL}/api/reservation`, {
-      method: "GET",
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw await parseErrorResponse(response);
-    }
-
-    return response.json();
-  }
-
-    async getReservationCount(userId: number, exhibitionId: number) {
+  async getGenresByStall(stallId: number, reservationId: number) {
     const response = await authFetch(
-      `${API_BASE_URL}/api/reservation/user/${userId}/exhibition/${exhibitionId}/count`,
+      `${API_BASE_URL}/api/genres/stall/${stallId}/${reservationId}`,
       {
         method: "GET",
         headers: this.getAuthHeaders(),
@@ -117,9 +73,57 @@ class ReservationService {
       throw await parseErrorResponse(response);
     }
 
+    // Parse safely
+    const text = await response.text();
+    try {
+      return text ? JSON.parse(text) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  async updateGenre(
+    genreId: number,
+    payload: {
+      names?: string[];
+      reservationId?: number;
+      stallId?: number;
+      exhibitionId?: number;
+    }
+  ) {
+    const response = await authFetch(`${API_BASE_URL}/api/genres/${genreId}`, {
+      method: "PUT",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw await parseErrorResponse(response);
+    }
+
     return response.json();
   }
 
+  async createBulkGenres(
+    payload: Array<{
+      names: string[];
+      reservationId: number;
+      stallId: number;
+      exhibitionId: number;
+    }>
+  ) {
+    const response = await authFetch(`${API_BASE_URL}/api/genres/bulk`, {
+      method: "POST",
+      headers: this.getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw await parseErrorResponse(response);
+    }
+
+    return response.json();
+  }
 }
 
-export const reservationService = new ReservationService();
+export const genreService = new GenreService();

@@ -86,4 +86,11 @@ public class ReservationController {
       throw new IllegalArgumentException("Subject claim is not a valid user id");
     }
   }
+
+  @GetMapping("/user/{userId}/exhibition/{exhibitionId}/count")
+  public int getUserStallCount(
+      @PathVariable Long userId,
+      @PathVariable Long exhibitionId) {
+    return reservationService.getUserBookedStallCount(userId, exhibitionId);
+  }
 }

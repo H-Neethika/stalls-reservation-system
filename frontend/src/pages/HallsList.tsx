@@ -58,8 +58,8 @@ const HallsList = () => {
       setHalls(hallsWithCounts);
     } catch (error: any) {
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Failed to Load Hall",
+        description: "Unable to load hall details. Please refresh the page.",
         variant: "destructive",
       });
     } finally {
@@ -71,51 +71,46 @@ const HallsList = () => {
     const fetchExhibitions = async () => {
       try {
         const data = await exhibitionService.getPublishedExhibitions();
-        const mapped =
-          data?.map((expo) => ({
-            id: String(expo.id),
-            title: expo.exhibitionName || "Exhibition",
-            description: expo.description || "Explore the latest offerings.",
-            dateRange:
-              expo.startDateTime && expo.endDateTime
-                ? `${new Date(expo.startDateTime).toLocaleDateString()} - ${new Date(expo.endDateTime).toLocaleDateString()}`
-                : "Dates TBA",
-            location: expo.venue || "Exhibition venue",
-            hallIds:
-              Array.isArray((expo as any).halls) && (expo as any).halls.length > 0
-                ? (expo as any).halls.map((h: any) => String(h.hallId || h.id))
-                : Array.isArray((expo as any).hallIds)
-                ? (expo as any).hallIds.map((id: any) => String(id))
-                : [],
-            status: "PUBLISHED" as const,
-            halls: (expo as any).halls || [],
-          })) || [];
+        console.log("data : ",data);
+      const mapped =
+  data?.map((expo) => ({
+    id: String(expo.id),
+    title: expo.exhibitionName || "Exhibition",
+    description: expo.description || "Explore the latest offerings.",
+
+    // Exhibition start & end
+    exhibitionStart: expo.startDateTime ? new Date(expo.startDateTime) : null,
+    exhibitionEnd: expo.endDateTime ? new Date(expo.endDateTime) : null,
+
+    // Booking open & close
+    bookingOpen: expo.bookingOpenDateTime ? new Date(expo.bookingOpenDateTime) : null,
+    bookingClose: expo.bookingCloseDateTime ? new Date(expo.bookingCloseDateTime) : null,
+
+    // Hall IDs
+    hallIds: Array.isArray(expo.halls)
+      ? expo.halls.map((h) => String(h.id))
+      : [],
+
+    halls: expo.halls || [],
+    status: expo.exhibitionState || "PUBLISHED",
+  })) || [];
+
 
         if (mapped.length === 0) {
           throw new Error("No published exhibitions returned");
         }
         setPublishedExhibitions(mapped);
       } catch (error: any) {
-        // fallback sample data
-        setPublishedExhibitions([
-          {
-            id: "sample-1",
-            title: "Sample Exhibition",
-            description: "Sample published exhibition (fallback).",
-            dateRange: "TBA",
-            location: "Hall Complex",
-            hallIds: halls.map((h) => h.id),
-            status: "PUBLISHED",
-          },
-        ]);
-        toast({
-          title: "Showing sample exhibitions",
-          description:
-            typeof error?.message === "string"
-              ? error.message
-              : "Using sample data because published exhibitions could not be loaded.",
-        });
-      } finally {
+  setPublishedExhibitions([]); // ← no fallback
+  // toast({
+  //   title: "No exhibitions available",
+  //   description:
+  //     typeof error?.message === "string"
+  //       ? error.message
+  //       : "Unable to load exhibitions at the moment.",
+  // });
+}
+ finally {
         setLoadingExhibitions(false);
       }
     };
@@ -153,54 +148,106 @@ const HallsList = () => {
       );
     }
 
-    if (publishedExhibitions.length === 0) {
-      return (
-        <Card className="text-center py-12">
-          <CardContent>
-            <Grid3x3 className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">No Exhibitions available at the moment.</p>
-          </CardContent>
-        </Card>
-      );
-    }
+if (publishedExhibitions.length === 0) {
+  return (
+    <Card className="text-center py-12">
+      <CardContent>
+        <Map className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+
+
+        <h3 className="text-xl font-semibold mb-2">No Exhibitions Available</h3>
+
+        <p className="text-muted-foreground">
+          There are currently no exhibitions published for booking.
+        </p>
+
+        <p className="text-sm text-muted-foreground mt-2">
+          Please check back later or contact the organizer for updates.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+
 
     return (
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {publishedExhibitions
-          .filter((expo) => expo.status === "PUBLISHED")
-          .map((expo) => (
-            <Card
-              key={expo.id}
-              className="hover-scale cursor-pointer"
-              onClick={() =>
-                navigate(`/exhibitions/${expo.id}/reserve`, {
-                  state: { exhibition: expo },
-                })
-              }
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5" />
-                  {expo.title}
-                </CardTitle>
-                <CardDescription>{expo.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="w-4 h-4" />
-                  <span>{expo.dateRange}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Map className="w-4 h-4" />
-                  <span>{expo.location}</span>
-                </div>
-                <Badge variant="secondary" className="mt-1">
-                  {expo.hallIds.length} hall{expo.hallIds.length === 1 ? "" : "s"}
-                </Badge>
-                <Button className="w-full mt-2">Select Exhibition</Button>
-              </CardContent>
-            </Card>
-          ))}
+  .filter((expo) => expo.status === "PUBLISHED")
+  .map((expo) => {
+    console.log("Expo:", expo);  // <-- LOG HERE
+
+    return (
+     <Card
+  key={expo.id}
+  className="hover-scale cursor-pointer"
+  onClick={() =>
+    navigate(`/exhibitions/${expo.id}/reserve`, {
+      state: { exhibition: expo },
+    })
+  }
+>
+  <CardHeader>
+    <CardTitle className="flex items-center gap-2">
+      <Building2 className="w-5 h-5" />
+      {expo.title}
+    </CardTitle>
+    <CardDescription>{expo.description}</CardDescription>
+  </CardHeader>
+
+  <CardContent className="space-y-4 text-sm text-muted-foreground">
+
+    {/* Exhibition Dates */}
+    <div className="flex items-start gap-2">
+      <Calendar className="w-4 h-4 mt-1" />
+      <div>
+        <span className="font-medium text-foreground">Exhibition:</span>
+        <p>
+          {expo.exhibitionStart?.toLocaleDateString()} →{" "}
+          {expo.exhibitionEnd?.toLocaleDateString()}
+        </p>
+      </div>
+    </div>
+
+    {/* Booking Opens */}
+    <div className="flex items-start gap-2">
+      <Calendar className="w-4 h-4 mt-1" />
+      <div>
+        <span className="font-medium text-foreground">Booking Opens:</span>
+        <p>
+          {expo.bookingOpen
+            ? `${expo.bookingOpen.toLocaleDateString()} at ${expo.bookingOpen.toLocaleTimeString()}`
+            : "TBA"}
+        </p>
+      </div>
+    </div>
+
+    {/* Booking Closes */}
+    <div className="flex items-start gap-2">
+      <Calendar className="w-4 h-4 mt-1" />
+      <div>
+        <span className="font-medium text-foreground">Booking Closes:</span>
+        <p>
+          {expo.bookingClose
+            ? `${expo.bookingClose.toLocaleDateString()} at ${expo.bookingClose.toLocaleTimeString()}`
+            : "TBA"}
+        </p>
+      </div>
+    </div>
+
+    {/* Hall count */}
+    <Badge variant="secondary" className="mt-1">
+      {expo.hallIds.length} hall{expo.hallIds.length === 1 ? "" : "s"}
+    </Badge>
+
+    <Button className="w-full mt-2">Select Exhibition</Button>
+  </CardContent>
+</Card>
+
+    );
+  })}
+
       </div>
     );
   };

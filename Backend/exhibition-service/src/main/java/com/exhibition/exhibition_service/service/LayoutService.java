@@ -42,6 +42,7 @@ public class LayoutService {
     private final ExhibitionStallRepository exhibitionStallRepository;
     private final ExhibitionHallPriceRepository exhibitionHallPriceRepository;
     private final StallStatusEventProducer stallStatusEventProducer;
+    private final GenreService genreService;
 
     public List<HallSummaryResponse> getHallSummaries() {
         return hallRepository.findAll().stream()
@@ -133,6 +134,8 @@ public class LayoutService {
                 es.setExhibition(exhibition);
                 es.setStall(stall);
                 es.setBookingStatus(available);
+                es.setStallName(stall.getDisplayName());
+
                 exhibitionStalls.add(es);
             }
             if (!exhibitionStalls.isEmpty()) {
@@ -232,58 +235,34 @@ public class LayoutService {
 
     @Transactional
     public List<StallStatusResponse> updateStallStatuses(UpdateStallStatusRequest request) {
-        if (request == null || request.getStallIds() == null || request.getStallIds().isEmpty()) {
-            return List.of();
-        }
-        BookingStatus status = null;
-        if (request.getBookingStatus() != null) {
-            try {
-                status = BookingStatus.valueOf(request.getBookingStatus());
-            } catch (IllegalArgumentException ignored) {
-                // fall through, leave status null
-            }
-        }
-        if (status == null) {
-            throw new IllegalArgumentException("bookingStatus must be one of: " + java.util.Arrays.toString(BookingStatus.values()));
-        }
 
-        BookingStatus finalStatus = status;
+        Exhibition exhibition = exhibitionRepository.findById(request.getExhibitionId())
+            .orElseThrow(() -> new IllegalArgumentException("Exhibition not found"));
 
-        // First pass: detect conflicts to avoid partial updates
-        List<Long> conflicted = new ArrayList<>();
+        List<Long> stallIds = request.getStallIds();
+        BookingStatus finalStatus = BookingStatus.valueOf(request.getBookingStatus());
+
         List<ExhibitionStall> targets = new ArrayList<>();
-        for (Long stallId : request.getStallIds()) {
-            List<ExhibitionStall> matches = exhibitionStallRepository.findByStallId_Id(stallId);
+
+        for (Long stallId : stallIds) {
+
+            // 🔥 FIX: fetch stall only for **this** exhibition
+            List<ExhibitionStall> matches =
+                exhibitionStallRepository.findByExhibitionAndStall_Id(exhibition, stallId);
+
             targets.addAll(matches);
-            if (finalStatus == BookingStatus.PENDING || finalStatus == BookingStatus.RESERVED) {
-                for (ExhibitionStall es : matches) {
-                    BookingStatus current = es.getBookingStatus();
-                    // Allow idempotent updates when the stall already has the desired status
-                    if (current == finalStatus) {
-                        continue;
-                    }
-                    boolean isUpgradeFromPending =
-                            finalStatus == BookingStatus.RESERVED && current == BookingStatus.PENDING;
-                    if (current != null && current != BookingStatus.AVAILABLE && !isUpgradeFromPending) {
-                        conflicted.add(es.getStall() != null ? es.getStall().getId() : es.getId());
-                    }
-                }
-            }
         }
 
-        if (!conflicted.isEmpty()) {
-            throw new IllegalStateException("Stalls are not available: " + conflicted);
-        }
-
-        Map<Long, StallStatusResponse> updated = new HashMap<>();
         for (ExhibitionStall es : targets) {
             es.setBookingStatus(finalStatus);
             exhibitionStallRepository.save(es);
-            updated.put(es.getId(), toStatus(es));
-            publishStatusEvent(es);
         }
-        return new java.util.ArrayList<>(updated.values());
+
+        return targets.stream()
+            .map(this::toStatus)
+            .collect(Collectors.toList());
     }
+
 
     private void publishStatusEvent(ExhibitionStall es) {
         if (es == null || es.getStall() == null || es.getStall().getHall() == null || es.getExhibition() == null) {
@@ -329,6 +308,7 @@ public class LayoutService {
     private StallLayoutResponse toStallLayout(Stall stall) {
         StallLayoutResponse dto = new StallLayoutResponse();
         dto.setId(stall.getId());
+        dto.setDisplayName(stall.getDisplayName());
         Optional.ofNullable(stall.getStallType()).ifPresent(type -> {
             dto.setStallTypeId(type.getId());
             dto.setStallType(type.getType());
@@ -352,6 +332,7 @@ public class LayoutService {
     private StallSummaryResponse toSummary(Stall stall) {
         StallSummaryResponse response = new StallSummaryResponse();
         response.setId(stall.getId());
+        response.setDisplayName(stall.getDisplayName());
         Optional.ofNullable(stall.getStallType()).ifPresent(type -> {
             response.setStallType(type.getType());
             priceFor(stall.getHall(), type).ifPresent(response::setPrice);
@@ -390,4 +371,49 @@ public class LayoutService {
         dto.setPrice(price.getPrice());
         return dto;
     }
+
+
+    public List<StallSummaryResponse> getExhibitionStallSummaries(Long exhibitionId, List<Long> ids) {
+
+        Exhibition exhibition = exhibitionRepository.findById(exhibitionId)
+            .orElseThrow(() -> new IllegalArgumentException("Exhibition not found: " + exhibitionId));
+
+        List<ExhibitionStall> exhibitionStalls =
+            exhibitionStallRepository.findByExhibitionAndStall_IdIn(exhibition, ids);
+
+        return exhibitionStalls.stream()
+            .map(es -> {
+                Stall stall = es.getStall();
+                StallSummaryResponse dto = new StallSummaryResponse();
+
+                List<String> genres = genreService.getGenresByStallIdAndExhibitionId(exhibitionId,stall.getId());
+                dto.setGenres(genres);
+
+                dto.setId(stall.getId());
+                dto.setDisplayName(stall.getDisplayName());
+                dto.setStallName(es.getStallName());
+                dto.setBookingStatus(es.getBookingStatus() != null ? es.getBookingStatus().name() : null);
+
+                Optional.ofNullable(stall.getStallType()).ifPresent(type -> {
+                    dto.setStallType(type.getType());
+                    dto.setPrice(priceForExhibition(exhibitionId, stall.getHall().getId(), type.getId()));
+                });
+
+                dto.setHallName(stall.getHall().getHallName());
+
+                return dto;
+            })
+            .collect(Collectors.toList());
+    }
+
+    private Long priceForExhibition(Long exhibitionId, Long hallId, Long stallTypeId) {
+        return exhibitionHallPriceRepository
+            .findByExhibitionHall_Exhibition_IdAndExhibitionHall_Hall_IdAndStallType_Id(
+                exhibitionId, hallId, stallTypeId
+            )
+            .map(ExhibitionHallPrice::getPrice)
+            .orElse(null);
+
+    }
+
 }

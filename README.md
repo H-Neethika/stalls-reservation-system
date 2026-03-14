@@ -86,6 +86,18 @@ npm install
 npm run dev
 ```
 
+## 🔐 Default Organizer Account
+
+The Stalls Reservation System includes a **predefined organizer account** that is required for managing exhibitions from the organizer portal.  
+This account **cannot be created from the UI** and is automatically seeded into the `user_db` during project setup.
+
+Use the following credentials to sign in as the organizer:
+
+Email: organizer@gmail.com  
+Password: Org@1234
+
+Only **vendors** and **publishers** can register themselves through the frontend registration page.
+
 ## 💳 Stripe (local)
 - Set `STRIPE_SECRET_KEY`, `STRIPE_API_PUBLISHABLE`, and `STRIPE_WEBHOOK_SECRET` in `.env`.
 - Run the Stripe webhook forwarder (replace the key with yours):

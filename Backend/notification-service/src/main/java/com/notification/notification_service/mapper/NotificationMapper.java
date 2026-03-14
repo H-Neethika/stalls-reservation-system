@@ -10,156 +10,160 @@ import com.notification.notification_service.model.email_details.EmailDetails;
 import com.notification.notification_service.model.email_details.ReservationEmailDetails;
 
 public class NotificationMapper {
-    public static ReservationNotificationRequest toReservationNotificationRequest(
-            Notification notification
-    ) {
-        ReservationNotificationRequest reservationNotificationRequest = new ReservationNotificationRequest();
-        reservationNotificationRequest.setUserId(notification.getUserId());
-        reservationNotificationRequest.setEmail(notification.getRecipientEmail());
-        if(notification.getEmailDetails() instanceof ReservationEmailDetails emailDetails) {
-            reservationNotificationRequest.setReservationId(emailDetails.getReservationId());
-            reservationNotificationRequest.setUserName(emailDetails.getUserName());
-            reservationNotificationRequest.setEventTime(emailDetails.getEventTime());
-            reservationNotificationRequest.setEventLink(emailDetails.getEventLink());
-            reservationNotificationRequest.setBookingTime(emailDetails.getBookingTime());
-            reservationNotificationRequest.setFairName(emailDetails.getFairName());
-            reservationNotificationRequest.setStallName(emailDetails.getStallName());
-            reservationNotificationRequest.setStallType(emailDetails.getStallType());
-            reservationNotificationRequest.setHallName(emailDetails.getHallName());
+
+    // ----------- RESERVATION REQUEST FROM ENTITY -------------
+    public static ReservationNotificationRequest toReservationNotificationRequest(Notification notification) {
+        ReservationNotificationRequest request = new ReservationNotificationRequest();
+        request.setUserId(notification.getUserId());
+        request.setEmail(notification.getRecipientEmail());
+
+        if (notification.getEmailDetails() instanceof ReservationEmailDetails details) {
+            request.setReservationId(details.getReservationId());
+            request.setUserName(details.getUserName());
+            request.setEventStartTime(details.getEventStartTime());
+            request.setEventEndTime(details.getEventEndTime());
+            request.setEventLink(details.getEventLink());
+            request.setBookingTime(details.getBookingTime());
+            request.setFairName(details.getFairName());
+            request.setDisplayName(details.getDisplayName());
+            request.setStalls(details.getStalls());  // <-- updated
         }
 
-        return reservationNotificationRequest;
+        return request;
     }
 
-    public static AccountActivationNotificationRequest toAccountActivationNotificationRequest(
-            Notification notification
-    ) {
-        AccountActivationNotificationRequest activationNotificationRequest = new AccountActivationNotificationRequest();
-        activationNotificationRequest.setUserId(notification.getUserId());
-        activationNotificationRequest.setEmail(notification.getRecipientEmail());
-        activationNotificationRequest.setNotificationType(notification.getNotificationType());
-        if(notification.getEmailDetails() instanceof AccountActivationEmailDetails emailDetails) {
-            activationNotificationRequest.setUserName(emailDetails.getUserName());
-            activationNotificationRequest.setRole(emailDetails.getRole());
-            activationNotificationRequest.setCreatedTime(emailDetails.getCreatedTime());
+    // ----------- ACCOUNT ACTIVATION REQUEST FROM ENTITY -------------
+    public static AccountActivationNotificationRequest toAccountActivationNotificationRequest(Notification notification) {
+        AccountActivationNotificationRequest req = new AccountActivationNotificationRequest();
+        req.setUserId(notification.getUserId());
+        req.setEmail(notification.getRecipientEmail());
+        req.setNotificationType(notification.getNotificationType());
+
+        if (notification.getEmailDetails() instanceof AccountActivationEmailDetails details) {
+            req.setUserName(details.getUserName());
+            req.setRole(details.getRole());
+            req.setCreatedTime(details.getCreatedTime());
+            req.setLoginLink(details.getLoginLink());
         }
 
-        return activationNotificationRequest;
+        return req;
     }
 
-    public static Notification toNotification(
-            ReservationNotificationRequest reservationNotificationRequest
-    ) {
+    // ----------- CREATE NOTIFICATION ENTITY (RESERVATION) -------------
+    public static Notification toNotification(ReservationNotificationRequest req) {
         Notification notification = new Notification();
-        notification.setUserId(reservationNotificationRequest.getUserId());
-        notification.setRecipientEmail(reservationNotificationRequest.getEmail());
-        notification.setNotificationType(reservationNotificationRequest.getNotificationType());
+        notification.setUserId(req.getUserId());
+        notification.setRecipientEmail(req.getEmail());
+        notification.setNotificationType(req.getNotificationType());
 
-        EmailDetails emailDetails = new ReservationEmailDetails(
-                reservationNotificationRequest.getReservationId(),
-                reservationNotificationRequest.getFairName(),
-                reservationNotificationRequest.getStallName(),
-                reservationNotificationRequest.getStallType(),
-                reservationNotificationRequest.getHallName(),
-                reservationNotificationRequest.getBookingTime(),
-                reservationNotificationRequest.getEventTime(),
-                reservationNotificationRequest.getEventLink()
+        EmailDetails details = new ReservationEmailDetails(
+                req.getReservationId(),
+                req.getFairName(),
+                req.getDisplayName(),
+                req.getStalls(),               // <-- list of stalls
+                req.getBookingTime(),
+                req.getEventStartTime(),
+                req.getEventEndTime(),
+                req.getEventLink()
         );
-        emailDetails.setUserName(reservationNotificationRequest.getUserName());
-        notification.setEmailDetails(emailDetails);
 
+        details.setUserName(req.getUserName());
+        notification.setEmailDetails(details);
         return notification;
     }
 
-    public static Notification toNotification(
-            AccountActivationNotificationRequest activationNotificationRequest
-    ) {
+    // ----------- CREATE NOTIFICATION ENTITY (ACCOUNT ACTIVATION) -------------
+    public static Notification toNotification(AccountActivationNotificationRequest req) {
         Notification notification = new Notification();
-        notification.setUserId(activationNotificationRequest.getUserId());
-        notification.setRecipientEmail(activationNotificationRequest.getEmail());
-        notification.setNotificationType(activationNotificationRequest.getNotificationType());
+        notification.setUserId(req.getUserId());
+        notification.setRecipientEmail(req.getEmail());
+        notification.setNotificationType(req.getNotificationType());
 
-        EmailDetails emailDetails = new AccountActivationEmailDetails(
-                activationNotificationRequest.getCreatedTime(),
-                activationNotificationRequest.getRole(),
-                activationNotificationRequest.getLoginLink()
+        EmailDetails details = new AccountActivationEmailDetails(
+                req.getCreatedTime(),
+                req.getRole(),
+                req.getLoginLink()
         );
-        emailDetails.setUserName(activationNotificationRequest.getUserName());
-        notification.setEmailDetails(emailDetails);
 
+        details.setUserName(req.getUserName());
+        notification.setEmailDetails(details);
         return notification;
     }
 
+    // ----------- COPY EMAIL DETAILS -------------
     public static EmailDetails toEmailDetails(Notification notification) {
-        if (notification.getEmailDetails() instanceof ReservationEmailDetails emailDetails) {
+        if (notification.getEmailDetails() instanceof ReservationEmailDetails details) {
             return new ReservationEmailDetails(
-                    emailDetails.getReservationId(),
-                    emailDetails.getFairName(),
-                    emailDetails.getStallName(),
-                    emailDetails.getStallType(),
-                    emailDetails.getHallName(),
-                    emailDetails.getBookingTime(),
-                    emailDetails.getEventTime(),
-                    emailDetails.getEventLink()
+                    details.getReservationId(),
+                    details.getFairName(),
+                    details.getDisplayName(),
+                    details.getStalls(),      // <-- list support
+                    details.getBookingTime(),
+                    details.getEventStartTime(),
+                    details.getEventEndTime(),
+                    details.getEventLink()
             );
         }
-        else if (notification.getEmailDetails() instanceof AccountActivationEmailDetails emailDetails) {
+
+        if (notification.getEmailDetails() instanceof AccountActivationEmailDetails details) {
             return new AccountActivationEmailDetails(
-                    emailDetails.getCreatedTime(),
-                    emailDetails.getRole(),
-                    emailDetails.getLoginLink()
+                    details.getCreatedTime(),
+                    details.getRole(),
+                    details.getLoginLink()
             );
-        } else {
-            return null;
         }
+
+        return null;
     }
 
-    public static ReservationEmailDetails toReservationEmailDetailsFromRequest(
-            ReservationNotificationRequest notificationRequest
-    ) {
+    // ----------- COPY RESERVATION DETAILS FROM REQUEST -------------
+    public static ReservationEmailDetails toReservationEmailDetailsFromRequest(ReservationNotificationRequest req) {
         return new ReservationEmailDetails(
-                notificationRequest.getReservationId(),
-                notificationRequest.getFairName(),
-                notificationRequest.getStallName(),
-                notificationRequest.getStallType(),
-                notificationRequest.getHallName(),
-                notificationRequest.getBookingTime(),
-                notificationRequest.getEventTime(),
-                notificationRequest.getEventLink()
+                req.getReservationId(),
+                req.getFairName(),
+                req.getDisplayName(),
+                req.getStalls(),
+                req.getBookingTime(),
+                req.getEventStartTime(),
+                req.getEventEndTime(),
+                req.getEventLink()
         );
     }
 
+    // ----------- BUILD RESERVATION RESPONSE -------------
     public static ReservationNotificationResponse toReservationNotificationResponse(Notification notification) {
-        ReservationNotificationResponse reservationNotificationResponse = new ReservationNotificationResponse();
-        reservationNotificationResponse.setUserId(notification.getUserId());
-        reservationNotificationResponse.setNotificationType(notification.getNotificationType());
-        reservationNotificationResponse.setStatus(notification.getStatus().toString());
-        reservationNotificationResponse.setRecipientEmail(notification.getRecipientEmail());
+        ReservationNotificationRequest req = toReservationNotificationRequest(notification);
 
+        ReservationNotificationResponse res = new ReservationNotificationResponse();
+        res.setUserId(notification.getUserId());
+        res.setNotificationType(notification.getNotificationType());
+        res.setStatus(notification.getStatus().toString());
+        res.setRecipientEmail(notification.getRecipientEmail());
 
-        ReservationNotificationRequest notificationRequest = toReservationNotificationRequest(notification);
+        res.setBookingTime(req.getBookingTime());
+        res.setEventStartTime(req.getEventStartTime());
+        res.setEventEndTime(req.getEventEndTime());
+        res.setReservationId(req.getReservationId());
+        res.setFairName(req.getFairName());
+        res.setDisplayName(req.getDisplayName());
+        res.setStalls(req.getStalls());               // <-- UPDATED
+        res.setUserName(req.getUserName());
+        res.setEventLink(req.getEventLink().toString());
 
-        reservationNotificationResponse.setBookingTime(notificationRequest.getBookingTime());
-        reservationNotificationResponse.setEventTime(notificationRequest.getEventTime());
-        reservationNotificationResponse.setReservationId(notificationRequest.getReservationId());
-        reservationNotificationResponse.setFairName(notificationRequest.getFairName());
-        reservationNotificationResponse.setStallName(notificationRequest.getStallName());
-        reservationNotificationResponse.setStallType(notificationRequest.getStallType());
-        reservationNotificationResponse.setHallName(notificationRequest.getHallName());
-        reservationNotificationResponse.setUserName(notificationRequest.getUserName());
-        reservationNotificationResponse.setEventLink(notificationRequest.getEventLink().toString());
-        return reservationNotificationResponse;
+        return res;
     }
 
+    // ----------- BUILD ACCOUNT ACTIVATION RESPONSE -------------
     public static AccountActivationNotificationResponse toAccountActivationNotificationResponse(Notification notification) {
-        AccountActivationNotificationResponse accountActivationNotificationResponse = new AccountActivationNotificationResponse();
-        accountActivationNotificationResponse.setUserId(notification.getUserId());
-        accountActivationNotificationResponse.setStatus(notification.getStatus().toString());
-        accountActivationNotificationResponse.setNotificationType(notification.getNotificationType());
-        AccountActivationNotificationRequest notificationRequest = toAccountActivationNotificationRequest(notification);
-        accountActivationNotificationResponse.setNotificationType(notificationRequest.getNotificationType());
-        accountActivationNotificationResponse.setCreatedTime(notificationRequest.getCreatedTime());
-        accountActivationNotificationResponse.setRecipientEmail(notification.getRecipientEmail());
-        return accountActivationNotificationResponse;
+        AccountActivationNotificationRequest req = toAccountActivationNotificationRequest(notification);
+
+        AccountActivationNotificationResponse res = new AccountActivationNotificationResponse();
+        res.setUserId(notification.getUserId());
+        res.setStatus(notification.getStatus().toString());
+        res.setNotificationType(req.getNotificationType());
+        res.setCreatedTime(req.getCreatedTime());
+        res.setRecipientEmail(notification.getRecipientEmail());
+
+        return res;
     }
 }

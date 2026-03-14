@@ -1,5 +1,6 @@
 package com.booking.booking_service.service.serviceImpl;
 
+import com.booking.booking_service.dto.response.ExhibitionDTO;
 import com.booking.booking_service.dto.response.ExternalStallSummaryResponse;
 import com.booking.booking_service.dto.response.ReservedStallDto;
 import com.booking.booking_service.model.Reservation;
@@ -9,6 +10,8 @@ import com.booking.booking_service.dto.response.UserResponse;
 import com.booking.booking_service.service.ExhibitionServiceClient;
 import com.booking.booking_service.service.ExhibitionStallService;
 import com.booking.booking_service.service.UserService;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -67,6 +70,17 @@ public class ExhibitionStallServiceImpl implements ExhibitionStallService {
     response.setUserId(reservation.getUserId());
     response.setUsername(user.getName());
     response.setEmail(user.getEmail());
+
+    ExhibitionDTO exhibitionDTO = exhibitionServiceClient.getExhibition(reservation.getExhibitionId())
+        .getBody();
+    LocalDateTime startDateTime = exhibitionDTO.getStartDateTime();
+    LocalDateTime endDateTime = exhibitionDTO.getEndDateTime();
+//    Date eventDate = Date.from(startDateTime.atZone(ZoneId.systemDefault()).toInstant());
+    // treat the startDateTime as "local event time" without converting to system timezone
+    response.setEventStartDateTime(Date.from(startDateTime.atZone(ZoneId.of("UTC")).toInstant()));
+    response.setEventEndDateTime(Date.from(endDateTime.atZone(ZoneId.of("UTC")).toInstant()));
+
+    response.setFairName(exhibitionDTO.getExhibitionName());
     response.setStalls(reservedStallDtos);
     response.setBookingDateTime(new Date());
 

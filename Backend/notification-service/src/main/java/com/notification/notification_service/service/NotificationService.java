@@ -16,6 +16,8 @@ import com.notification.notification_service.model.email_details.EmailDetails;
 import com.notification.notification_service.model.email_details.ReservationEmailDetails;
 import com.notification.notification_service.repository.NotificationRepository;
 import com.notification.notification_service.service.event.EmailNotificationEvent;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -24,8 +26,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.util.*;
+import java.util.stream.Collectors;
+
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @Slf4j
@@ -35,12 +41,55 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final ApplicationEventPublisher publisher;
     private final QRCodeService qrCodeService;
+    private static final ZoneId SL_ZONE = ZoneId.of("Asia/Kolkata");
+
 
     @Value("${OFFICIAL_WEBSITE_LINK}")
     private String websiteLink;
 
     @Value("${NOTIFICATION_QRCODE_SECRET:YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=}")
     private String base64Secret;
+
+    private String formatDayWithSuffix(int day) {
+        if (day >= 11 && day <= 13) return day + "th";
+        return switch (day % 10) {
+            case 1 -> day + "st";
+            case 2 -> day + "nd";
+            case 3 -> day + "rd";
+            default -> day + "th";
+        };
+    }
+
+    private Map<String, String> formatDateTime(String isoDateTime) {
+
+        LocalDateTime dt = LocalDateTime.parse(isoDateTime);
+
+        ZonedDateTime colomboTime = dt.atZone(ZoneId.of("UTC"))
+            .withZoneSameInstant(SL_ZONE);
+
+        String date = colomboTime.toLocalDate().toString();
+        String time = colomboTime.toLocalTime().format(DateTimeFormatter.ofPattern("hh:mm a"));
+
+        Map<String, String> result = new HashMap<>();
+        result.put("date", date);
+        result.put("time", time);
+        return result;
+    }
+
+    private String formatDateTimeNoUTC(LocalDateTime dateTime) {
+        int day = dateTime.getDayOfMonth();
+        String daySuffix = formatDayWithSuffix(day);
+
+        String month = dateTime.getMonth().name().substring(0, 1)
+            + dateTime.getMonth().name().substring(1).toLowerCase();
+
+        String formattedTime = dateTime.format(DateTimeFormatter.ofPattern("hh.mm a"));
+
+        return "%s %s %d (%s)".formatted(daySuffix, month, dateTime.getYear(), formattedTime);
+    }
+
+
+
 
     @PostConstruct
     private void validateSecrets() {
@@ -140,9 +189,8 @@ public class NotificationService {
     private byte[] getQRCodeBytes(ReservationNotificationRequest notificationRequest) {
         Map<String, Object> qrcodeDetails = new HashMap<>();
         qrcodeDetails.put("reservationId", notificationRequest.getReservationId());
-        qrcodeDetails.put("stallType", notificationRequest.getStallType());
-        qrcodeDetails.put("stallName", notificationRequest.getStallName());
         qrcodeDetails.put("fairName", notificationRequest.getFairName());
+        qrcodeDetails.put("stalls", notificationRequest.getStalls());
 
         try {
             ObjectMapper objectMapper = new ObjectMapper();
@@ -153,6 +201,7 @@ public class NotificationService {
             throw new QRCodeGenerationException("Failed to generate QR code", e);
         }
     }
+
 
     public byte[] getQRCodeBytes(Long reservationId, Long userId) {
         Notification notification = getReservationNotification(reservationId, userId)
@@ -301,73 +350,132 @@ public class NotificationService {
     }
 
     // --- HTML Template Methods ---
-    private static String getReservationConfirmationHTMLBody(
+    private String getReservationConfirmationHTMLBody(
             ReservationNotificationRequest notificationRequest,
             URI websiteUri
     ) {
+
+        String stallDetailsHtml = notificationRequest.getStalls()
+            .stream()
+            .map(s -> """
+            <p style="margin: 4px 0 4px 20px;">
+                <b>%s</b> — %s (%s)
+            </p>
+        """.formatted(s.getStallName(), s.getStallType(), s.getHallName()))
+            .collect(Collectors.joining());
+
+
+
+        String eventStart = formatDateTimeNoUTC(notificationRequest.getEventStartTime());
+        String eventEnd   = formatDateTimeNoUTC(notificationRequest.getEventEndTime());
+
+        String exhibitionPeriod = "From %s To %s".formatted(eventStart, eventEnd);
+
+        Map<String, String> bookingDT = formatDateTime(notificationRequest.getBookingTime().toString());
+
+
+
         return """
-                <html>
-                <head>
-                    <style>
-                        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8f9fa; color: #333; }
-                        .container { max-width: 600px; background: #fff; margin: 30px auto; border-radius: 12px;
-                                     box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
-                        .header { background-color: #5b3cc4; color: #fff; text-align: center; padding: 25px 20px; }
-                        .header h1 { margin: 0; font-size: 24px; }
-                        .content { padding: 30px 40px; text-align: left; }
-                        .details { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px; line-height: 1.6; }
-                        .qr-section { text-align: center; margin-top: 30px; }
-                        #qrCode { width: 180px; height: 180px; border: 4px solid #eee; border-radius: 10px; }
-                        .footer { background: #f1f1f1; text-align: center; padding: 15px; font-size: 13px; color: #666; }
-                        .btn { display: inline-block; background-color: #5b3cc4; color: white; padding: 10px 20px;
-                               border-radius: 5px; text-decoration: none; margin-top: 15px; }
-                        .btn:hover { background-color: #4a2aa5; color: white; }
-                    </style>
-                </head>
-                <body>
-                    <div class="container">
-                        <div class="header">
-                            <h1>📖 %s - Stall Reservation Confirmed!</h1>
-                        </div>
-                        <div class="content">
-                            <h2>Dear %s,</h2>
-                            <p>We’re thrilled to confirm your stall reservation for the upcoming <b>%s</b>.</p>
-                            <div class="details">
-                                <p><b>Reservation ID:</b> %s</p>
-                                <p><b>Stall Name:</b> %s</p>
-                                <p><b>Stall Type:</b> %s</p>
-                                <p><b>Hall:</b> %s</p>
-                                <p><b>Booking Time:</b> %s</p>
-                                <p><b>Event Date & Time:</b> %s</p>
-                            </div>
-                
-                            <div class="qr-section">
-                                <p>Please present this QR code at the venue entrance for verification:</p>
-                                <img id="qrCode" src="cid:qrCode" alt="QR Code" />
-                                <p>We look forward to seeing you at the fair!</p>
-                                <a href="%s" class="btn">View Event Details</a>
-                            </div>
-                        </div>
-                        <div class="footer">
-                            <p>© 2025 Book Fair Committee |
-                            <a href="%s" style="color:#5b3cc4;text-decoration:none;">Visit Website</a></p>
-                        </div>
-                    </div>
-                </body>
-                </html>
-                """.formatted(
-                notificationRequest.getFairName(),
-                notificationRequest.getUserName(),
-                notificationRequest.getFairName(),
-                notificationRequest.getReservationId(),
-                notificationRequest.getStallName(),
-                notificationRequest.getStallType(),
-                notificationRequest.getHallName(),
-                notificationRequest.getBookingTime(),
-                notificationRequest.getEventTime(),
-                notificationRequest.getEventLink(),
-                websiteUri
+<html>
+<head>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f8f9fa; color: #333; }
+        .container { max-width: 600px; background: #fff; margin: 30px auto; border-radius: 12px;
+                     box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background-color: #0b428e; color: #fff; text-align: center; padding: 25px 20px; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .content { padding: 30px 40px; text-align: left; }
+        .details { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px; line-height: 1.6; }
+
+        /* Bullet point fix: using inline SVG ensures visibility in all mail clients */
+        .stall-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+        }
+        .stall-bullet {
+            width: 10px;
+            height: 10px;
+            margin-right: 10px;
+        }
+        .stall-text {
+            font-size: 14px;
+        }
+
+        .qr-section { text-align: center; margin-top: 30px; }
+        #qrCode { width: 180px; height: 180px; border: 4px solid #eee; border-radius: 10px; }
+
+        .btn {
+             display: inline-block;
+             background-color: #0b428e;
+             color: white !important;
+             padding: 12px 24px;
+             border-radius: 6px;
+             text-decoration: none;
+             margin-top: 20px;
+             font-weight: 600;
+         }
+         .btn:hover { background-color: #09366f; }
+
+        .footer { background: #f1f1f1; text-align: center; padding: 15px; font-size: 13px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📖 %s - Stall Reservation Confirmed!</h1>
+        </div>
+
+        <div class="content">
+            <h2>Dear %s,</h2>
+            <p>We’re thrilled to confirm your stall reservation for the upcoming <b>%s</b>.</p>
+            <p><b> %s</b></p>
+            <div class="details">
+
+               
+                <p><b>Booked Date:</b> %s</p>
+                <p><b>Booked Time:</b> %s</p>
+            
+
+                <p><b>Your Booked Stalls:</b></p>
+            
+                <div style="margin-left: 10px; line-height: 1.6;">
+                  %s
+                </div>
+
+            </div>
+
+            <div class="qr-section">
+                <p>Please present this QR code at the venue entrance for verification:</p>
+                <img id="qrCode" src="cid:qrCode" alt="QR Code" />
+                <p>We look forward to seeing you at the fair!</p>
+                <a href="%s" class="btn">View Event Details</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>© 2025 Book Fair Committee |
+            <a href="%s" style="color:#5b3cc4;text-decoration:none;">Visit Website</a></p>
+        </div>
+    </div>
+</body>
+</html>
+""".formatted(
+                notificationRequest.getFairName(),        // header fair name
+                notificationRequest.getUserName(),        // Dear X
+                notificationRequest.getFairName(),        // fair name again
+                exhibitionPeriod,
+                bookingDT.get("date"),
+                bookingDT.get("time"),
+                stallDetailsHtml,                         // Stalls HTML
+                notificationRequest.getEventLink(),       // Event button link
+                websiteUri                                // Footer site link
+
+
         );
+
+
+
     }
 
     private String getAccountActivationEmailBody(AccountActivationNotificationRequest notificationRequest) {

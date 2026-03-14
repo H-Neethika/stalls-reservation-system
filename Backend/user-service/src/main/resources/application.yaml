@@ -5,6 +5,11 @@ spring:
   application:
     name: USER-SERVICE
 
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
   datasource:
     url: ${USER_DB_URL}
     username: ${DB_USERNAME:postgres}
@@ -13,7 +18,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     show-sql: false
     open-in-view: false

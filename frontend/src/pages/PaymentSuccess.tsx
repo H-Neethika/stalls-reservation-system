@@ -2,9 +2,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useGenreFlow } from "@/store/useGenreFlow";
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
+  const { setOpenGenrePopup } = useGenreFlow();
+
+  const goHomeWithPopup = () => {
+    setOpenGenrePopup(true); // 🔥 Tell MyBookings to open popup immediately
+    navigate("/");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center px-4">
@@ -23,7 +30,7 @@ const PaymentSuccess = () => {
             <Button onClick={() => navigate("/my-bookings")}>
               View My Bookings
             </Button>
-            <Button variant="outline" onClick={() => navigate("/")}>
+            <Button variant="outline" onClick={goHomeWithPopup}>
               <Home className="h-4 w-4 mr-2" />
               Return Home
             </Button>
@@ -35,3 +42,5 @@ const PaymentSuccess = () => {
 };
 
 export default PaymentSuccess;
+
+

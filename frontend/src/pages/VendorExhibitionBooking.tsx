@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useAuth } from "@/hooks/use-auth";
 
 interface Price {
   hallId: number;
@@ -46,6 +47,7 @@ interface ExhibitionPayload {
 
 interface SelectedStall {
   hallId: string;
+  displayName: string;
   stallId: string;
   stallTypeId?: number;
   stallType?: string;
@@ -76,6 +78,7 @@ const VendorExhibitionBooking = () => {
   const [paymentRedirecting, setPaymentRedirecting] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [realtimeDisconnect, setRealtimeDisconnect] = useState<(() => void) | null>(null);
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
     const fetchExhibition = async () => {
@@ -95,7 +98,7 @@ const VendorExhibitionBooking = () => {
       } catch (error: any) {
         toast({
           title: "Failed to load exhibition",
-          description: error?.message || "Please try again later.",
+          description: "Please try again later.",
           variant: "destructive",
         });
       } finally {
@@ -134,7 +137,7 @@ const VendorExhibitionBooking = () => {
       } catch (error: any) {
         toast({
           title: "Failed to load availability",
-          description: error?.message || "Stall availability could not be loaded.",
+          description: "Stall availability could not be loaded.",
           variant: "destructive",
         });
       }
@@ -194,7 +197,7 @@ const VendorExhibitionBooking = () => {
     } catch (error: any) {
       toast({
         title: "Failed to load hall map",
-        description: error?.message || "Try again later.",
+        description: "Try again later.",
         variant: "destructive",
       });
       setHallLayouts((prev) => ({ ...prev, [String(hallId)]: [] }));
@@ -203,7 +206,7 @@ const VendorExhibitionBooking = () => {
     }
   };
 
-  const handleToggleStall = (hallId: string, stall: any) => {
+  const handleToggleStall = async(hallId: string, stall: any) => {
     const stallId = String(stall.id);
     const isSelected = selectedStalls.some((s) => s.stallId === stallId);
     const currentStatus =
@@ -225,15 +228,17 @@ const VendorExhibitionBooking = () => {
       setSelectedStalls((prev) => prev.filter((s) => s.stallId !== stallId));
       return;
     }
+      const numberOfReservedStalls = await reservationService.getReservationCount(user!.id,  Number(exhibitionId));
+console.log("number of reserved stalls : ",numberOfReservedStalls);
+    if (numberOfReservedStalls + selectedStalls.length >= MAX_SELECTION) {
+  toast({
+    title: "Stall limit reached",
+    description: `You may reserve up to ${MAX_SELECTION} stalls in total.`,
+    variant: "destructive",
+  });
+  return;
+}
 
-    if (selectedStalls.length >= MAX_SELECTION) {
-      toast({
-        title: "Selection limit reached",
-        description: `You can select up to ${MAX_SELECTION} stalls.`,
-        variant: "destructive",
-      });
-      return;
-    }
 
     const typeId = Number(stall.stallTypeId) || undefined;
     const hallPrices =
@@ -250,6 +255,7 @@ const VendorExhibitionBooking = () => {
       {
         hallId: String(hallId),
         stallId,
+        displayName: stall.displayName || `Stall ${stallId}`,
         stallTypeId: typeId,
         stallType: stall.stallType || stall.size,
         price,
@@ -259,6 +265,7 @@ const VendorExhibitionBooking = () => {
   };
 
   const totalPrice = selectedStalls.reduce((sum, s) => sum + Number(s.price || 0), 0);
+  console.log("selected stalls : ",selectedStalls);
 
   const handleProceed = () => {
     if (selectedStalls.length === 0) return;
@@ -277,7 +284,7 @@ const VendorExhibitionBooking = () => {
       console.error("Failed to update stall lock status", error);
       toast({
         title: "Stall lock failed",
-        description: error?.message || `Could not set stalls to ${status}.`,
+        description: `Could not set stalls to ${status}.`,
         variant: "destructive",
       });
     }
@@ -330,6 +337,11 @@ const VendorExhibitionBooking = () => {
   //   // eslint-disable-next-line react-hooks/exhaustive-deps
   // }, [showConfirm]);
 
+  const getHallName = (hallId: string) => {
+  return exhibition?.halls?.find((h) => String(h.id) === hallId)?.hallName || `Hall ${hallId}`;
+};
+
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -363,11 +375,11 @@ const VendorExhibitionBooking = () => {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">{exhibition.exhibitionName || "Exhibition"}</h1>
+              <h1 className="text-2xl font-bold">{exhibition.title || "Exhibition"}</h1>
               <p className="text-sm text-muted-foreground">
-                {exhibition.startDateTime && exhibition.endDateTime
-                  ? `${new Date(exhibition.startDateTime).toLocaleDateString()} - ${new Date(
-                    exhibition.endDateTime,
+                {exhibition.exhibitionStart && exhibition.exhibitionEnd
+                  ? `${new Date(exhibition.exhibitionStart).toLocaleDateString()} - ${new Date(
+                    exhibition.exhibitionEnd,
                   ).toLocaleDateString()}`
                   : "Dates TBA"}
               </p>
@@ -390,7 +402,7 @@ const VendorExhibitionBooking = () => {
                 <span>Pending</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="inline-block h-3 w-3 rounded-full bg-[#e00707ff]" />
+                <span className="inline-block h-3 w-3 rounded-full bg-[#FF0000]" />
                 <span>Reserved</span>
               </div>
               <div className="flex items-center gap-2">
@@ -481,9 +493,9 @@ const VendorExhibitionBooking = () => {
                       className="flex items-center justify-between rounded border px-2 py-2 text-sm"
                     >
                       <div className="flex flex-col">
-                        <span className="font-medium">{stall.stallId}</span>
+                        <span className="font-medium">{stall.displayName}</span>
                         <span className="text-xs text-muted-foreground">
-                          Hall {stall.hallId} · {stall.stallType || "Stall"}
+                           {getHallName(stall.hallId)} · {stall.stallType || "Stall"}
                         </span>
                       </div>
                       <div className="text-right">
@@ -530,9 +542,9 @@ const VendorExhibitionBooking = () => {
               {selectedStalls.map((stall) => (
                 <div key={stall.stallId} className="flex justify-between rounded border px-3 py-2">
                   <div>
-                    <div className="font-semibold">{stall.stallId}</div>
+                    <div className="font-semibold">{stall.displayName}</div>
                     <div className="text-xs text-muted-foreground">
-                      Hall {stall.hallId} · {stall.stallType || "Stall"}
+                      {getHallName(stall.hallId)} · {stall.stallType || "Stall"}
                     </div>
                   </div>
                   <div className="text-right">

@@ -19,13 +19,14 @@ public class StallStatusUpdateProducer {
     @Value("${app.kafka.topics.stall-status-update:stall.status.update}")
     private String stallStatusTopic;
 
-    public void publishReservedStatus(Long reservationId, java.util.List<Long> stallIds) {
-        if (reservationId == null || stallIds == null || stallIds.isEmpty()) {
+    public void publishReservedStatus(Long exhibitionId,Long reservationId, java.util.List<Long> stallIds) {
+        if (reservationId == null|| exhibitionId == null ||  stallIds == null || stallIds.isEmpty()) {
             log.warn("Skipping stall status publish - missing reservationId or stallIds");
             return;
         }
 
         StallStatusUpdateEvent event = StallStatusUpdateEvent.builder()
+            .exhibitionId(exhibitionId)
                 .reservationId(reservationId)
                 .stallIds(stallIds)
                 .bookingStatus("RESERVED")

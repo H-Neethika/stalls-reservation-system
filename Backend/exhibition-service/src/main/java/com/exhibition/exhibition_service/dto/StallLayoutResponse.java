@@ -6,6 +6,7 @@ import lombok.Data;
 @Data
 public class StallLayoutResponse {
     private Long id;
+    private String displayName;
     private Long stallTypeId;
     private String stallType;
     private String path;

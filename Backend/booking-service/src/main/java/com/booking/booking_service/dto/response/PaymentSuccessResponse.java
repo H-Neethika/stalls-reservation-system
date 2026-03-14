@@ -18,5 +18,7 @@ public class PaymentSuccessResponse {
   private String fairName;
   private List<ReservedStallDto> stalls;
   private Date bookingDateTime;
+  private Date eventStartDateTime;
+  private Date eventEndDateTime;
 
 }

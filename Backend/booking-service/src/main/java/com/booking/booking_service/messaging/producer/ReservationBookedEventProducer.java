@@ -46,6 +46,15 @@ public class ReservationBookedEventProducer {
                 .map(date -> date.toInstant())
                 .orElse(Instant.now());
 
+        // FIX: Use exhibition date instead of booking date
+        Instant eventStartInstant = Optional.ofNullable(response.getEventStartDateTime())
+            .map(date -> date.toInstant())
+            .orElseThrow(() -> new IllegalArgumentException("Event date is required"));
+
+        Instant eventEndInstant = Optional.ofNullable(response.getEventEndDateTime())
+            .map(date -> date.toInstant())
+            .orElseThrow(() -> new IllegalArgumentException("Event date is required"));
+
         List<ReservationBookedEvent.StallSummary> stalls = Optional.ofNullable(response.getStalls())
                 .orElse(Collections.emptyList())
                 .stream()
@@ -60,7 +69,8 @@ public class ReservationBookedEventProducer {
                 .fairName(fairName)
                 .notificationType("STALL_RESERVATION")
                 .bookingTime(bookingInstant)
-                .eventTime(bookingInstant)
+                .eventStartTime(eventStartInstant)
+                .eventEndTime(eventEndInstant)
                 .eventLink(defaultEventLink)
                 .stalls(stalls)
                 .build();
